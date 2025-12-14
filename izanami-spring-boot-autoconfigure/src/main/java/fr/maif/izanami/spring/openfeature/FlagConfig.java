@@ -1,298 +1,73 @@
 package fr.maif.izanami.spring.openfeature;
 
 import dev.openfeature.sdk.FlagValueType;
-import fr.maif.izanami.spring.autoconfigure.DefaultValueMap;
 import org.springframework.lang.Nullable;
 
-import java.math.BigDecimal;
-import java.util.Map;
-
 /**
- * Configuration for a single OpenFeature flag backed by Izanami.
+ * Immutable configuration for a single OpenFeature flag backed by Izanami.
  * <p>
- * This type is designed for Spring Boot {@code @ConfigurationProperties} binding, including support for
- * YAML objects/arrays as {@code defaultValue} when {@code valueType=object}.
+ * Instances are created by {@link fr.maif.izanami.spring.openfeature.internal.FlagConfigServiceImpl}
+ * from the raw YAML-bound configuration, with default values already coerced to the correct type.
+ *
+ * @param id            the Izanami feature id
+ * @param name          the OpenFeature flag key (human-friendly name)
+ * @param description   the flag description
+ * @param valueType     the configured value type (never null, defaults to BOOLEAN)
+ * @param errorStrategy the configured error strategy (never null, defaults to DEFAULT_VALUE)
+ * @param defaultValue  the default value, already coerced to the correct type based on valueType
+ * @param callbackBean  the Spring bean name for error callback (used with CALLBACK strategy)
  */
-public final class FlagConfig {
-
-    private static final String SCALAR_KEY = "_scalar";
-
-    private String id;
-    private String name;
-    private String description;
-    private FlagValueType valueType = FlagValueType.BOOLEAN;
-    private ErrorStrategy errorStrategy = ErrorStrategy.DEFAULT_VALUE;
-    @Nullable
-    private DefaultValueMap defaultValue;
-    @Nullable
-    private String callbackBean;
+public record FlagConfig(
+    String id,
+    String name,
+    String description,
+    FlagValueType valueType,
+    ErrorStrategy errorStrategy,
+    @Nullable Object defaultValue,
+    @Nullable String callbackBean
+) {
 
     /**
-     * Create an empty config instance for configuration binding.
-     */
-    public FlagConfig() {
-    }
-
-    /**
-     * @return the Izanami feature id.
-     */
-    public String getId() {
-        return id;
-    }
-
-    /**
-     * @param id the Izanami feature id
-     */
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    /**
-     * @return the OpenFeature flag key (human-friendly name).
-     */
-    public String getName() {
-        return name;
-    }
-
-    /**
-     * @param name the OpenFeature flag key (human-friendly name)
-     */
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    /**
-     * @return the flag description.
-     */
-    public String getDescription() {
-        return description;
-    }
-
-    /**
-     * @param description the flag description
-     */
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    /**
-     * @return the configured value type (defaults to {@link FlagValueType#BOOLEAN}).
-     */
-    public FlagValueType getValueType() {
-        return valueType;
-    }
-
-    /**
-     * @param valueType the configured value type
-     */
-    public void setValueType(FlagValueType valueType) {
-        this.valueType = valueType;
-    }
-
-    /**
-     * @return the configured error strategy (defaults to {@link ErrorStrategy#DEFAULT_VALUE}).
-     */
-    public ErrorStrategy getErrorStrategy() {
-        return errorStrategy;
-    }
-
-    /**
-     * @param errorStrategy the configured error strategy
-     */
-    public void setErrorStrategy(ErrorStrategy errorStrategy) {
-        this.errorStrategy = errorStrategy;
-    }
-
-    /**
-     * @return the raw configured default value.
-     * <p>
-     * For YAML scalars, this map contains a single {@code _scalar} entry.
-     * For YAML objects, this map contains the YAML keys.
-     * For YAML arrays, this map contains numeric keys ({@code "0"}, {@code "1"}, ...).
+     * Get the default value as a Boolean.
+     *
+     * @param callerDefault fallback if no configured default
+     * @return the boolean default value
      */
     @Nullable
-    public DefaultValueMap getDefaultValue() {
-        return defaultValue;
+    public Boolean booleanDefault(@Nullable Boolean callerDefault) {
+        return defaultValue instanceof Boolean b ? b : callerDefault;
     }
 
     /**
-     * @param defaultValue the raw configured default value
-     */
-    public void setDefaultValue(@Nullable DefaultValueMap defaultValue) {
-        this.defaultValue = defaultValue;
-    }
-
-    /**
-     * @return the name of the Spring bean implementing
-     *         {@link fr.maif.izanami.spring.openfeature.api.IzanamiErrorCallback},
-     *         used when {@code errorStrategy=CALLBACK}.
+     * Get the default value as a String.
+     *
+     * @param callerDefault fallback if no configured default
+     * @return the string default value
      */
     @Nullable
-    public String getCallbackBean() {
-        return callbackBean;
+    public String stringDefault(@Nullable String callerDefault) {
+        return defaultValue instanceof String s ? s : callerDefault;
     }
 
     /**
-     * @param callbackBean the Spring bean name for the error callback
-     */
-    public void setCallbackBean(@Nullable String callbackBean) {
-        this.callbackBean = callbackBean;
-    }
-
-    /**
-     * Record-like accessor for compatibility within this library.
+     * Get the default value as an Integer.
      *
-     * @return the id
-     */
-    public String id() {
-        return getId();
-    }
-
-    /**
-     * Record-like accessor for compatibility within this library.
-     *
-     * @return the name
-     */
-    public String name() {
-        return getName();
-    }
-
-    /**
-     * Record-like accessor for compatibility within this library.
-     *
-     * @return the description
-     */
-    public String description() {
-        return getDescription();
-    }
-
-    /**
-     * Record-like accessor for compatibility within this library.
-     *
-     * @return the value type (never {@code null})
-     */
-    public FlagValueType valueType() {
-        return valueType != null ? valueType : FlagValueType.BOOLEAN;
-    }
-
-    /**
-     * Record-like accessor for compatibility within this library.
-     *
-     * @return the error strategy (never {@code null})
-     */
-    public ErrorStrategy errorStrategy() {
-        return errorStrategy != null ? errorStrategy : ErrorStrategy.DEFAULT_VALUE;
-    }
-
-    /**
-     * Record-like accessor for compatibility within this library.
-     *
-     * @return the callback bean name (may be {@code null})
+     * @param callerDefault fallback if no configured default
+     * @return the integer default value
      */
     @Nullable
-    public String callbackBean() {
-        return callbackBean;
+    public Integer integerDefault(@Nullable Integer callerDefault) {
+        return defaultValue instanceof Integer i ? i : callerDefault;
     }
 
     /**
-     * Record-like accessor for compatibility within this library.
-     * <p>
-     * If {@code defaultValue} is not provided and {@code errorStrategy=DEFAULT_VALUE}, this returns a sensible default
-     * based on {@link #valueType()}.
+     * Get the default value as a Double.
      *
-     * @return the default value, possibly computed
+     * @param callerDefault fallback if no configured default
+     * @return the double default value
      */
     @Nullable
-    public Object defaultValue() {
-        if (defaultValue != null) {
-            return unwrapDefaultValue(defaultValue);
-        }
-        if (errorStrategy() != ErrorStrategy.DEFAULT_VALUE) {
-            return null;
-        }
-        return switch (valueType()) {
-            case BOOLEAN -> Boolean.FALSE;
-            case STRING -> "";
-            case INTEGER, DOUBLE -> BigDecimal.ZERO;
-            case OBJECT -> Map.of();
-        };
-    }
-
-    private Object unwrapDefaultValue(Map<String, Object> raw) {
-        if (raw.containsKey(SCALAR_KEY)) {
-            Object scalar = raw.get(SCALAR_KEY);
-            return coerceScalar(scalar);
-        }
-        if (valueType() == FlagValueType.OBJECT) {
-            return normalizeObjectOrArray(raw);
-        }
-        return raw;
-    }
-
-    private Object normalizeObjectOrArray(Object value) {
-        if (value instanceof Map<?, ?> map) {
-            java.util.Map<String, Object> normalized = new java.util.LinkedHashMap<>();
-            for (java.util.Map.Entry<?, ?> entry : map.entrySet()) {
-                if (entry.getKey() == null) {
-                    continue;
-                }
-                normalized.put(entry.getKey().toString(), normalizeObjectOrArray(entry.getValue()));
-            }
-            if (isIndexedMap(normalized)) {
-                return indexedMapToList(normalized).stream().map(this::normalizeObjectOrArray).toList();
-            }
-            return normalized;
-        }
-        if (value instanceof java.util.List<?> list) {
-            return list.stream().map(this::normalizeObjectOrArray).toList();
-        }
-        return value;
-    }
-
-    private Object coerceScalar(@Nullable Object scalar) {
-        if (scalar == null) {
-            return null;
-        }
-        if (valueType() == FlagValueType.STRING || valueType() == FlagValueType.OBJECT) {
-            return scalar.toString();
-        }
-        if (valueType() == FlagValueType.BOOLEAN) {
-            if (scalar instanceof Boolean b) {
-                return b;
-            }
-            return Boolean.parseBoolean(scalar.toString());
-        }
-        if (valueType() == FlagValueType.INTEGER || valueType() == FlagValueType.DOUBLE) {
-            if (scalar instanceof BigDecimal bd) {
-                return bd;
-            }
-            try {
-                return new BigDecimal(scalar.toString());
-            } catch (NumberFormatException e) {
-                return BigDecimal.ZERO;
-            }
-        }
-        return scalar;
-    }
-
-    private static boolean isIndexedMap(Map<String, Object> raw) {
-        if (raw.isEmpty()) {
-            return false;
-        }
-        for (String key : raw.keySet()) {
-            try {
-                Integer.parseInt(key);
-            } catch (NumberFormatException e) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static java.util.List<Object> indexedMapToList(Map<String, Object> raw) {
-        return raw.entrySet().stream()
-            .sorted(java.util.Map.Entry.comparingByKey(java.util.Comparator.comparingInt(Integer::parseInt)))
-            .map(java.util.Map.Entry::getValue)
-            .toList();
+    public Double doubleDefault(@Nullable Double callerDefault) {
+        return defaultValue instanceof Double d ? d : callerDefault;
     }
 }

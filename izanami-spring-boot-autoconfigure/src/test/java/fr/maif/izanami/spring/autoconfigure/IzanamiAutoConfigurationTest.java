@@ -78,10 +78,11 @@ class IzanamiAutoConfigurationTest {
                 "openfeature.flags[0].defaultValue.name=Izanami"
             )
             .run(context -> {
-                FlagsProperties flagsProperties = context.getBean(FlagsProperties.class);
-                assertThat(flagsProperties.flags()).hasSize(1);
-                assertThat(flagsProperties.flags().get(0).valueType()).isEqualTo(FlagValueType.OBJECT);
-                assertThat(flagsProperties.flags().get(0).errorStrategy()).isEqualTo(ErrorStrategy.DEFAULT_VALUE);
+                FlagConfigService configService = context.getBean(FlagConfigService.class);
+                assertThat(configService.getAllFlagConfigs()).hasSize(1);
+                assertThat(configService.getFlagConfigByName("new-dashboard")).isPresent();
+                assertThat(configService.getFlagConfigByName("new-dashboard").get().valueType()).isEqualTo(FlagValueType.OBJECT);
+                assertThat(configService.getFlagConfigByName("new-dashboard").get().errorStrategy()).isEqualTo(ErrorStrategy.DEFAULT_VALUE);
             });
     }
 
@@ -103,10 +104,11 @@ class IzanamiAutoConfigurationTest {
                 "openfeature.flags[0].defaultValue.meta.version=1"
             )
             .run(context -> {
-                FlagsProperties flagsProperties = context.getBean(FlagsProperties.class);
-                assertThat(flagsProperties.flags()).hasSize(1);
-                assertThat(flagsProperties.flags().get(0).valueType()).isEqualTo(FlagValueType.OBJECT);
-                assertThat(flagsProperties.flags().get(0).defaultValue()).isInstanceOfAny(java.util.Map.class, java.util.List.class);
+                FlagConfigService configService = context.getBean(FlagConfigService.class);
+                assertThat(configService.getAllFlagConfigs()).hasSize(1);
+                assertThat(configService.getFlagConfigByName("json-content")).isPresent();
+                assertThat(configService.getFlagConfigByName("json-content").get().valueType()).isEqualTo(FlagValueType.OBJECT);
+                assertThat(configService.getFlagConfigByName("json-content").get().defaultValue()).isInstanceOfAny(java.util.Map.class, java.util.List.class);
 
                 IzanamiFeatureProvider provider = context.getBean(IzanamiFeatureProvider.class);
                 assertThat(provider.getObjectEvaluation("json-content", new Value("caller-default"), null).getValue().isStructure()).isTrue();

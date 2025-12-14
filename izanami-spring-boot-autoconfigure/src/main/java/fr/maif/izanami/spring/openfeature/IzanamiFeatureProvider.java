@@ -134,22 +134,22 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
 
     @Override
     public ProviderEvaluation<Boolean> getBooleanEvaluation(String key, Boolean defaultValue, EvaluationContext ctx) {
-        return evaluatePrimitive(key, defaultValue, ctx, FlagValueType.BOOLEAN, this::extractBoolean, this::coerceBooleanDefault);
+        return evaluatePrimitive(key, defaultValue, ctx, FlagValueType.BOOLEAN, this::extractBoolean, FlagConfig::booleanDefault);
     }
 
     @Override
     public ProviderEvaluation<String> getStringEvaluation(String key, String defaultValue, EvaluationContext ctx) {
-        return evaluatePrimitive(key, defaultValue, ctx, FlagValueType.STRING, this::extractString, this::coerceStringDefault);
+        return evaluatePrimitive(key, defaultValue, ctx, FlagValueType.STRING, this::extractString, FlagConfig::stringDefault);
     }
 
     @Override
     public ProviderEvaluation<Integer> getIntegerEvaluation(String key, Integer defaultValue, EvaluationContext ctx) {
-        return evaluatePrimitive(key, defaultValue, ctx, FlagValueType.INTEGER, this::extractInteger, this::coerceIntegerDefault);
+        return evaluatePrimitive(key, defaultValue, ctx, FlagValueType.INTEGER, this::extractInteger, FlagConfig::integerDefault);
     }
 
     @Override
     public ProviderEvaluation<Double> getDoubleEvaluation(String key, Double defaultValue, EvaluationContext ctx) {
-        return evaluatePrimitive(key, defaultValue, ctx, FlagValueType.DOUBLE, this::extractDouble, this::coerceDoubleDefault);
+        return evaluatePrimitive(key, defaultValue, ctx, FlagValueType.DOUBLE, this::extractDouble, FlagConfig::doubleDefault);
     }
 
     @Override
@@ -280,67 +280,6 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         } catch (JsonProcessingException e) {
             throw new InvalidObjectJsonException("Flag '" + config.name() + "' returned invalid JSON for valueType=object");
         }
-    }
-
-    private Boolean coerceBooleanDefault(FlagConfig config, @Nullable Boolean callerDefault) {
-        Object configuredDefault = config.defaultValue();
-        if (configuredDefault == null) {
-            return callerDefault;
-        }
-        if (configuredDefault instanceof Boolean b) {
-            return b;
-        }
-        if (configuredDefault instanceof String s) {
-            return Boolean.parseBoolean(s);
-        }
-        if (configuredDefault instanceof Number n) {
-            return n.intValue() != 0;
-        }
-        return callerDefault;
-    }
-
-    private String coerceStringDefault(FlagConfig config, @Nullable String callerDefault) {
-        Object configuredDefault = config.defaultValue();
-        if (configuredDefault == null) {
-            return callerDefault;
-        }
-        return configuredDefault.toString();
-    }
-
-    private Integer coerceIntegerDefault(FlagConfig config, @Nullable Integer callerDefault) {
-        Object configuredDefault = config.defaultValue();
-        if (configuredDefault == null) {
-            return callerDefault;
-        }
-        if (configuredDefault instanceof Number n) {
-            return n.intValue();
-        }
-        if (configuredDefault instanceof String s) {
-            try {
-                return Double.valueOf(s).intValue();
-            } catch (NumberFormatException e) {
-                return callerDefault;
-            }
-        }
-        return callerDefault;
-    }
-
-    private Double coerceDoubleDefault(FlagConfig config, @Nullable Double callerDefault) {
-        Object configuredDefault = config.defaultValue();
-        if (configuredDefault == null) {
-            return callerDefault;
-        }
-        if (configuredDefault instanceof Number n) {
-            return n.doubleValue();
-        }
-        if (configuredDefault instanceof String s) {
-            try {
-                return Double.valueOf(s);
-            } catch (NumberFormatException e) {
-                return callerDefault;
-            }
-        }
-        return callerDefault;
     }
 
     private Value toOpenFeatureValueOrNullSafe(@Nullable Object configuredDefault, @Nullable Value callerDefault) {
