@@ -81,12 +81,27 @@ public final class FlagConfigServiceImpl implements FlagConfigService {
 
     private void validateConfig(FlagConfig config) {
         ErrorStrategy strategy = config.errorStrategy();
+        String flagIdentifier = config.name() != null ? config.name() : config.id();
+
         if (strategy != ErrorStrategy.DEFAULT_VALUE && config.getDefaultValue() != null) {
-            String flagIdentifier = config.name() != null ? config.name() : config.id();
             throw new IllegalArgumentException(
                 "Flag '" + flagIdentifier + "' has errorStrategy=" + strategy.name()
                     + " but also defines a defaultValue. "
                     + "The defaultValue property is only valid with errorStrategy=DEFAULT_VALUE."
+            );
+        }
+
+        if (strategy == ErrorStrategy.CALLBACK
+                && (config.getCallbackBean() == null || config.getCallbackBean().isBlank())) {
+            log.warn("Flag '{}' has errorStrategy=CALLBACK but no callbackBean specified; "
+                + "will fall back to type-safe defaults on error", flagIdentifier);
+        }
+
+        if (strategy != ErrorStrategy.CALLBACK && config.getCallbackBean() != null) {
+            throw new IllegalArgumentException(
+                "Flag '" + flagIdentifier + "' has callbackBean='" + config.getCallbackBean()
+                    + "' but errorStrategy=" + strategy.name() + ". "
+                    + "The callbackBean property is only valid with errorStrategy=CALLBACK."
             );
         }
     }

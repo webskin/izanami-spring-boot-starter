@@ -23,6 +23,8 @@ public final class FlagConfig {
     private ErrorStrategy errorStrategy = ErrorStrategy.DEFAULT_VALUE;
     @Nullable
     private DefaultValueMap defaultValue;
+    @Nullable
+    private String callbackBean;
 
     /**
      * Create an empty config instance for configuration binding.
@@ -120,6 +122,23 @@ public final class FlagConfig {
     }
 
     /**
+     * @return the name of the Spring bean implementing
+     *         {@link fr.maif.izanami.spring.openfeature.api.IzanamiErrorCallback},
+     *         used when {@code errorStrategy=CALLBACK}.
+     */
+    @Nullable
+    public String getCallbackBean() {
+        return callbackBean;
+    }
+
+    /**
+     * @param callbackBean the Spring bean name for the error callback
+     */
+    public void setCallbackBean(@Nullable String callbackBean) {
+        this.callbackBean = callbackBean;
+    }
+
+    /**
      * Record-like accessor for compatibility within this library.
      *
      * @return the id
@@ -162,6 +181,16 @@ public final class FlagConfig {
      */
     public ErrorStrategy errorStrategy() {
         return errorStrategy != null ? errorStrategy : ErrorStrategy.DEFAULT_VALUE;
+    }
+
+    /**
+     * Record-like accessor for compatibility within this library.
+     *
+     * @return the callback bean name (may be {@code null})
+     */
+    @Nullable
+    public String callbackBean() {
+        return callbackBean;
     }
 
     /**

@@ -12,6 +12,7 @@ import dev.openfeature.sdk.MutableStructure;
 import dev.openfeature.sdk.ProviderEvaluation;
 import dev.openfeature.sdk.Structure;
 import dev.openfeature.sdk.Value;
+import dev.openfeature.sdk.exceptions.GeneralError;
 import fr.maif.FeatureClientErrorStrategy;
 import fr.maif.features.results.IzanamiResult;
 import fr.maif.features.values.BooleanCastStrategy;
@@ -202,12 +203,12 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         IzanamiContext izanamiContext = IzanamiContext.from(ctx);
 
         if (config.id() == null || config.id().isBlank()) {
-            return EvaluationOutcome.applicationFallback(fallbackValue, "Flag id is blank");
+            return handleApplicationError(config, fallbackValue, "Flag id is blank");
         }
 
         Optional<IzanamiResult.Result> maybeResult = queryIzanami(config, izanamiContext);
         if (maybeResult.isEmpty()) {
-            return EvaluationOutcome.applicationFallback(fallbackValue, "Izanami client not available or evaluation failed");
+            return handleApplicationError(config, fallbackValue, "Izanami client not available or evaluation failed");
         }
 
         IzanamiResult.Result result = maybeResult.get();
@@ -218,11 +219,18 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
             T value = extractor.extract(result, config, fallbackValue);
             String reason = (source == EvaluationValueSource.IZANAMI) ? null : Reason.ERROR.toString();
             return new EvaluationOutcome<>(value, source, null, null, reason);
-        } catch (InvalidObjectJsonException e) {
-            return EvaluationOutcome.invalidJsonFallback(fallbackValue, e.getMessage());
         } catch (Exception e) {
-            return EvaluationOutcome.applicationFallback(fallbackValue, e.getMessage());
+            return handleApplicationError(config, fallbackValue, e.getMessage());
         }
+    }
+
+    private <T> EvaluationOutcome<T> handleApplicationError(FlagConfig config, T fallbackValue, String message) {
+        ErrorStrategy strategy = config.errorStrategy();
+        return switch (strategy) {
+            case FAIL -> throw new GeneralError(message);
+            case NULL_VALUE -> new EvaluationOutcome<>(null, EvaluationValueSource.APPLICATION_ERROR_STRATEGY, null, message, Reason.ERROR.toString());
+            case DEFAULT_VALUE, CALLBACK -> EvaluationOutcome.applicationFallback(fallbackValue, message);
+        };
     }
 
     private Optional<IzanamiResult.Result> queryIzanami(FlagConfig config, IzanamiContext context) {

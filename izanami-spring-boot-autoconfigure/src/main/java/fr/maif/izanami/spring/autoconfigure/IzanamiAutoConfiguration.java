@@ -11,6 +11,7 @@ import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
 import fr.maif.izanami.spring.openfeature.internal.ErrorStrategyFactoryImpl;
 import fr.maif.izanami.spring.openfeature.internal.FlagConfigServiceImpl;
 import fr.maif.izanami.spring.service.IzanamiService;
+import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -110,13 +111,17 @@ public class IzanamiAutoConfiguration {
      * Create the error strategy factory used to translate flag configuration into Izanami client error strategies.
      *
      * @param objectMapperProvider Spring-managed {@link ObjectMapper} (optional)
+     * @param beanFactory          Spring bean factory for callback bean lookup
      * @return an {@link ErrorStrategyFactory}
      */
     @Bean
     @ConditionalOnMissingBean
-    public ErrorStrategyFactory errorStrategyFactory(ObjectProvider<ObjectMapper> objectMapperProvider) {
+    public ErrorStrategyFactory errorStrategyFactory(
+            ObjectProvider<ObjectMapper> objectMapperProvider,
+            BeanFactory beanFactory
+    ) {
         ObjectMapper objectMapper = objectMapperProvider.getIfAvailable(ObjectMapper::new);
-        return new ErrorStrategyFactoryImpl(objectMapper);
+        return new ErrorStrategyFactoryImpl(objectMapper, beanFactory);
     }
 
     /**

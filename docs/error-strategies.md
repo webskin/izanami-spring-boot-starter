@@ -9,7 +9,7 @@ This document explains how to configure and use error strategies for feature fla
 | `DEFAULT_VALUE` | Returns the configured `defaultValue` on error (default behavior) |
 | `NULL_VALUE` | Returns `null` on error |
 | `FAIL` | Signals an error to the OpenFeature SDK |
-| `CALLBACK` | Uses a callback function (same as `DEFAULT_VALUE` for application errors) |
+| `CALLBACK` | Uses a Spring bean callback to compute fallback value |
 
 ## Configuration
 
@@ -85,6 +85,77 @@ public static <T> T getValueOrThrow(FlagEvaluationDetails<T> details) {
 // Usage:
 Boolean value = getValueOrThrow(client.getBooleanDetails("my-feature", false));
 ```
+
+## CALLBACK Strategy
+
+The CALLBACK strategy allows you to define a Spring bean that computes fallback values when Izanami encounters an error.
+
+### Configuration
+
+```yaml
+openfeature:
+  flags:
+    - name: premium-features
+      id: project:premium-features
+      value-type: boolean
+      error-strategy: CALLBACK
+      callback-bean: myErrorHandler  # Spring bean name
+```
+
+### Implementing the Callback
+
+Create a Spring bean implementing `IzanamiErrorCallback`:
+
+```java
+import fr.maif.izanami.spring.openfeature.api.IzanamiErrorCallback;
+import fr.maif.izanami.spring.openfeature.EvaluationValueType;
+import fr.maif.izanami.spring.openfeature.FlagConfig;
+import org.springframework.stereotype.Component;
+
+import java.util.concurrent.CompletableFuture;
+
+@Component("myErrorHandler")
+public class MyErrorHandler implements IzanamiErrorCallback {
+
+    private final SomeService someService;
+
+    public MyErrorHandler(SomeService someService) {
+        this.someService = someService;
+    }
+
+    @Override
+    public CompletableFuture<Object> onError(Throwable error, FlagConfig flagConfig, EvaluationValueType valueType) {
+        log.warn("Izanami error for flag '{}': {}", flagConfig.name(), error.getMessage());
+
+        // Return type-appropriate fallback values
+        return switch (valueType) {
+            case BOOLEAN -> CompletableFuture.completedFuture(someService.getDefaultBoolean(flagConfig.name()));
+            case STRING -> CompletableFuture.completedFuture(someService.getDefaultString(flagConfig.name()));
+            case NUMBER -> CompletableFuture.completedFuture(someService.getDefaultNumber(flagConfig.name()));
+            case OBJECT -> CompletableFuture.completedFuture(someService.getDefaultObject(flagConfig.name()));
+        };
+    }
+}
+```
+
+### Return Type Coercion
+
+The callback returns `CompletableFuture<Object>`. Values are coerced based on the flag's `valueType`:
+
+| valueType | Expected Return | Coercion |
+|-----------|-----------------|----------|
+| `BOOLEAN` | `Boolean` | Non-zero numbers → `true`, strings parsed |
+| `STRING` | `String` | Objects serialized to JSON |
+| `NUMBER` | `Number` | Converted to `BigDecimal` |
+| `OBJECT` | `Object` or `String` (JSON) | Serialized to JSON if not a string |
+
+### Error Handling
+
+- **Missing bean**: Falls back to type-safe defaults (`false`, `""`, `0`)
+- **Wrong bean type**: Falls back to type-safe defaults
+- **No `callbackBean` specified**: Warning logged, falls back to type-safe defaults
+
+> **Note:** The `callbackBean` property is only valid with `errorStrategy: CALLBACK`. Using it with other strategies will cause an application startup error.
 
 ## NULL_VALUE Strategy
 
