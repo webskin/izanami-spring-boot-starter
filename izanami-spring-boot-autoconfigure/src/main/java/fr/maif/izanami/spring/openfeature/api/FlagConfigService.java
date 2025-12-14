@@ -10,12 +10,12 @@ import java.util.Optional;
  */
 public interface FlagConfigService {
     /**
-     * Find a flag id by its configured name.
+     * Find a flag key by its configured name.
      *
      * @param name flag name (OpenFeature key)
-     * @return the configured id (Izanami feature id)
+     * @return the configured key (Izanami feature key)
      */
-    Optional<String> findFlagIdByName(String name);
+    Optional<String> findFlagKeyByName(String name);
 
     /**
      * Get a flag configuration by its name.
@@ -26,12 +26,12 @@ public interface FlagConfigService {
     Optional<FlagConfig> getFlagConfigByName(String name);
 
     /**
-     * Get a flag configuration by its id.
+     * Get a flag configuration by its key.
      *
-     * @param id Izanami feature id
+     * @param key Izanami feature key
      * @return flag configuration if present
      */
-    Optional<FlagConfig> getFlagConfigById(String id);
+    Optional<FlagConfig> getFlagConfigByKey(String key);
 
     /**
      * @return all configured flag configurations.

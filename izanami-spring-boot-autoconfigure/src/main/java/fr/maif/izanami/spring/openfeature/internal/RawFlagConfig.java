@@ -20,7 +20,7 @@ public final class RawFlagConfig {
 
     private static final String SCALAR_KEY = "_scalar";
 
-    private String id;
+    private String key;
     private String name;
     private String description;
     private FlagValueType valueType = FlagValueType.BOOLEAN;
@@ -33,12 +33,12 @@ public final class RawFlagConfig {
     public RawFlagConfig() {
     }
 
-    public String getId() {
-        return id;
+    public String getKey() {
+        return key;
     }
 
-    public void setId(String id) {
-        this.id = id;
+    public void setKey(String key) {
+        this.key = key;
     }
 
     public String getName() {

@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.util.List;
 
 /**
- * Configuration properties for OpenFeature flags backed by Izanami.
+ * Configuration properties for OpenFeature flags.
  * <p>
  * Binds to {@code openfeature.flags}.
  * <p>

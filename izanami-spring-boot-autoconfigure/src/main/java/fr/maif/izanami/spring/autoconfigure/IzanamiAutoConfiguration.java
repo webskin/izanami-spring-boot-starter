@@ -135,7 +135,7 @@ public class IzanamiAutoConfiguration {
     @ConditionalOnMissingBean
     public IzanamiService izanamiService(IzanamiProperties properties, FlagConfigService flagConfigService) {
         Set<String> idsToPreload = flagConfigService.getAllFlagConfigs().stream()
-            .map(FlagConfig::id)
+            .map(FlagConfig::key)
             .filter(Objects::nonNull)
             .collect(Collectors.toSet());
         return new IzanamiService(properties, idsToPreload);

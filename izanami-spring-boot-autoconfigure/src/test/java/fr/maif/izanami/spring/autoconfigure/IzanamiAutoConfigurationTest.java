@@ -70,7 +70,7 @@ class IzanamiAutoConfigurationTest {
     void bindsValueTypeAndErrorStrategyUsingConverters() {
         contextRunner
             .withPropertyValues(
-                "openfeature.flags[0].id=0c1774d1-9a26-4284-b8a6-0179eb7cf2f7",
+                "openfeature.flags[0].key=0c1774d1-9a26-4284-b8a6-0179eb7cf2f7",
                 "openfeature.flags[0].name=new-dashboard",
                 "openfeature.flags[0].description=Test flag",
                 "openfeature.flags[0].valueType=object",
@@ -90,15 +90,15 @@ class IzanamiAutoConfigurationTest {
     void bindsObjectDefaultValueAndReturnsStructuredOpenFeatureValueOnFallback() {
         contextRunner
             .withPropertyValues(
-                "openfeature.flags[0].id=00812ba5-aebc-49e8-959a-4b96a5cebbff",
+                "openfeature.flags[0].key=00812ba5-aebc-49e8-959a-4b96a5cebbff",
                 "openfeature.flags[0].name=json-content",
                 "openfeature.flags[0].description=JSON content",
                 "openfeature.flags[0].valueType=object",
                 "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
                 "openfeature.flags[0].defaultValue.name=Izanami",
-                "openfeature.flags[0].defaultValue.flags[0].id=f1",
+                "openfeature.flags[0].defaultValue.flags[0].key=f1",
                 "openfeature.flags[0].defaultValue.flags[0].active=true",
-                "openfeature.flags[0].defaultValue.flags[1].id=f2",
+                "openfeature.flags[0].defaultValue.flags[1].key=f2",
                 "openfeature.flags[0].defaultValue.flags[1].active=false",
                 "openfeature.flags[0].defaultValue.meta.createdBy=unit-test",
                 "openfeature.flags[0].defaultValue.meta.version=1"
@@ -125,7 +125,7 @@ class IzanamiAutoConfigurationTest {
                 assertThat(details.getValue().asStructure().getValue("name").asString()).isEqualTo("Izanami");
                 assertThat(details.getValue().asStructure().getValue("flags").asList()).hasSize(2);
 
-                assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_EVALUATION_VALUE_SOURCE))
+                assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                     .isEqualTo("APPLICATION_ERROR_STRATEGY");
             });
     }

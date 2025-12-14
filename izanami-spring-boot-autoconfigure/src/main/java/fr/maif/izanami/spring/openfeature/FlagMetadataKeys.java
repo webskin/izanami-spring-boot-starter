@@ -9,9 +9,9 @@ public final class FlagMetadataKeys {
     }
 
     /**
-     * Metadata key: flag id from configuration.
+     * Metadata key: flag key from configuration.
      */
-    public static final String FLAG_CONFIG_ID = "FLAG_CONFIG_ID";
+    public static final String FLAG_CONFIG_KEY = "FLAG_CONFIG_KEY";
     /**
      * Metadata key: flag name from configuration.
      */
@@ -36,6 +36,6 @@ public final class FlagMetadataKeys {
     /**
      * Metadata key: {@link FlagValueSource} for the returned value.
      */
-    public static final String FLAG_EVALUATION_VALUE_SOURCE = "FLAG_EVALUATION_VALUE_SOURCE";
+    public static final String FLAG_VALUE_SOURCE = "FLAG_VALUE_SOURCE";
 }
 

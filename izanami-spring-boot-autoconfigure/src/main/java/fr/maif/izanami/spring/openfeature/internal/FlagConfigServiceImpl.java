@@ -49,14 +49,14 @@ public final class FlagConfigServiceImpl implements FlagConfigService {
                 if (previous != null && previous != config) {
                     log.warn("Duplicate flag name '{}' detected; last one wins", config.name());
                 }
-                if (config.id() != null) {
-                    nameToIdMap.put(config.name(), config.id());
+                if (config.key() != null) {
+                    nameToIdMap.put(config.name(), config.key());
                 }
             }
-            if (config.id() != null) {
-                FlagConfig previous = byId.put(config.id(), config);
+            if (config.key() != null) {
+                FlagConfig previous = byId.put(config.key(), config);
                 if (previous != null && previous != config) {
-                    log.warn("Duplicate flag id '{}' detected; last one wins", config.id());
+                    log.warn("Duplicate flag key '{}' detected; last one wins", config.key());
                 }
             }
         }
@@ -67,7 +67,7 @@ public final class FlagConfigServiceImpl implements FlagConfigService {
     }
 
     @Override
-    public Optional<String> findFlagIdByName(String name) {
+    public Optional<String> findFlagKeyByName(String name) {
         return Optional.ofNullable(nameToId.get(name));
     }
 
@@ -77,8 +77,8 @@ public final class FlagConfigServiceImpl implements FlagConfigService {
     }
 
     @Override
-    public Optional<FlagConfig> getFlagConfigById(String id) {
-        return Optional.ofNullable(configsById.get(id));
+    public Optional<FlagConfig> getFlagConfigByKey(String key) {
+        return Optional.ofNullable(configsById.get(key));
     }
 
     @Override
@@ -93,7 +93,7 @@ public final class FlagConfigServiceImpl implements FlagConfigService {
     private FlagConfig transformAndValidate(RawFlagConfig raw) {
         ErrorStrategy strategy = raw.errorStrategy();
         FlagValueType valueType = raw.valueType();
-        String flagIdentifier = raw.getName() != null ? raw.getName() : raw.getId();
+        String flagIdentifier = raw.getName() != null ? raw.getName() : raw.getKey();
 
         // Validate: defaultValue only allowed with DEFAULT_VALUE strategy
         if (strategy != ErrorStrategy.DEFAULT_VALUE && raw.getDefaultValue() != null) {
@@ -128,7 +128,7 @@ public final class FlagConfigServiceImpl implements FlagConfigService {
         Object coercedDefaultValue = coerceDefaultValue(rawDefaultValue, valueType, strategy);
 
         return new FlagConfig(
-            raw.getId(),
+            raw.getKey(),
             raw.getName(),
             raw.getDescription(),
             valueType,

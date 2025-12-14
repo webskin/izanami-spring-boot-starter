@@ -47,7 +47,7 @@ class IzanamiOpenFeatureIT {
                 "izanami.client-id=" + env("IZANAMI_CLIENT_ID"),
                 "izanami.client-secret=" + env("IZANAMI_CLIENT_SECRET"),
                 "izanami.cache.sse.enabled=false",
-                "openfeature.flags[0].id=" + PERFORMANCE_MODE_ID,
+                "openfeature.flags[0].key=" + PERFORMANCE_MODE_ID,
                 "openfeature.flags[0].name=performance-mode",
                 "openfeature.flags[0].description=Performance mode",
                 "openfeature.flags[0].valueType=boolean",
@@ -59,7 +59,7 @@ class IzanamiOpenFeatureIT {
                 FlagEvaluationDetails<Boolean> details = client.getBooleanDetails("performance-mode", false);
 
                 assertThat(details.getValue()).isTrue();
-                assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_EVALUATION_VALUE_SOURCE))
+                assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                     .isEqualTo("IZANAMI");
             });
     }
@@ -73,7 +73,7 @@ class IzanamiOpenFeatureIT {
                 "izanami.client-id=" + env("IZANAMI_CLIENT_ID"),
                 "izanami.client-secret=" + env("IZANAMI_CLIENT_SECRET"),
                 "izanami.cache.sse.enabled=false",
-                "openfeature.flags[0].id=" + JSON_CONTENT_ID,
+                "openfeature.flags[0].key=" + JSON_CONTENT_ID,
                 "openfeature.flags[0].name=json-content",
                 "openfeature.flags[0].description=JSON content",
                 "openfeature.flags[0].valueType=object",
@@ -84,7 +84,7 @@ class IzanamiOpenFeatureIT {
                 Client client = context.getBean(Client.class);
                 FlagEvaluationDetails<Value> details = client.getObjectDetails("json-content", new Value());
 
-                assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_EVALUATION_VALUE_SOURCE))
+                assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                     .isEqualTo("IZANAMI");
 
                 assertThat(details.getValue().isStructure()).isTrue();

@@ -35,8 +35,8 @@ import java.util.Optional;
  * <p>
  * This provider resolves flags based on {@code openfeature.flags} configuration:
  * <ul>
- *   <li>The OpenFeature flag key can be either the configured {@link FlagConfig#name()} or {@link FlagConfig#id()}.</li>
- *   <li>Izanami is always queried by id.</li>
+ *   <li>The OpenFeature flag key can be either the configured {@link FlagConfig#name()} or {@link FlagConfig#key()}.</li>
+ *   <li>Izanami is always queried by key.</li>
  * </ul>
  * <p>
  * Resilience and fallback rules:
@@ -192,7 +192,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
 
     private Optional<FlagConfig> resolveConfig(String key) {
         return flagConfigService.getFlagConfigByName(key)
-            .or(() -> flagConfigService.getFlagConfigById(key));
+            .or(() -> flagConfigService.getFlagConfigByKey(key));
     }
 
     private <T> EvaluationOutcome<T> evaluateViaIzanami(
@@ -203,8 +203,8 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
     ) {
         IzanamiContext izanamiContext = IzanamiContext.from(ctx);
 
-        if (config.id() == null || config.id().isBlank()) {
-            return handleApplicationError(config, fallbackValue, "Flag id is blank");
+        if (config.key() == null || config.key().isBlank()) {
+            return handleApplicationError(config, fallbackValue, "Flag key is blank");
         }
 
         Optional<IzanamiResult.Result> maybeResult = queryIzanami(config, izanamiContext);
@@ -238,7 +238,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         FeatureClientErrorStrategy<?> errorStrategy = errorStrategyFactory.createErrorStrategy(config);
 
         FeatureRequest request = FeatureRequest.newFeatureRequest()
-            .withFeature(config.id())
+            .withFeature(config.key())
             .withErrorStrategy(errorStrategy)
             .withBooleanCastStrategy(BooleanCastStrategy.LAX);
 
@@ -364,13 +364,13 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
     private ImmutableMetadata metadata(FlagConfig config, FlagValueSource source) {
         String defaultValueString = stringifyDefaultValue(config);
         return ImmutableMetadata.builder()
-            .addString(FlagMetadataKeys.FLAG_CONFIG_ID, config.id())
+            .addString(FlagMetadataKeys.FLAG_CONFIG_KEY, config.key())
             .addString(FlagMetadataKeys.FLAG_CONFIG_NAME, config.name())
             .addString(FlagMetadataKeys.FLAG_CONFIG_DESCRIPTION, config.description())
             .addString(FlagMetadataKeys.FLAG_CONFIG_VALUE_TYPE, config.valueType().name())
             .addString(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE, defaultValueString)
             .addString(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY, config.errorStrategy() == null ? null : config.errorStrategy().name())
-            .addString(FlagMetadataKeys.FLAG_EVALUATION_VALUE_SOURCE, source.name())
+            .addString(FlagMetadataKeys.FLAG_VALUE_SOURCE, source.name())
             .build();
     }
 
