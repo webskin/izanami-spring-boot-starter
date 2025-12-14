@@ -107,8 +107,8 @@ openfeature:
 Create a Spring bean implementing `IzanamiErrorCallback`:
 
 ```java
+import dev.openfeature.sdk.FlagValueType;
 import fr.maif.izanami.spring.openfeature.api.IzanamiErrorCallback;
-import fr.maif.izanami.spring.openfeature.EvaluationValueType;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
 import org.springframework.stereotype.Component;
 
@@ -124,14 +124,14 @@ public class MyErrorHandler implements IzanamiErrorCallback {
     }
 
     @Override
-    public CompletableFuture<Object> onError(Throwable error, FlagConfig flagConfig, EvaluationValueType valueType) {
+    public CompletableFuture<Object> onError(Throwable error, FlagConfig flagConfig, FlagValueType valueType) {
         log.warn("Izanami error for flag '{}': {}", flagConfig.name(), error.getMessage());
 
         // Return type-appropriate fallback values
         return switch (valueType) {
             case BOOLEAN -> CompletableFuture.completedFuture(someService.getDefaultBoolean(flagConfig.name()));
             case STRING -> CompletableFuture.completedFuture(someService.getDefaultString(flagConfig.name()));
-            case NUMBER -> CompletableFuture.completedFuture(someService.getDefaultNumber(flagConfig.name()));
+            case INTEGER, DOUBLE -> CompletableFuture.completedFuture(someService.getDefaultNumber(flagConfig.name()));
             case OBJECT -> CompletableFuture.completedFuture(someService.getDefaultObject(flagConfig.name()));
         };
     }
@@ -146,8 +146,11 @@ The callback returns `CompletableFuture<Object>`. Values are coerced based on th
 |-----------|-----------------|----------|
 | `BOOLEAN` | `Boolean` | Non-zero numbers → `true`, strings parsed |
 | `STRING` | `String` | Objects serialized to JSON |
-| `NUMBER` | `Number` | Converted to `BigDecimal` |
+| `INTEGER` | `Number` | Converted to `BigDecimal` |
+| `DOUBLE` | `Number` | Converted to `BigDecimal` |
 | `OBJECT` | `Object` or `String` (JSON) | Serialized to JSON if not a string |
+
+> **Note:** Both `integer` and `double` are converted to `BigDecimal` internally by Izanami. You can also use `number` as an alias for `double` in configuration.
 
 ### Error Handling
 

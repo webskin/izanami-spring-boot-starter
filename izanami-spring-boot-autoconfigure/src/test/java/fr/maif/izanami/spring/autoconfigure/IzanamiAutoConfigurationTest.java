@@ -2,10 +2,10 @@ package fr.maif.izanami.spring.autoconfigure;
 
 import dev.openfeature.sdk.Client;
 import dev.openfeature.sdk.FlagEvaluationDetails;
+import dev.openfeature.sdk.FlagValueType;
 import dev.openfeature.sdk.OpenFeatureAPI;
 import dev.openfeature.sdk.Value;
 import fr.maif.izanami.spring.openfeature.ErrorStrategy;
-import fr.maif.izanami.spring.openfeature.EvaluationValueType;
 import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
 import fr.maif.izanami.spring.openfeature.FlagsProperties;
 import fr.maif.izanami.spring.openfeature.IzanamiFeatureProvider;
@@ -38,7 +38,7 @@ class IzanamiAutoConfigurationTest {
             assertThat(context).hasSingleBean(ErrorStrategyFactory.class);
             assertThat(context).hasSingleBean(IzanamiService.class);
 
-            assertThat(context).hasBean("stringToEvaluationValueTypeConverter");
+            assertThat(context).hasBean("stringToFlagValueTypeConverter");
             assertThat(context).hasBean("stringToErrorStrategyConverter");
 
             assertThat(context).hasSingleBean(IzanamiFeatureProvider.class);
@@ -80,7 +80,7 @@ class IzanamiAutoConfigurationTest {
             .run(context -> {
                 FlagsProperties flagsProperties = context.getBean(FlagsProperties.class);
                 assertThat(flagsProperties.flags()).hasSize(1);
-                assertThat(flagsProperties.flags().get(0).valueType()).isEqualTo(EvaluationValueType.OBJECT);
+                assertThat(flagsProperties.flags().get(0).valueType()).isEqualTo(FlagValueType.OBJECT);
                 assertThat(flagsProperties.flags().get(0).errorStrategy()).isEqualTo(ErrorStrategy.DEFAULT_VALUE);
             });
     }
@@ -105,7 +105,7 @@ class IzanamiAutoConfigurationTest {
             .run(context -> {
                 FlagsProperties flagsProperties = context.getBean(FlagsProperties.class);
                 assertThat(flagsProperties.flags()).hasSize(1);
-                assertThat(flagsProperties.flags().get(0).valueType()).isEqualTo(EvaluationValueType.OBJECT);
+                assertThat(flagsProperties.flags().get(0).valueType()).isEqualTo(FlagValueType.OBJECT);
                 assertThat(flagsProperties.flags().get(0).defaultValue()).isInstanceOfAny(java.util.Map.class, java.util.List.class);
 
                 IzanamiFeatureProvider provider = context.getBean(IzanamiFeatureProvider.class);

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.openfeature.sdk.ErrorCode;
 import dev.openfeature.sdk.EvaluationContext;
 import dev.openfeature.sdk.FeatureProvider;
+import dev.openfeature.sdk.FlagValueType;
 import dev.openfeature.sdk.Reason;
 import dev.openfeature.sdk.ImmutableMetadata;
 import dev.openfeature.sdk.Metadata;
@@ -133,22 +134,22 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
 
     @Override
     public ProviderEvaluation<Boolean> getBooleanEvaluation(String key, Boolean defaultValue, EvaluationContext ctx) {
-        return evaluatePrimitive(key, defaultValue, ctx, EvaluationValueType.BOOLEAN, this::extractBoolean, this::coerceBooleanDefault);
+        return evaluatePrimitive(key, defaultValue, ctx, FlagValueType.BOOLEAN, this::extractBoolean, this::coerceBooleanDefault);
     }
 
     @Override
     public ProviderEvaluation<String> getStringEvaluation(String key, String defaultValue, EvaluationContext ctx) {
-        return evaluatePrimitive(key, defaultValue, ctx, EvaluationValueType.STRING, this::extractString, this::coerceStringDefault);
+        return evaluatePrimitive(key, defaultValue, ctx, FlagValueType.STRING, this::extractString, this::coerceStringDefault);
     }
 
     @Override
     public ProviderEvaluation<Integer> getIntegerEvaluation(String key, Integer defaultValue, EvaluationContext ctx) {
-        return evaluatePrimitive(key, defaultValue, ctx, EvaluationValueType.NUMBER, this::extractInteger, this::coerceIntegerDefault);
+        return evaluatePrimitive(key, defaultValue, ctx, FlagValueType.INTEGER, this::extractInteger, this::coerceIntegerDefault);
     }
 
     @Override
     public ProviderEvaluation<Double> getDoubleEvaluation(String key, Double defaultValue, EvaluationContext ctx) {
-        return evaluatePrimitive(key, defaultValue, ctx, EvaluationValueType.NUMBER, this::extractDouble, this::coerceDoubleDefault);
+        return evaluatePrimitive(key, defaultValue, ctx, FlagValueType.DOUBLE, this::extractDouble, this::coerceDoubleDefault);
     }
 
     @Override
@@ -158,8 +159,8 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
             return notFound(key, defaultValue, FlagMetadataKeys.FLAG_CONFIG_NAME);
         }
         FlagConfig config = maybeConfig.get();
-        if (config.valueType() != EvaluationValueType.OBJECT) {
-            return typeMismatch(key, defaultValue, config, EvaluationValueType.OBJECT);
+        if (config.valueType() != FlagValueType.OBJECT) {
+            return typeMismatch(key, defaultValue, config, FlagValueType.OBJECT);
         }
 
         Value fallbackValue = toOpenFeatureValueOrNullSafe(config.defaultValue(), defaultValue);
@@ -171,7 +172,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         String key,
         @Nullable T defaultValue,
         EvaluationContext ctx,
-        EvaluationValueType expectedType,
+        FlagValueType expectedType,
         PrimitiveExtractor<T> extractor,
         DefaultValueConverter<T> defaultValueConverter
     ) {
@@ -387,7 +388,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         String key,
         @Nullable T defaultValue,
         FlagConfig config,
-        EvaluationValueType expectedType
+        FlagValueType expectedType
     ) {
         return ProviderEvaluation.<T>builder()
             .value(defaultValue)
@@ -439,7 +440,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         if (defaultValue == null) {
             return null;
         }
-        if (config.valueType() == EvaluationValueType.OBJECT) {
+        if (config.valueType() == FlagValueType.OBJECT) {
             try {
                 return objectMapper.writeValueAsString(defaultValue);
             } catch (JsonProcessingException e) {

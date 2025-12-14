@@ -2,9 +2,9 @@ package fr.maif.izanami.spring.openfeature.internal;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.openfeature.sdk.FlagValueType;
 import fr.maif.FeatureClientErrorStrategy;
 import fr.maif.izanami.spring.openfeature.ErrorStrategy;
-import fr.maif.izanami.spring.openfeature.EvaluationValueType;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
 import fr.maif.izanami.spring.openfeature.api.ErrorStrategyFactory;
 import fr.maif.izanami.spring.openfeature.api.IzanamiErrorCallback;
@@ -66,11 +66,11 @@ public final class ErrorStrategyFactoryImpl implements ErrorStrategyFactory {
         }
 
         return FeatureClientErrorStrategy.callbackStrategy(
-            error -> callback.onError(error, config, EvaluationValueType.BOOLEAN)
+            error -> callback.onError(error, config, FlagValueType.BOOLEAN)
                 .thenApply(value -> coerceToBoolean(value, config)),
-            error -> callback.onError(error, config, EvaluationValueType.STRING)
+            error -> callback.onError(error, config, FlagValueType.STRING)
                 .thenApply(value -> coerceToString(value, config)),
-            error -> callback.onError(error, config, EvaluationValueType.NUMBER)
+            error -> callback.onError(error, config, FlagValueType.DOUBLE)
                 .thenApply(value -> coerceToNumber(value, config))
         );
     }
@@ -144,7 +144,7 @@ public final class ErrorStrategyFactoryImpl implements ErrorStrategyFactory {
     }
 
     private boolean asBooleanDefault(FlagConfig config) {
-        if (config.valueType() != EvaluationValueType.BOOLEAN) {
+        if (config.valueType() != FlagValueType.BOOLEAN) {
             return false;
         }
         Object defaultValue = config.defaultValue();
@@ -162,14 +162,14 @@ public final class ErrorStrategyFactoryImpl implements ErrorStrategyFactory {
         if (defaultValue == null) {
             return "";
         }
-        if (config.valueType() == EvaluationValueType.OBJECT) {
+        if (config.valueType() == FlagValueType.OBJECT) {
             return toJson(config, defaultValue);
         }
         return defaultValue.toString();
     }
 
     private BigDecimal asNumberDefault(FlagConfig config) {
-        if (config.valueType() != EvaluationValueType.NUMBER) {
+        if (config.valueType() != FlagValueType.INTEGER && config.valueType() != FlagValueType.DOUBLE) {
             return BigDecimal.ZERO;
         }
         Object defaultValue = config.defaultValue();

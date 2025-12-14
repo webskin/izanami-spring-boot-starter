@@ -21,7 +21,7 @@ public final class FlagMetadataKeys {
      */
     public static final String FLAG_CONFIG_DESCRIPTION = "FLAG_CONFIG_DESCRIPTION";
     /**
-     * Metadata key: configured {@link EvaluationValueType}.
+     * Metadata key: configured {@link dev.openfeature.sdk.FlagValueType}.
      */
     public static final String FLAG_CONFIG_VALUE_TYPE = "FLAG_CONFIG_VALUE_TYPE";
     /**

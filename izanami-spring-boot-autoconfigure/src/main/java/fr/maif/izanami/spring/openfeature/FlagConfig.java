@@ -1,5 +1,6 @@
 package fr.maif.izanami.spring.openfeature;
 
+import dev.openfeature.sdk.FlagValueType;
 import fr.maif.izanami.spring.autoconfigure.DefaultValueMap;
 import org.springframework.lang.Nullable;
 
@@ -19,7 +20,7 @@ public final class FlagConfig {
     private String id;
     private String name;
     private String description;
-    private EvaluationValueType valueType = EvaluationValueType.BOOLEAN;
+    private FlagValueType valueType = FlagValueType.BOOLEAN;
     private ErrorStrategy errorStrategy = ErrorStrategy.DEFAULT_VALUE;
     @Nullable
     private DefaultValueMap defaultValue;
@@ -75,16 +76,16 @@ public final class FlagConfig {
     }
 
     /**
-     * @return the configured value type (defaults to {@link EvaluationValueType#BOOLEAN}).
+     * @return the configured value type (defaults to {@link FlagValueType#BOOLEAN}).
      */
-    public EvaluationValueType getValueType() {
+    public FlagValueType getValueType() {
         return valueType;
     }
 
     /**
      * @param valueType the configured value type
      */
-    public void setValueType(EvaluationValueType valueType) {
+    public void setValueType(FlagValueType valueType) {
         this.valueType = valueType;
     }
 
@@ -170,8 +171,8 @@ public final class FlagConfig {
      *
      * @return the value type (never {@code null})
      */
-    public EvaluationValueType valueType() {
-        return valueType != null ? valueType : EvaluationValueType.BOOLEAN;
+    public FlagValueType valueType() {
+        return valueType != null ? valueType : FlagValueType.BOOLEAN;
     }
 
     /**
@@ -212,7 +213,7 @@ public final class FlagConfig {
         return switch (valueType()) {
             case BOOLEAN -> Boolean.FALSE;
             case STRING -> "";
-            case NUMBER -> BigDecimal.ZERO;
+            case INTEGER, DOUBLE -> BigDecimal.ZERO;
             case OBJECT -> Map.of();
         };
     }
@@ -222,7 +223,7 @@ public final class FlagConfig {
             Object scalar = raw.get(SCALAR_KEY);
             return coerceScalar(scalar);
         }
-        if (valueType() == EvaluationValueType.OBJECT) {
+        if (valueType() == FlagValueType.OBJECT) {
             return normalizeObjectOrArray(raw);
         }
         return raw;
@@ -252,16 +253,16 @@ public final class FlagConfig {
         if (scalar == null) {
             return null;
         }
-        if (valueType() == EvaluationValueType.STRING || valueType() == EvaluationValueType.OBJECT) {
+        if (valueType() == FlagValueType.STRING || valueType() == FlagValueType.OBJECT) {
             return scalar.toString();
         }
-        if (valueType() == EvaluationValueType.BOOLEAN) {
+        if (valueType() == FlagValueType.BOOLEAN) {
             if (scalar instanceof Boolean b) {
                 return b;
             }
             return Boolean.parseBoolean(scalar.toString());
         }
-        if (valueType() == EvaluationValueType.NUMBER) {
+        if (valueType() == FlagValueType.INTEGER || valueType() == FlagValueType.DOUBLE) {
             if (scalar instanceof BigDecimal bd) {
                 return bd;
             }

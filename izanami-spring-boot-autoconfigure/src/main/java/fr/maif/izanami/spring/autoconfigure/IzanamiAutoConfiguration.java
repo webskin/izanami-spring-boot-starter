@@ -1,10 +1,10 @@
 package fr.maif.izanami.spring.autoconfigure;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.openfeature.sdk.FlagValueType;
 import fr.maif.IzanamiClient;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
 import fr.maif.izanami.spring.openfeature.ErrorStrategy;
-import fr.maif.izanami.spring.openfeature.EvaluationValueType;
 import fr.maif.izanami.spring.openfeature.FlagsProperties;
 import fr.maif.izanami.spring.openfeature.api.ErrorStrategyFactory;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
@@ -40,12 +40,12 @@ public class IzanamiAutoConfiguration {
     /**
      * Register the converter used to bind {@code openfeature.flags[*].valueType}.
      *
-     * @return a String to {@link EvaluationValueType} converter
+     * @return a String to {@link FlagValueType} converter
      */
     @Bean
     @ConfigurationPropertiesBinding
-    public Converter<String, EvaluationValueType> stringToEvaluationValueTypeConverter() {
-        return new StringToEvaluationValueTypeConverter();
+    public Converter<String, FlagValueType> stringToFlagValueTypeConverter() {
+        return new StringToFlagValueTypeConverter();
     }
 
     /**

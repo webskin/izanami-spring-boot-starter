@@ -1,6 +1,6 @@
 package fr.maif.izanami.spring.openfeature.api;
 
-import fr.maif.izanami.spring.openfeature.EvaluationValueType;
+import dev.openfeature.sdk.FlagValueType;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
 
 import java.util.concurrent.CompletableFuture;
@@ -26,12 +26,12 @@ import java.util.concurrent.CompletableFuture;
  * @Component("myErrorHandler")
  * public class MyErrorHandler implements IzanamiErrorCallback {
  *     @Override
- *     public CompletableFuture<Object> onError(Throwable error, FlagConfig flagConfig, EvaluationValueType valueType) {
+ *     public CompletableFuture<Object> onError(Throwable error, FlagConfig flagConfig, FlagValueType valueType) {
  *         log.warn("Izanami error for flag '{}': {}", flagConfig.name(), error.getMessage());
  *         return switch (valueType) {
  *             case BOOLEAN -> CompletableFuture.completedFuture(false);
  *             case STRING -> CompletableFuture.completedFuture("");
- *             case NUMBER -> CompletableFuture.completedFuture(0);
+ *             case INTEGER, DOUBLE -> CompletableFuture.completedFuture(0);
  *             case OBJECT -> CompletableFuture.completedFuture(Map.of());
  *         };
  *     }
@@ -49,10 +49,10 @@ public interface IzanamiErrorCallback {
      * <p>
      * The returned value should be compatible with the flag's {@code valueType}:
      * <ul>
-     *   <li>{@link EvaluationValueType#BOOLEAN}: return {@link Boolean}</li>
-     *   <li>{@link EvaluationValueType#STRING}: return {@link String}</li>
-     *   <li>{@link EvaluationValueType#NUMBER}: return {@link Number} (will be converted to {@link java.math.BigDecimal})</li>
-     *   <li>{@link EvaluationValueType#OBJECT}: return {@link String} (JSON) or a serializable object</li>
+     *   <li>{@link FlagValueType#BOOLEAN}: return {@link Boolean}</li>
+     *   <li>{@link FlagValueType#STRING}: return {@link String}</li>
+     *   <li>{@link FlagValueType#INTEGER} / {@link FlagValueType#DOUBLE}: return {@link Number} (will be converted to {@link java.math.BigDecimal})</li>
+     *   <li>{@link FlagValueType#OBJECT}: return {@link String} (JSON) or a serializable object</li>
      * </ul>
      *
      * @param error      the error that occurred during evaluation
@@ -60,5 +60,5 @@ public interface IzanamiErrorCallback {
      * @param valueType  the expected value type
      * @return a {@link CompletableFuture} with the fallback value
      */
-    CompletableFuture<Object> onError(Throwable error, FlagConfig flagConfig, EvaluationValueType valueType);
+    CompletableFuture<Object> onError(Throwable error, FlagConfig flagConfig, FlagValueType valueType);
 }
