@@ -180,6 +180,60 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
         return loadedRef.get();
     }
 
+    /**
+     * Evaluate a boolean feature flag.
+     * <p>
+     * This is a direct delegate to the Izanami client. The error strategy configured
+     * on the request (or the client default) will be applied.
+     *
+     * @param request the single feature request
+     * @return the feature boolean value
+     * @throws IllegalStateException if the client is not available
+     */
+    public CompletableFuture<Boolean> booleanValue(SingleFeatureRequest request) {
+        IzanamiClient client = clientRef.get();
+        if (client == null) {
+            throw new IllegalStateException("Izanami client is not available");
+        }
+        return client.booleanValue(request);
+    }
+
+    /**
+     * Evaluate a string feature flag.
+     * <p>
+     * This is a direct delegate to the Izanami client. The error strategy configured
+     * on the request (or the client default) will be applied.
+     *
+     * @param request the single feature request
+     * @return the feature string value
+     * @throws IllegalStateException if the client is not available
+     */
+    public CompletableFuture<String> stringValue(SingleFeatureRequest request) {
+        IzanamiClient client = clientRef.get();
+        if (client == null) {
+            throw new IllegalStateException("Izanami client is not available");
+        }
+        return client.stringValue(request);
+    }
+
+    /**
+     * Evaluate a number feature flag.
+     * <p>
+     * This is a direct delegate to the Izanami client. The error strategy configured
+     * on the request (or the client default) will be applied.
+     *
+     * @param request the single feature request
+     * @return the feature number value as BigDecimal
+     * @throws IllegalStateException if the client is not available
+     */
+    public CompletableFuture<BigDecimal> numberValue(SingleFeatureRequest request) {
+        IzanamiClient client = clientRef.get();
+        if (client == null) {
+            throw new IllegalStateException("Izanami client is not available");
+        }
+        return client.numberValue(request);
+    }
+
     @Override
     public void destroy() {
         IzanamiClient client = clientRef.getAndSet(null);
