@@ -156,7 +156,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
     public ProviderEvaluation<Value> getObjectEvaluation(String key, Value defaultValue, EvaluationContext ctx) {
         Optional<FlagConfig> maybeConfig = resolveConfig(key);
         if (maybeConfig.isEmpty()) {
-            return notFound(key, defaultValue, FlagMetadataKeys.FLAG_CONFIG_NAME);
+            return notFound(key, defaultValue);
         }
         FlagConfig config = maybeConfig.get();
         if (config.valueType() != FlagValueType.OBJECT) {
@@ -178,7 +178,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
     ) {
         Optional<FlagConfig> maybeConfig = resolveConfig(key);
         if (maybeConfig.isEmpty()) {
-            return notFound(key, defaultValue, FlagMetadataKeys.FLAG_CONFIG_NAME);
+            return notFound(key, defaultValue);
         }
         FlagConfig config = maybeConfig.get();
         if (config.valueType() != expectedType) {
@@ -305,21 +305,21 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         }
     }
 
-    private ProviderEvaluation<Value> notFound(String key, Value defaultValue, String metadataKey) {
+    private ProviderEvaluation<Value> notFound(String key, Value defaultValue) {
         return ProviderEvaluation.<Value>builder()
             .value(defaultValue != null ? defaultValue : new Value())
             .errorCode(ErrorCode.FLAG_NOT_FOUND)
             .errorMessage("Feature flag '" + key + "' not found in openfeature.flags")
-            .flagMetadata(ImmutableMetadata.builder().addString(metadataKey, key).build())
+            .flagMetadata(ImmutableMetadata.builder().addString(FlagMetadataKeys.FLAG_CONFIG_KEY, key).build())
             .build();
     }
 
-    private <T> ProviderEvaluation<T> notFound(String key, @Nullable T defaultValue, String metadataKey) {
+    private <T> ProviderEvaluation<T> notFound(String key, @Nullable T defaultValue) {
         return ProviderEvaluation.<T>builder()
             .value(defaultValue)
             .errorCode(ErrorCode.FLAG_NOT_FOUND)
             .errorMessage("Feature flag '" + key + "' not found in openfeature.flags")
-            .flagMetadata(ImmutableMetadata.builder().addString(metadataKey, key).build())
+            .flagMetadata(ImmutableMetadata.builder().addString(FlagMetadataKeys.FLAG_CONFIG_KEY, key).build())
             .build();
     }
 
