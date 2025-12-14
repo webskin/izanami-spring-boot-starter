@@ -239,7 +239,9 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         if (context.contextPath() != null && !context.contextPath().isBlank()) {
             request.withContext(context.contextPath());
         }
-        return izanamiService.getFeatureResult(request);
+
+        boolean propagateErrors = config.errorStrategy() == ErrorStrategy.FAIL;
+        return izanamiService.getFeatureResult(request, propagateErrors);
     }
 
     private Boolean extractBoolean(IzanamiResult.Result result, FlagConfig config, Boolean fallbackValue) {

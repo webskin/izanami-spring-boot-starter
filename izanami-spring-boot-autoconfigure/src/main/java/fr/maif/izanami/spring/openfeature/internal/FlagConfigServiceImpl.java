@@ -1,5 +1,6 @@
 package fr.maif.izanami.spring.openfeature.internal;
 
+import fr.maif.izanami.spring.openfeature.ErrorStrategy;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
 import fr.maif.izanami.spring.openfeature.FlagsProperties;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
@@ -35,6 +36,7 @@ public final class FlagConfigServiceImpl implements FlagConfigService {
             if (config == null) {
                 continue;
             }
+            validateConfig(config);
             if (config.name() != null) {
                 FlagConfig previous = byName.put(config.name(), config);
                 if (previous != null && previous != config) {
@@ -75,6 +77,18 @@ public final class FlagConfigServiceImpl implements FlagConfigService {
     @Override
     public Collection<FlagConfig> getAllFlagConfigs() {
         return configsByName.values();
+    }
+
+    private void validateConfig(FlagConfig config) {
+        ErrorStrategy strategy = config.errorStrategy();
+        if (strategy != ErrorStrategy.DEFAULT_VALUE && config.getDefaultValue() != null) {
+            String flagIdentifier = config.name() != null ? config.name() : config.id();
+            throw new IllegalArgumentException(
+                "Flag '" + flagIdentifier + "' has errorStrategy=" + strategy.name()
+                    + " but also defines a defaultValue. "
+                    + "The defaultValue property is only valid with errorStrategy=DEFAULT_VALUE."
+            );
+        }
     }
 }
 

@@ -136,6 +136,21 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
      * @return optional containing the first result if available
      */
     public Optional<IzanamiResult.Result> getFeatureResult(FeatureRequest featureRequest) {
+        return getFeatureResult(featureRequest, false);
+    }
+
+    /**
+     * Retrieve a single feature result (success or error) for a pre-built request.
+     * <p>
+     * When {@code propagateErrors} is {@code false}, this method never throws; in case of any error,
+     * it returns {@link Optional#empty()}. When {@code propagateErrors} is {@code true}, exceptions
+     * from the Izanami client (such as those thrown by the fail error strategy) are propagated to the caller.
+     *
+     * @param featureRequest  request containing exactly one feature id
+     * @param propagateErrors if {@code true}, exceptions from Izanami are propagated instead of being caught
+     * @return optional containing the first result if available
+     */
+    public Optional<IzanamiResult.Result> getFeatureResult(FeatureRequest featureRequest, boolean propagateErrors) {
         IzanamiClient client = clientRef.get();
         if (client == null) {
             return Optional.empty();
@@ -147,6 +162,12 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
             }
             return Optional.ofNullable(result.results.values().iterator().next());
         } catch (Exception e) {
+            if (propagateErrors) {
+                if (e instanceof RuntimeException re) {
+                    throw re;
+                }
+                throw new RuntimeException(e);
+            }
             log.debug("Izanami evaluation failed; falling back to configured defaults: {}", e.getMessage());
             return Optional.empty();
         }
