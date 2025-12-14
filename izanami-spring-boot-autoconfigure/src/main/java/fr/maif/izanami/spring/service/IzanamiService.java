@@ -7,6 +7,7 @@ import fr.maif.features.results.IzanamiResult;
 import fr.maif.izanami.spring.autoconfigure.IzanamiProperties;
 import fr.maif.requests.FeatureRequest;
 import fr.maif.requests.IzanamiConnectionInformation;
+import fr.maif.requests.SingleFeatureRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;

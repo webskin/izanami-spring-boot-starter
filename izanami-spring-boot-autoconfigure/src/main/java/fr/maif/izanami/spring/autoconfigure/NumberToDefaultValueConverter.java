@@ -1,6 +1,7 @@
 package fr.maif.izanami.spring.autoconfigure;
 
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.lang.NonNull;
 
 /**
  * Spring Boot {@code @ConfigurationProperties} converter for binding scalar numbers into a map-based default value.
@@ -9,11 +10,9 @@ final class NumberToDefaultValueConverter implements Converter<Number, DefaultVa
     private static final String SCALAR_KEY = "_scalar";
 
     @Override
-    public DefaultValueMap convert(Number source) {
+    public DefaultValueMap convert(@NonNull Number source) {
         DefaultValueMap map = new DefaultValueMap();
-        if (source != null) {
-            map.put(SCALAR_KEY, source);
-        }
+        map.put(SCALAR_KEY, source);
         return map;
     }
 }
