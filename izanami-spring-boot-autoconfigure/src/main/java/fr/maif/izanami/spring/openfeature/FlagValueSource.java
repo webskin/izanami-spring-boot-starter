@@ -3,7 +3,7 @@ package fr.maif.izanami.spring.openfeature;
 /**
  * Indicates where a flag value originates from.
  */
-public enum EvaluationValueSource {
+public enum FlagValueSource {
     /**
      * Value retrieved from Izanami.
      */
@@ -17,4 +17,3 @@ public enum EvaluationValueSource {
      */
     APPLICATION_ERROR_STRATEGY
 }
-

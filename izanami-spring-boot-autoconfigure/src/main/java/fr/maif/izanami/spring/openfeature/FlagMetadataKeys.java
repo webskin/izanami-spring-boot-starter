@@ -34,7 +34,7 @@ public final class FlagMetadataKeys {
     public static final String FLAG_CONFIG_ERROR_STRATEGY = "FLAG_CONFIG_ERROR_STRATEGY";
 
     /**
-     * Metadata key: {@link EvaluationValueSource} for the returned value.
+     * Metadata key: {@link FlagValueSource} for the returned value.
      */
     public static final String FLAG_EVALUATION_VALUE_SOURCE = "FLAG_EVALUATION_VALUE_SOURCE";
 }

@@ -42,9 +42,9 @@ import java.util.Optional;
  * Resilience and fallback rules:
  * <ul>
  *   <li>If the Izanami client is not configured/available, the provider returns the configured default value
- *       ({@link EvaluationValueSource#APPLICATION_ERROR_STRATEGY}).</li>
+ *       ({@link FlagValueSource#APPLICATION_ERROR_STRATEGY}).</li>
  *   <li>If Izanami returns an error, the provider returns the value computed by the Izanami client error strategy
- *       ({@link EvaluationValueSource#IZANAMI_ERROR_STRATEGY}).</li>
+ *       ({@link FlagValueSource#IZANAMI_ERROR_STRATEGY}).</li>
  *   <li>If an object-typed flag returns invalid JSON, the provider returns the configured default value and sets
  *       {@link Reason#ERROR}. The {@link ErrorCode} is intentionally left {@code null} to prevent the OpenFeature SDK
  *       from overwriting the returned value with the caller-provided default.</li>
@@ -213,12 +213,12 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         }
 
         IzanamiResult.Result result = maybeResult.get();
-        EvaluationValueSource source =
-            (result instanceof IzanamiResult.Success) ? EvaluationValueSource.IZANAMI : EvaluationValueSource.IZANAMI_ERROR_STRATEGY;
+        FlagValueSource source =
+            (result instanceof IzanamiResult.Success) ? FlagValueSource.IZANAMI : FlagValueSource.IZANAMI_ERROR_STRATEGY;
 
         try {
             T value = extractor.extract(result, config, fallbackValue);
-            String reason = (source == EvaluationValueSource.IZANAMI) ? null : Reason.ERROR.toString();
+            String reason = (source == FlagValueSource.IZANAMI) ? null : Reason.ERROR.toString();
             return new EvaluationOutcome<>(value, source, null, null, reason);
         } catch (Exception e) {
             return handleApplicationError(config, fallbackValue, e.getMessage());
@@ -229,7 +229,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         ErrorStrategy strategy = config.errorStrategy();
         return switch (strategy) {
             case FAIL -> throw new GeneralError(message);
-            case NULL_VALUE -> new EvaluationOutcome<>(null, EvaluationValueSource.APPLICATION_ERROR_STRATEGY, null, message, Reason.ERROR.toString());
+            case NULL_VALUE -> new EvaluationOutcome<>(null, FlagValueSource.APPLICATION_ERROR_STRATEGY, null, message, Reason.ERROR.toString());
             case DEFAULT_VALUE, CALLBACK -> EvaluationOutcome.applicationFallback(fallbackValue, message);
         };
     }
@@ -395,7 +395,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
             .errorCode(ErrorCode.TYPE_MISMATCH)
             .errorMessage("Feature flag '" + key + "' is configured as '" + config.valueType().name()
                 + "' but evaluated as '" + expectedType.name() + "'")
-            .flagMetadata(metadata(config, EvaluationValueSource.APPLICATION_ERROR_STRATEGY))
+            .flagMetadata(metadata(config, FlagValueSource.APPLICATION_ERROR_STRATEGY))
             .build();
     }
 
@@ -409,7 +409,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
             return builder.build();
         }
 
-        if (outcome.source() == EvaluationValueSource.IZANAMI) {
+        if (outcome.source() == FlagValueSource.IZANAMI) {
             return builder.build();
         }
 
@@ -422,7 +422,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         return builder.build();
     }
 
-    private ImmutableMetadata metadata(FlagConfig config, EvaluationValueSource source) {
+    private ImmutableMetadata metadata(FlagConfig config, FlagValueSource source) {
         String defaultValueString = stringifyDefaultValue(config);
         return ImmutableMetadata.builder()
             .addString(FlagMetadataKeys.FLAG_CONFIG_ID, config.id())
@@ -518,17 +518,17 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
 
     private record EvaluationOutcome<T>(
         T value,
-        EvaluationValueSource source,
+        FlagValueSource source,
         @Nullable ErrorCode errorCode,
         @Nullable String errorMessage,
         @Nullable String reason
     ) {
         static <T> EvaluationOutcome<T> applicationFallback(T fallbackValue, @Nullable String message) {
-            return new EvaluationOutcome<>(fallbackValue, EvaluationValueSource.APPLICATION_ERROR_STRATEGY, null, message, Reason.DEFAULT.toString());
+            return new EvaluationOutcome<>(fallbackValue, FlagValueSource.APPLICATION_ERROR_STRATEGY, null, message, Reason.DEFAULT.toString());
         }
 
         static <T> EvaluationOutcome<T> invalidJsonFallback(T fallbackValue, @Nullable String message) {
-            return new EvaluationOutcome<>(fallbackValue, EvaluationValueSource.APPLICATION_ERROR_STRATEGY, null, message, Reason.ERROR.toString());
+            return new EvaluationOutcome<>(fallbackValue, FlagValueSource.APPLICATION_ERROR_STRATEGY, null, message, Reason.ERROR.toString());
         }
     }
 
