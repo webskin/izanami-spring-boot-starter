@@ -47,6 +47,38 @@ import java.util.Optional;
  *       {@link Reason#ERROR}. The {@link ErrorCode} is intentionally left {@code null} to prevent the OpenFeature SDK
  *       from overwriting the returned value with the caller-provided default.</li>
  * </ul>
+ * <p>
+ * <b>Note on OpenFeature {@code variant} field:</b>
+ * <p>
+ * Izanami server does NOT return a "variant" field in its feature flag evaluation responses.
+ * The OpenFeature {@code variant} field is always null in evaluations from this provider.
+ * <p>
+ * Izanami supports activation conditions (user targeting, date ranges, percentage rollout),
+ * but these are only returned via the bulk evaluation endpoint {@code GET /api/v2/features}
+ * with the response structure:
+ * <pre>{@code
+ * {
+ *   "<context or empty>": {
+ *     "name": "feature-name",
+ *     "active": <boolean|string|number>,
+ *     "project": "project-name",
+ *     "conditions": {
+ *       "<context>": {
+ *         "enabled": true,
+ *         "resultType": "boolean|string|number",
+ *         "conditions": [
+ *           { "period": {...}, "rule": {"users": [...]} }
+ *         ]
+ *       }
+ *     }
+ *   }
+ * }
+ * }</pre>
+ * <p>
+ * Izanami does indicate which specific condition triggered the evaluation result.
+ * <p>
+ * To support the OpenFeature {@code variant} field, the {@code izanami-java-client} library
+ * would need to be updated to parse and expose condition matching information.
  */
 public final class IzanamiFeatureProvider implements FeatureProvider {
     private static final Logger log = LoggerFactory.getLogger(IzanamiFeatureProvider.class);
