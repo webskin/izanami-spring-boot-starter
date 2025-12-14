@@ -40,12 +40,5 @@ public enum EvaluationValueType {
             return BOOLEAN;
         }
     }
-
-    /**
-     * @return a lowercase representation suitable for metadata and configuration display.
-     */
-    public String toExternalForm() {
-        return name().toLowerCase();
-    }
 }
 
