@@ -1,5 +1,6 @@
 package fr.maif.izanami.spring.openfeature;
 
+import fr.maif.izanami.spring.autoconfigure.DefaultValueMap;
 import org.springframework.lang.Nullable;
 
 import java.math.BigDecimal;
@@ -21,7 +22,7 @@ public final class FlagConfig {
     private EvaluationValueType valueType = EvaluationValueType.BOOLEAN;
     private ErrorStrategy errorStrategy = ErrorStrategy.DEFAULT_VALUE;
     @Nullable
-    private Map<String, Object> defaultValue;
+    private DefaultValueMap defaultValue;
 
     /**
      * Create an empty config instance for configuration binding.
@@ -107,14 +108,14 @@ public final class FlagConfig {
      * For YAML arrays, this map contains numeric keys ({@code "0"}, {@code "1"}, ...).
      */
     @Nullable
-    public Map<String, Object> getDefaultValue() {
+    public DefaultValueMap getDefaultValue() {
         return defaultValue;
     }
 
     /**
      * @param defaultValue the raw configured default value
      */
-    public void setDefaultValue(@Nullable Map<String, Object> defaultValue) {
+    public void setDefaultValue(@Nullable DefaultValueMap defaultValue) {
         this.defaultValue = defaultValue;
     }
 

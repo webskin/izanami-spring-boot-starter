@@ -21,7 +21,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
 
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -69,7 +68,7 @@ public class IzanamiAutoConfiguration {
      */
     @Bean
     @ConfigurationPropertiesBinding
-    public Converter<String, Map<String, Object>> stringToDefaultValueConverter() {
+    public Converter<String, DefaultValueMap> stringToDefaultValueConverter() {
         return new StringToDefaultValueConverter();
     }
 
@@ -80,7 +79,7 @@ public class IzanamiAutoConfiguration {
      */
     @Bean
     @ConfigurationPropertiesBinding
-    public Converter<Boolean, Map<String, Object>> booleanToDefaultValueConverter() {
+    public Converter<Boolean, DefaultValueMap> booleanToDefaultValueConverter() {
         return new BooleanToDefaultValueConverter();
     }
 
@@ -91,7 +90,7 @@ public class IzanamiAutoConfiguration {
      */
     @Bean
     @ConfigurationPropertiesBinding
-    public Converter<Number, Map<String, Object>> numberToDefaultValueConverter() {
+    public Converter<Number, DefaultValueMap> numberToDefaultValueConverter() {
         return new NumberToDefaultValueConverter();
     }
 
