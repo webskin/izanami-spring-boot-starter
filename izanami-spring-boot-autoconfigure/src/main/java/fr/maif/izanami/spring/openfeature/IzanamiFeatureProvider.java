@@ -338,6 +338,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
             .build();
     }
 
+    // TODO GAUVINMIC check
     private <T> ProviderEvaluation<T> toProviderEvaluation(EvaluationOutcome<T> outcome, FlagConfig config) {
         ProviderEvaluation.ProviderEvaluationBuilder<T> builder = ProviderEvaluation.<T>builder()
             .value(outcome.value())
@@ -464,10 +465,6 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
     ) {
         static <T> EvaluationOutcome<T> applicationFallback(T fallbackValue, @Nullable String message) {
             return new EvaluationOutcome<>(fallbackValue, FlagValueSource.APPLICATION_ERROR_STRATEGY, null, message, Reason.DEFAULT.toString());
-        }
-
-        static <T> EvaluationOutcome<T> invalidJsonFallback(T fallbackValue, @Nullable String message) {
-            return new EvaluationOutcome<>(fallbackValue, FlagValueSource.APPLICATION_ERROR_STRATEGY, null, message, Reason.ERROR.toString());
         }
     }
 
