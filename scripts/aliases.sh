@@ -55,12 +55,27 @@ izsb_test() { izsb_mvn -B -ntp test; }
 izsb_verify() { izsb_mvn -B -ntp verify; }
 izsb_install() { izsb_mvn -B -ntp install; }
 
+izsb_compose() {
+  local compose_cmd
+  if command -v docker >/dev/null 2>&1; then
+    compose_cmd="docker compose"
+  elif command -v podman-compose >/dev/null 2>&1; then
+    compose_cmd="podman-compose"
+  elif command -v podman >/dev/null 2>&1; then
+    compose_cmd="podman compose"
+  else
+    echo "Error: Neither docker nor podman found" >&2
+    return 1
+  fi
+  (cd "${IZSB_ROOT}" && ${compose_cmd} -f docker-compose.izanami.yml "$@")
+}
+
 izsb_up() {
-  (cd "${IZSB_ROOT}" && docker compose -f docker-compose.izanami.yml up -d)
+  izsb_compose up -d
 }
 
 izsb_down() {
-  (cd "${IZSB_ROOT}" && docker compose -f docker-compose.izanami.yml down -v)
+  izsb_compose down -v
 }
 
 izsb_seed() {
@@ -76,7 +91,10 @@ izsb_seed() {
 izsb_it_verify() {
   izsb_up
   izsb_seed
-  IZANAMI_INTEGRATION_TEST=true izsb_mvn -B -ntp -Pintegration-tests verify
+  local result=0
+  IZANAMI_INTEGRATION_TEST=true izsb_mvn -B -ntp -Pintegration-tests verify || result=$?
+  izsb_down
+  return $result
 }
 
 izsb_help() {
@@ -90,11 +108,11 @@ Maven:
   izsb_verify
   izsb_install
 
-Izanami (Docker):
-  izsb_up
-  izsb_down
-  izsb_seed
-  izsb_it_verify
+Izanami (Docker/Podman):
+  izsb_up        - Start Izanami containers
+  izsb_down      - Stop and remove containers
+  izsb_seed      - Seed test data and export env vars
+  izsb_it_verify - Run integration tests (up -> seed -> test -> down)
 EOF
 }
 
