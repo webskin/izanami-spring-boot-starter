@@ -6,7 +6,7 @@ services:
     image: postgres:15-alpine
     container_name: izanami-postgres
     ports:
-      - "5432:5432"
+      - "6543:5432"
     environment:
       - POSTGRES_DB=izanami
       - POSTGRES_USER=izanami

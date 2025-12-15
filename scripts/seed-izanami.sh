@@ -64,13 +64,13 @@ token = None
 with open(headers_path, "r", encoding="utf-8", errors="ignore") as f:
     for line in f:
         if line.lower().startswith("set-cookie:"):
-            match = re.search(r"\\btoken=([^;\\s]+)", line)
+            match = re.search(r"\btoken=([^;\s]+)", line)
             if match:
                 token = match.group(1)
                 break
 
 if not token:
-    sys.stderr.write("Failed to extract admin JWT cookie from /api/admin/login response\\n")
+    sys.stderr.write("Failed to extract admin JWT cookie from /api/admin/login response\n")
     sys.exit(1)
 
 print(token)

@@ -24,6 +24,8 @@
         <spring-boot.version>3.2.1</spring-boot.version>
         <izanami-client.version>2.3.7</izanami-client.version>
         <openfeature.sdk.version>1.16.0</openfeature.sdk.version>
+        <!-- Override Spring Boot managed Jackson version for izanami-client:2.3.7 compatibility -->
+        <jackson-bom.version>2.16.0</jackson-bom.version>
 
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
         <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
@@ -35,6 +37,16 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- Override Spring Boot managed Jackson version for izanami-client:2.3.7 compatibility -->
+            <!-- Must come BEFORE spring-boot-dependencies to take precedence -->
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${jackson-bom.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>
