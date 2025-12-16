@@ -3,7 +3,6 @@ package fr.maif.izanami.spring.autoconfigure;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.openfeature.sdk.FlagValueType;
 import fr.maif.IzanamiClient;
-import fr.maif.izanami.spring.openfeature.FlagConfig;
 import fr.maif.izanami.spring.openfeature.ErrorStrategy;
 import fr.maif.izanami.spring.openfeature.FlagsProperties;
 import fr.maif.izanami.spring.openfeature.api.ErrorStrategyFactory;
@@ -21,10 +20,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
-
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Auto-configuration for Izanami core services and configuration properties.
@@ -134,10 +129,6 @@ public class IzanamiAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public IzanamiService izanamiService(IzanamiProperties properties, FlagConfigService flagConfigService) {
-        Set<String> idsToPreload = flagConfigService.getAllFlagConfigs().stream()
-            .map(FlagConfig::key)
-            .filter(Objects::nonNull)
-            .collect(Collectors.toSet());
-        return new IzanamiService(properties, idsToPreload);
+        return new IzanamiService(properties, flagConfigService);
     }
 }

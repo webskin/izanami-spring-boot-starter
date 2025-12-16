@@ -5,6 +5,7 @@ import fr.maif.FeatureClientErrorStrategy;
 import fr.maif.IzanamiClient;
 import fr.maif.features.results.IzanamiResult;
 import fr.maif.izanami.spring.autoconfigure.IzanamiProperties;
+import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
 import fr.maif.requests.FeatureRequest;
 import fr.maif.requests.IzanamiConnectionInformation;
 import fr.maif.requests.SingleFeatureRequest;
@@ -18,6 +19,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /**
  * Thin lifecycle wrapper around {@link IzanamiClient}.
@@ -36,7 +38,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
     private static final Logger log = LoggerFactory.getLogger(IzanamiService.class);
 
     private final IzanamiProperties properties;
-    private final Set<String> featureFlagIdsToPreload;
+    private final FlagConfigService flagConfigService;
 
     private final AtomicReference<IzanamiClient> clientRef = new AtomicReference<>();
     private final AtomicReference<CompletableFuture<Void>> loadedRef = new AtomicReference<>(CompletableFuture.completedFuture(null));
@@ -45,12 +47,12 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
     /**
      * Create a new service.
      *
-     * @param properties               Izanami properties
-     * @param featureFlagIdsToPreload  ids to preload in the Izanami client cache
+     * @param properties        Izanami properties
+     * @param flagConfigService flag configuration service providing IDs to preload
      */
-    public IzanamiService(IzanamiProperties properties, Set<String> featureFlagIdsToPreload) {
+    public IzanamiService(IzanamiProperties properties, FlagConfigService flagConfigService) {
         this.properties = properties;
-        this.featureFlagIdsToPreload = Set.copyOf(featureFlagIdsToPreload);
+        this.flagConfigService = flagConfigService;
     }
 
     @Override
@@ -90,6 +92,10 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
 
         FeatureClientErrorStrategy.DefaultValueStrategy defaultErrorStrategy =
             FeatureClientErrorStrategy.defaultValueStrategy(false, "", BigDecimal.ZERO);
+
+        Set<String> featureFlagIdsToPreload = flagConfigService.getAllFlagConfigs().stream()
+            .map(config -> config.key())
+            .collect(Collectors.toSet());
 
         IzanamiClient client = IzanamiClient.newBuilder(connectionInformation)
             .withCacheConfiguration(cacheConfiguration)
