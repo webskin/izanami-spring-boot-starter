@@ -75,7 +75,6 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
     private static final Logger log = LoggerFactory.getLogger(IzanamiFeatureProvider.class);
     private static final String IZANAMI_CONTEXT_ATTRIBUTE = "context";
 
-    private final FlagConfigService flagConfigService;
     private final IzanamiService izanamiService;
     private final ObjectMapper objectMapper;
     private final EvaluationDependencies evaluationDependencies;
@@ -93,7 +92,6 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         IzanamiService izanamiService,
         ObjectMapper objectMapper
     ) {
-        this.flagConfigService = flagConfigService;
         this.izanamiService = izanamiService;
         this.objectMapper = objectMapper;
         this.evaluationDependencies = new EvaluationDependencies(flagConfigService, izanamiService, objectMapper);
@@ -156,7 +154,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         T extract(IzanamiResult.Result result, FlagConfig flagConfig);
     }
 
-    private record EvaluationDependencies(
+    public record EvaluationDependencies(
         FlagConfigService flagConfigService,
         IzanamiService izanamiService,
         ObjectMapper objectMapper
