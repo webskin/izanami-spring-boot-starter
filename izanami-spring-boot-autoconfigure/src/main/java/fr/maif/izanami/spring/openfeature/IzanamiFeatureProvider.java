@@ -370,7 +370,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
             .addString(FlagMetadataKeys.FLAG_CONFIG_DESCRIPTION, config.description())
             .addString(FlagMetadataKeys.FLAG_CONFIG_VALUE_TYPE, config.valueType().name())
             .addString(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE, defaultValueString)
-            .addString(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY, config.errorStrategy() == null ? null : config.errorStrategy().name())
+            .addString(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY, config.errorStrategy().name())
             .addString(FlagMetadataKeys.FLAG_VALUE_SOURCE, source.name())
             .build();
     }

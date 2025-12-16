@@ -1,6 +1,7 @@
 package fr.maif.izanami.spring.openfeature;
 
 import dev.openfeature.sdk.FlagValueType;
+import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 
 /**
@@ -21,7 +22,9 @@ public record FlagConfig(
     String key,
     String name,
     String description,
+    @NonNull
     FlagValueType valueType,
+    @NonNull
     ErrorStrategy errorStrategy,
     @Nullable Object defaultValue,
     @Nullable String callbackBean

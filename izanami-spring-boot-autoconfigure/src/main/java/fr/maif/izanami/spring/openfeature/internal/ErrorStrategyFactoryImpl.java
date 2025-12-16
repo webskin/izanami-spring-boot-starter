@@ -40,8 +40,7 @@ public final class ErrorStrategyFactoryImpl implements ErrorStrategyFactory {
 
     @Override
     public FeatureClientErrorStrategy<?> createErrorStrategy(FlagConfig config) {
-        ErrorStrategy strategy = config.errorStrategy() == null ? ErrorStrategy.DEFAULT_VALUE : config.errorStrategy();
-        return switch (strategy) {
+        return switch (config.errorStrategy()) {
             case DEFAULT_VALUE -> FeatureClientErrorStrategy.defaultValueStrategy(
                 asBooleanDefault(config),
                 asStringDefault(config),

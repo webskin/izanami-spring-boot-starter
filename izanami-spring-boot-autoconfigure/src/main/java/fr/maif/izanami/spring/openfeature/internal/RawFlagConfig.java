@@ -3,6 +3,7 @@ package fr.maif.izanami.spring.openfeature.internal;
 import dev.openfeature.sdk.FlagValueType;
 import fr.maif.izanami.spring.autoconfigure.DefaultValueMap;
 import fr.maif.izanami.spring.openfeature.ErrorStrategy;
+import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 
 import java.util.Comparator;
@@ -23,7 +24,9 @@ public final class RawFlagConfig {
     private String key;
     private String name;
     private String description;
+    @NonNull
     private FlagValueType valueType = FlagValueType.BOOLEAN;
+    @NonNull
     private ErrorStrategy errorStrategy = ErrorStrategy.DEFAULT_VALUE;
     @Nullable
     private DefaultValueMap defaultValue;

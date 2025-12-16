@@ -105,6 +105,19 @@ public final class FlagConfigServiceImpl implements FlagConfigService {
             strategy = ErrorStrategy.CALLBACK;
         }
 
+        // Default to DEFAULT_VALUE if strategy is still null
+        if (strategy == null) {
+            strategy = ErrorStrategy.DEFAULT_VALUE;
+        }
+
+        // Validate: valueType must not be null
+        if (valueType == null) {
+            throw new IllegalArgumentException(
+                "Flag '" + flagIdentifier + "' has no valueType configured. "
+                    + "Please specify a valueType (BOOLEAN, STRING, INTEGER, DOUBLE, or OBJECT)."
+            );
+        }
+
         // Validate: defaultValue only allowed with DEFAULT_VALUE strategy
         if (strategy != ErrorStrategy.DEFAULT_VALUE && raw.getDefaultValue() != null) {
             throw new IllegalArgumentException(
