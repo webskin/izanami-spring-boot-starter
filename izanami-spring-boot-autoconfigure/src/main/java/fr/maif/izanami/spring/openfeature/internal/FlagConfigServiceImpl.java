@@ -153,7 +153,7 @@ public final class FlagConfigServiceImpl implements FlagConfigService {
         return new FlagConfig(
             raw.getKey(),
             raw.getName(),
-            raw.getDescription(),
+            raw.getDescription() == null ? raw.getName() : raw.getDescription(),
             valueType,
             strategy,
             coercedDefaultValue,

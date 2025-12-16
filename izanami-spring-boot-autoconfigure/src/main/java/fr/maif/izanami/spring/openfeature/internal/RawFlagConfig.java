@@ -24,13 +24,9 @@ public final class RawFlagConfig {
     private String key;
     private String name;
     private String description;
-    @NonNull
     private FlagValueType valueType = FlagValueType.BOOLEAN;
-    @NonNull
     private ErrorStrategy errorStrategy = ErrorStrategy.DEFAULT_VALUE;
-    @Nullable
     private DefaultValueMap defaultValue;
-    @Nullable
     private String callbackBean;
 
     public RawFlagConfig() {

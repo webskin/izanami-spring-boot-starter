@@ -19,8 +19,11 @@ import org.springframework.lang.Nullable;
  * @param callbackBean  the Spring bean name for error callback (used with CALLBACK strategy)
  */
 public record FlagConfig(
+    @NonNull
     String key,
+    @NonNull
     String name,
+    @NonNull
     String description,
     @NonNull
     FlagValueType valueType,

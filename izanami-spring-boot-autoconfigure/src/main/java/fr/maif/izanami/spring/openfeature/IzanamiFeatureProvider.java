@@ -248,6 +248,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
             request.withContext(context.contextPath());
         }
 
+        // TODO
         boolean propagateErrors = config.errorStrategy() == ErrorStrategy.FAIL;
         return izanamiService.getFeatureResult(request, propagateErrors);
     }
@@ -443,7 +444,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
     /**
      * Lazily extracted Izanami context from an OpenFeature evaluation context.
      */
-    private record IzanamiContext(@Nullable String user, @Nullable String contextPath) {
+    public record IzanamiContext(@Nullable String user, @Nullable String contextPath) {
         static IzanamiContext from(@Nullable EvaluationContext ctx) {
             if (ctx == null) {
                 return new IzanamiContext(null, null);
