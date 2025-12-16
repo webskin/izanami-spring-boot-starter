@@ -18,6 +18,7 @@ import fr.maif.FeatureClientErrorStrategy;
 import fr.maif.features.results.IzanamiResult;
 import fr.maif.features.values.BooleanCastStrategy;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
+import fr.maif.izanami.spring.service.IzanamiClientNotAvailableException;
 import fr.maif.izanami.spring.service.IzanamiService;
 import fr.maif.requests.FeatureRequest;
 import org.slf4j.Logger;
@@ -195,10 +196,6 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
     ) {
         IzanamiContext izanamiContext = IzanamiContext.from(ctx);
 
-        if (config.key() == null || config.key().isBlank()) {
-            return handleApplicationError(config, fallbackValue, "Flag key is blank");
-        }
-
         Optional<IzanamiResult.Result> maybeResult = queryIzanami(config, izanamiContext);
         if (maybeResult.isEmpty()) {
             return handleApplicationError(config, fallbackValue, "Izanami client not available or evaluation failed");
@@ -242,7 +239,12 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
             request.withContext(context.contextPath());
         }
 
-        return izanamiService.getFeatureResult(request);
+        try {
+            return izanamiService.getFeatureResult(request);
+        } catch (IzanamiClientNotAvailableException e) {
+            log.debug("Izanami client not available; returning empty result");
+            return Optional.empty();
+        }
     }
 
     private Boolean extractBoolean(IzanamiResult.Result result, FlagConfig config, Boolean fallbackValue) {
@@ -382,7 +384,6 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         return defaultValue.toString();
     }
 
-    @SuppressWarnings("unchecked")
     private Value objectToValue(Object object) {
         if (object instanceof Value v) {
             return v;
@@ -463,11 +464,6 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
     @FunctionalInterface
     private interface PrimitiveExtractor<T> {
         T extract(IzanamiResult.Result result, FlagConfig config, T fallbackValue);
-    }
-
-    @FunctionalInterface
-    private interface DefaultValueConverter<T> {
-        T convert(FlagConfig config, @Nullable T callerDefault);
     }
 
     private static final class InvalidObjectJsonException extends RuntimeException {

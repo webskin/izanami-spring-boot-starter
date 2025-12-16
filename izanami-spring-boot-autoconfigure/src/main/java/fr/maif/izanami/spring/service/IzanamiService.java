@@ -139,16 +139,15 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
 
     /**
      * Retrieve a single feature result (success or error) for a pre-built request.
-     * <p>
-     * This method never throws; in case of any error, it returns {@link Optional#empty()}.
      *
      * @param featureRequest request containing exactly one feature key
      * @return optional containing the first result if available
+     * @throws IzanamiClientNotAvailableException if the Izanami client is not available
      */
     public Optional<IzanamiResult.Result> getFeatureResult(FeatureRequest featureRequest) {
         IzanamiClient client = clientRef.get();
         if (client == null) {
-            return Optional.empty();
+            throw new IzanamiClientNotAvailableException();
         }
         try {
             IzanamiResult result = client.featureValues(featureRequest).join();
@@ -261,7 +260,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
          * Evaluate the feature flag as a boolean.
          *
          * @return a future containing the boolean value
-         * @throws IllegalStateException if the Izanami client is not available
+         * @throws IzanamiClientNotAvailableException if the Izanami client is not available
          */
         public CompletableFuture<Boolean> booleanValue() {
             return evaluateBoolean(buildRequest());
@@ -271,7 +270,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
          * Evaluate the feature flag as a string.
          *
          * @return a future containing the string value
-         * @throws IllegalStateException if the Izanami client is not available
+         * @throws IzanamiClientNotAvailableException if the Izanami client is not available
          */
         public CompletableFuture<String> stringValue() {
             return evaluateString(buildRequest());
@@ -281,7 +280,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
          * Evaluate the feature flag as a number.
          *
          * @return a future containing the number value as BigDecimal
-         * @throws IllegalStateException if the Izanami client is not available
+         * @throws IzanamiClientNotAvailableException if the Izanami client is not available
          */
         public CompletableFuture<BigDecimal> numberValue() {
             return evaluateNumber(buildRequest());
@@ -323,7 +322,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
     ) {
         IzanamiClient client = clientRef.get();
         if (client == null) {
-            return Optional.empty();
+            throw new IzanamiClientNotAvailableException();
         }
         try {
             FeatureRequest featureRequest = FeatureRequest.newFeatureRequest()
@@ -350,7 +349,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
     private CompletableFuture<Boolean> evaluateBoolean(SingleFeatureRequest request) {
         IzanamiClient client = clientRef.get();
         if (client == null) {
-            throw new IllegalStateException("Izanami client is not available");
+            throw new IzanamiClientNotAvailableException();
         }
         return client.booleanValue(request);
     }
@@ -358,7 +357,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
     private CompletableFuture<String> evaluateString(SingleFeatureRequest request) {
         IzanamiClient client = clientRef.get();
         if (client == null) {
-            throw new IllegalStateException("Izanami client is not available");
+            throw new IzanamiClientNotAvailableException();
         }
         return client.stringValue(request);
     }
@@ -366,7 +365,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
     private CompletableFuture<BigDecimal> evaluateNumber(SingleFeatureRequest request) {
         IzanamiClient client = clientRef.get();
         if (client == null) {
-            throw new IllegalStateException("Izanami client is not available");
+            throw new IzanamiClientNotAvailableException();
         }
         return client.numberValue(request);
     }
