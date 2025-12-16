@@ -247,7 +247,8 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
                 .forFlagKey(flagConfig.key())
                 .withUser(evaluationContext.getTargetingKey())
                 .withContext(context)
-                .featureResultWithMetadata();
+                .featureResultWithMetadata()
+                .join();
         }
 
         protected ProviderEvaluation<T> typeMismatch(FlagValueType expectedType) {

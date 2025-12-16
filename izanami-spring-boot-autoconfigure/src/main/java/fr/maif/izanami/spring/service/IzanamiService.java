@@ -151,6 +151,15 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
         return loadedRef.get();
     }
 
+    /**
+     * Check if the Izanami client is connected and has successfully preloaded flags.
+     *
+     * @return {@code true} if connected and preloaded, {@code false} otherwise
+     */
+    public boolean isConnected() {
+        return connected;
+    }
+
     // =====================================================================
     // Fluent API entry points
     // =====================================================================
@@ -272,22 +281,22 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
         }
 
         /**
-         * Retrieve the raw feature result.
+         * Retrieve the raw feature result asynchronously.
          *
-         * @return optional containing the result if available
+         * @return a future containing an optional with the result if available
          * @throws IzanamiClientNotAvailableException if the Izanami client is not available
          */
-        public Optional<IzanamiResult.Result> featureResult() {
+        public CompletableFuture<Optional<IzanamiResult.Result>> featureResult() {
             return service.evaluateFeatureResult(flagConfig, user, context);
         }
 
         /**
-         * Retrieve the raw feature result with metadata.
+         * Retrieve the raw feature result with metadata asynchronously.
          *
-         * @return optional containing the result with metadata if available
+         * @return a future containing an optional with the result and metadata if available
          * @throws IzanamiClientNotAvailableException if the Izanami client is not available
          */
-        public Optional<ResultWithMetadata> featureResultWithMetadata() {
+        public CompletableFuture<Optional<ResultWithMetadata>> featureResultWithMetadata() {
             Map<String, String> metadata = new LinkedHashMap<>();
             metadata.put(FlagMetadataKeys.FLAG_CONFIG_KEY, flagConfig.key());
             metadata.put(FlagMetadataKeys.FLAG_CONFIG_NAME, flagConfig.name());
@@ -296,22 +305,22 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
             metadata.put(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE, stringifyDefaultValue(service.objectMapper, flagConfig));
             metadata.put(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY, flagConfig.rawErrorStrategy().name());
             try {
-                return service.evaluateFeatureResult(flagConfig, user, context).map(r -> {
+                return service.evaluateFeatureResult(flagConfig, user, context).thenApply(mayBeResult -> mayBeResult.map(r -> {
                     FlagValueSource valueSource = (r instanceof IzanamiResult.Success)
                         ? FlagValueSource.IZANAMI
                         : FlagValueSource.IZANAMI_ERROR_STRATEGY;
                     metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, valueSource.name());
                     return new ResultWithMetadata(r, unmodifiableMap(metadata));
-                });
+                }));
             } catch (Exception e) {
                 if (flagConfig.rawErrorStrategy() == ErrorStrategy.FAIL) {
-                    throw e;
+                    return CompletableFuture.failedFuture(e);
                 }
                 metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
-                return Optional.of(new ResultWithMetadata(
+                return CompletableFuture.completedFuture(Optional.of(new ResultWithMetadata(
                     new IzanamiResult.Error(flagConfig.errorStrategy(), new IzanamiError(e.getMessage())),
                     unmodifiableMap(metadata))
-                );
+                ));
             }
         }
 
@@ -333,7 +342,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
     // Internal evaluation methods
     // =====================================================================
 
-    private Optional<IzanamiResult.Result> evaluateFeatureResult(
+    private CompletableFuture<Optional<IzanamiResult.Result>> evaluateFeatureResult(
             FlagConfig flagConfig,
             @Nullable String user,
             @Nullable String context
@@ -350,14 +359,18 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
             if (context != null) {
                 featureRequest = featureRequest.withContext(context);
             }
-            IzanamiResult result = client.featureValues(featureRequest).join();
-            if (result == null || result.results == null || result.results.isEmpty()) {
-                return Optional.empty();
-            }
-            return Optional.of(result.results.values().iterator().next());
+            return client
+                .featureValues(featureRequest)
+                .thenApply(r -> {
+                    if (r.results != null && !r.results.isEmpty()) {
+                        return Optional.of(r.results.values().iterator().next());
+                    } else {
+                        return Optional.empty();
+                    }
+                });
         } catch (Exception e) {
             log.debug("Izanami evaluation failed; falling back to configured defaults: {}", e.getMessage());
-            return Optional.empty();
+            return CompletableFuture.failedFuture(e);
         }
     }
 
