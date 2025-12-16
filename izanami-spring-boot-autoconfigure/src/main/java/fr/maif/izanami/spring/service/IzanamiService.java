@@ -122,43 +122,12 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
     }
 
     /**
-     * @return {@code true} if the client is configured and preloading completed successfully.
-     */
-    public boolean isConnected() {
-        return connected && clientRef.get() != null;
-    }
-
-    /**
      * Explicit escape hatch to access the underlying Izanami client.
      *
      * @return the configured {@link IzanamiClient} when available
      */
     public Optional<IzanamiClient> unwrapClient() {
         return Optional.ofNullable(clientRef.get());
-    }
-
-    /**
-     * Retrieve a single feature result (success or error) for a pre-built request.
-     *
-     * @param featureRequest request containing exactly one feature key
-     * @return optional containing the first result if available
-     * @throws IzanamiClientNotAvailableException if the Izanami client is not available
-     */
-    public Optional<IzanamiResult.Result> getFeatureResult(FeatureRequest featureRequest) {
-        IzanamiClient client = clientRef.get();
-        if (client == null) {
-            throw new IzanamiClientNotAvailableException();
-        }
-        try {
-            IzanamiResult result = client.featureValues(featureRequest).join();
-            if (result == null || result.results == null || result.results.isEmpty()) {
-                return Optional.empty();
-            }
-            return Optional.ofNullable(result.results.values().iterator().next());
-        } catch (Exception e) {
-            log.debug("Izanami evaluation failed; falling back to configured defaults: {}", e.getMessage());
-            return Optional.empty();
-        }
     }
 
     /**
