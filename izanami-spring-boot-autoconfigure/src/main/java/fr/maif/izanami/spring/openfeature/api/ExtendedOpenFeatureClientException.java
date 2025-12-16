@@ -10,13 +10,13 @@ package fr.maif.izanami.spring.openfeature.api;
  *       is not configured with {@link fr.maif.izanami.spring.openfeature.ErrorStrategy#DEFAULT_VALUE}</li>
  * </ul>
  */
-public class OpenFeatureClientException extends RuntimeException {
+public class ExtendedOpenFeatureClientException extends RuntimeException {
 
-    public OpenFeatureClientException(String message) {
+    public ExtendedOpenFeatureClientException(String message) {
         super(message);
     }
 
-    public OpenFeatureClientException(String message, Throwable cause) {
+    public ExtendedOpenFeatureClientException(String message, Throwable cause) {
         super(message, cause);
     }
 }

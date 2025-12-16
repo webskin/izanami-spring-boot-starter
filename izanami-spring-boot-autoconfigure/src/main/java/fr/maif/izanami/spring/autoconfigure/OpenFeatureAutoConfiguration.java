@@ -7,9 +7,9 @@ import fr.maif.IzanamiClient;
 import fr.maif.izanami.spring.openfeature.IzanamiFeatureProvider;
 import fr.maif.izanami.spring.openfeature.api.ErrorStrategyFactory;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
-import fr.maif.izanami.spring.openfeature.api.OpenFeatureClient;
-import fr.maif.izanami.spring.openfeature.api.OpenFeatureClientFactory;
-import fr.maif.izanami.spring.openfeature.internal.OpenFeatureClientFactoryImpl;
+import fr.maif.izanami.spring.openfeature.api.ExtendedOpenFeatureClient;
+import fr.maif.izanami.spring.openfeature.api.ExtendedOpenFeatureClientFactory;
+import fr.maif.izanami.spring.openfeature.internal.ExtendedOpenFeatureClientFactoryImpl;
 import fr.maif.izanami.spring.service.IzanamiService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,25 +73,25 @@ public class OpenFeatureAutoConfiguration {
     }
 
     /**
-     * Factory for creating {@link OpenFeatureClient} instances.
+     * Factory for creating {@link ExtendedOpenFeatureClient} instances.
      * <p>
      * This factory mirrors the {@link OpenFeatureAPI#getClient()} methods but returns
-     * {@link OpenFeatureClient} instead of the standard SDK {@link Client}.
+     * {@link ExtendedOpenFeatureClient} instead of the standard SDK {@link Client}.
      *
      * @param openFeatureAPI    configured OpenFeature API
      * @param flagConfigService flag configuration service
      * @return a client factory instance
      */
     @Bean
-    @ConditionalOnMissingBean(OpenFeatureClientFactory.class)
-    public OpenFeatureClientFactory openFeatureClientFactory(
+    @ConditionalOnMissingBean(ExtendedOpenFeatureClientFactory.class)
+    public ExtendedOpenFeatureClientFactory extendedOpenFeatureClientFactory(
             OpenFeatureAPI openFeatureAPI,
             FlagConfigService flagConfigService) {
-        return new OpenFeatureClientFactoryImpl(openFeatureAPI, flagConfigService);
+        return new ExtendedOpenFeatureClientFactoryImpl(openFeatureAPI, flagConfigService);
     }
 
     /**
-     * Expose the default {@link OpenFeatureClient} for injection.
+     * Expose the default {@link ExtendedOpenFeatureClient} for injection.
      * <p>
      * This client extends the standard OpenFeature {@link Client} with additional methods
      * that auto-compute default values from flag configuration.
@@ -100,8 +100,8 @@ public class OpenFeatureAutoConfiguration {
      * @return an extended client instance
      */
     @Bean
-    @ConditionalOnMissingBean(OpenFeatureClient.class)
-    public OpenFeatureClient openFeatureClient(OpenFeatureClientFactory factory) {
+    @ConditionalOnMissingBean(ExtendedOpenFeatureClient.class)
+    public ExtendedOpenFeatureClient extendedOpenFeatureClient(ExtendedOpenFeatureClientFactory factory) {
         return factory.getClient();
     }
 

@@ -16,8 +16,8 @@ import dev.openfeature.sdk.Value;
 import fr.maif.izanami.spring.openfeature.ErrorStrategy;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
-import fr.maif.izanami.spring.openfeature.api.OpenFeatureClient;
-import fr.maif.izanami.spring.openfeature.api.OpenFeatureClientException;
+import fr.maif.izanami.spring.openfeature.api.ExtendedOpenFeatureClient;
+import fr.maif.izanami.spring.openfeature.api.ExtendedOpenFeatureClientException;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -26,15 +26,15 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 /**
- * Implementation of {@link OpenFeatureClient} that delegates to an underlying {@link Client}
+ * Implementation of {@link ExtendedOpenFeatureClient} that delegates to an underlying {@link Client}
  * while providing auto-computed default values for Boolean and Object types.
  */
-public final class OpenFeatureClientImpl implements OpenFeatureClient {
+public final class ExtendedOpenFeatureClientImpl implements ExtendedOpenFeatureClient {
 
     private final Client delegate;
     private final FlagConfigService flagConfigService;
 
-    public OpenFeatureClientImpl(Client delegate, FlagConfigService flagConfigService) {
+    public ExtendedOpenFeatureClientImpl(Client delegate, FlagConfigService flagConfigService) {
         this.delegate = delegate;
         this.flagConfigService = flagConfigService;
     }
@@ -414,37 +414,37 @@ public final class OpenFeatureClientImpl implements OpenFeatureClient {
     }
 
     @Override
-    public OpenFeatureClient onProviderReady(Consumer<EventDetails> handler) {
+    public ExtendedOpenFeatureClient onProviderReady(Consumer<EventDetails> handler) {
         delegate.onProviderReady(handler);
         return this;
     }
 
     @Override
-    public OpenFeatureClient onProviderConfigurationChanged(Consumer<EventDetails> handler) {
+    public ExtendedOpenFeatureClient onProviderConfigurationChanged(Consumer<EventDetails> handler) {
         delegate.onProviderConfigurationChanged(handler);
         return this;
     }
 
     @Override
-    public OpenFeatureClient onProviderStale(Consumer<EventDetails> handler) {
+    public ExtendedOpenFeatureClient onProviderStale(Consumer<EventDetails> handler) {
         delegate.onProviderStale(handler);
         return this;
     }
 
     @Override
-    public OpenFeatureClient onProviderError(Consumer<EventDetails> handler) {
+    public ExtendedOpenFeatureClient onProviderError(Consumer<EventDetails> handler) {
         delegate.onProviderError(handler);
         return this;
     }
 
     @Override
-    public OpenFeatureClient on(ProviderEvent event, Consumer<EventDetails> handler) {
+    public ExtendedOpenFeatureClient on(ProviderEvent event, Consumer<EventDetails> handler) {
         delegate.on(event, handler);
         return this;
     }
 
     @Override
-    public OpenFeatureClient removeHandler(ProviderEvent event, Consumer<EventDetails> handler) {
+    public ExtendedOpenFeatureClient removeHandler(ProviderEvent event, Consumer<EventDetails> handler) {
         delegate.removeHandler(event, handler);
         return this;
     }
@@ -473,13 +473,13 @@ public final class OpenFeatureClientImpl implements OpenFeatureClient {
 
     private FlagConfig getValidatedFlagConfig(String key) {
         FlagConfig config = flagConfigService.getFlagConfigByKey(key)
-            .orElseThrow(() -> new OpenFeatureClientException(
+            .orElseThrow(() -> new ExtendedOpenFeatureClientException(
                 "Flag '" + key + "' is not configured. "
                     + "Please add it to openfeature.flags configuration or use a method with explicit defaultValue."
             ));
 
         if (config.errorStrategy() != ErrorStrategy.DEFAULT_VALUE) {
-            throw new OpenFeatureClientException(
+            throw new ExtendedOpenFeatureClientException(
                 "Flag '" + key + "' has errorStrategy=" + config.errorStrategy().name()
                     + " but a method requiring auto-computed defaultValue was called. "
                     + "Either configure the flag with errorStrategy=DEFAULT_VALUE or use a method with explicit defaultValue."
@@ -494,7 +494,7 @@ public final class OpenFeatureClientImpl implements OpenFeatureClient {
         Object defaultValue = config.defaultValue();
 
         if (defaultValue == null) {
-            throw new OpenFeatureClientException(
+            throw new ExtendedOpenFeatureClientException(
                 "Flag '" + key + "' has no defaultValue configured. "
                     + "OpenFeature requires a non-null defaultValue. "
                     + "Please configure a defaultValue or use a method with explicit defaultValue."
@@ -502,7 +502,7 @@ public final class OpenFeatureClientImpl implements OpenFeatureClient {
         }
 
         if (!type.isInstance(defaultValue)) {
-            throw new OpenFeatureClientException(
+            throw new ExtendedOpenFeatureClientException(
                 "Flag '" + key + "' has defaultValue of type " + defaultValue.getClass().getSimpleName()
                     + " but expected " + type.getSimpleName() + ". Check your flag configuration."
             );

@@ -14,10 +14,10 @@ import dev.openfeature.sdk.Value;
  * {@link fr.maif.izanami.spring.openfeature.ErrorStrategy#DEFAULT_VALUE}.
  * <p>
  * If a flag is not configured with {@code errorStrategy=DEFAULT_VALUE} and a method that
- * requires auto-computed default value is called, an {@link OpenFeatureClientException}
+ * requires auto-computed default value is called, an {@link ExtendedOpenFeatureClientException}
  * is thrown.
  */
-public interface OpenFeatureClient extends Client {
+public interface ExtendedOpenFeatureClient extends Client {
 
     // Boolean evaluation methods (auto-computed default value)
 
