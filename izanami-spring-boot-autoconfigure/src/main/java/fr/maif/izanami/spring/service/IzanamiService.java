@@ -4,11 +4,14 @@ import fr.maif.FeatureCacheConfiguration;
 import fr.maif.FeatureClientErrorStrategy;
 import fr.maif.IzanamiClient;
 import fr.maif.features.results.IzanamiResult;
+import fr.maif.features.values.BooleanCastStrategy;
 import fr.maif.izanami.spring.autoconfigure.IzanamiProperties;
+import fr.maif.izanami.spring.openfeature.FlagConfig;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
 import fr.maif.requests.FeatureRequest;
 import fr.maif.requests.IzanamiConnectionInformation;
 import fr.maif.requests.SingleFeatureRequest;
+import org.springframework.lang.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
@@ -187,17 +190,143 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
         return loadedRef.get();
     }
 
+    // =====================================================================
+    // Fluent API entry points
+    // =====================================================================
+
     /**
-     * Evaluate a boolean feature flag.
+     * Start building a feature request for the given flag key (UUID).
      * <p>
-     * This is a direct delegate to the Izanami client. The error strategy configured
-     * on the request (or the client default) will be applied.
+     * Example usage:
+     * <pre>{@code
+     * izanamiService.forFlagKey("my-flag-uuid")
+     *     .withUser("user-123")
+     *     .booleanValue()
+     *     .thenAccept(enabled -> ...);
+     * }</pre>
      *
-     * @param request the single feature request
-     * @return the feature boolean value
-     * @throws IllegalStateException if the client is not available
+     * @param flagKey the flag key (UUID) as configured in Izanami
+     * @return a builder for configuring and executing the feature request
+     * @throws FlagNotFoundException if the flag key is not found in configuration
      */
-    public CompletableFuture<Boolean> booleanValue(SingleFeatureRequest request) {
+    public FeatureRequestBuilder forFlagKey(String flagKey) {
+        FlagConfig flagConfig = flagConfigService
+            .getFlagConfigByKey(flagKey)
+            .orElseThrow(() -> new FlagNotFoundException(flagKey, FlagNotFoundException.IdentifierType.KEY));
+        return new FeatureRequestBuilder(flagConfig);
+    }
+
+    /**
+     * Start building a feature request for the given flag name.
+     * <p>
+     * Example usage:
+     * <pre>{@code
+     * izanamiService.forFlagName("my-feature")
+     *     .withUser("user-123")
+     *     .stringValue()
+     *     .thenAccept(value -> ...);
+     * }</pre>
+     *
+     * @param flagName the flag name as configured in openfeature.flags
+     * @return a builder for configuring and executing the feature request
+     * @throws FlagNotFoundException if the flag name is not found in configuration
+     */
+    public FeatureRequestBuilder forFlagName(String flagName) {
+        FlagConfig flagConfig = flagConfigService
+            .getFlagConfigByName(flagName)
+            .orElseThrow(() -> new FlagNotFoundException(flagName, FlagNotFoundException.IdentifierType.NAME));
+        return new FeatureRequestBuilder(flagConfig);
+    }
+
+    // =====================================================================
+    // Feature Request Builder
+    // =====================================================================
+
+    /**
+     * Fluent builder for configuring and executing feature flag evaluations.
+     * <p>
+     * Use {@link #forFlagKey(String)} or {@link #forFlagName(String)} to obtain an instance.
+     */
+    public final class FeatureRequestBuilder {
+        private final FlagConfig flagConfig;
+        private String user;
+        private String context;
+
+        private FeatureRequestBuilder(FlagConfig flagConfig) {
+            this.flagConfig = flagConfig;
+        }
+
+        /**
+         * Set the user identifier for this evaluation.
+         *
+         * @param user the user identifier
+         * @return this builder for chaining
+         */
+        public FeatureRequestBuilder withUser(@Nullable String user) {
+            this.user = user;
+            return this;
+        }
+
+        /**
+         * Set the context for this evaluation.
+         *
+         * @param context the evaluation context
+         * @return this builder for chaining
+         */
+        public FeatureRequestBuilder withContext(@Nullable String context) {
+            this.context = context;
+            return this;
+        }
+
+        /**
+         * Evaluate the feature flag as a boolean.
+         *
+         * @return a future containing the boolean value
+         * @throws IllegalStateException if the Izanami client is not available
+         */
+        public CompletableFuture<Boolean> booleanValue() {
+            return evaluateBoolean(buildRequest());
+        }
+
+        /**
+         * Evaluate the feature flag as a string.
+         *
+         * @return a future containing the string value
+         * @throws IllegalStateException if the Izanami client is not available
+         */
+        public CompletableFuture<String> stringValue() {
+            return evaluateString(buildRequest());
+        }
+
+        /**
+         * Evaluate the feature flag as a number.
+         *
+         * @return a future containing the number value as BigDecimal
+         * @throws IllegalStateException if the Izanami client is not available
+         */
+        public CompletableFuture<BigDecimal> numberValue() {
+            return evaluateNumber(buildRequest());
+        }
+
+        private SingleFeatureRequest buildRequest() {
+            SingleFeatureRequest request = SingleFeatureRequest.newSingleFeatureRequest(flagConfig.key())
+                .withErrorStrategy(flagConfig.errorStrategy())
+                .withBooleanCastStrategy(BooleanCastStrategy.LAX);
+            if (user != null) {
+                request = request.withUser(user);
+            }
+            if (context != null) {
+                request = request.withContext(context);
+            }
+            return request;
+        }
+    }
+
+    // =====================================================================
+    // Internal evaluation methods
+    // =====================================================================
+
+    private CompletableFuture<Boolean> evaluateBoolean(SingleFeatureRequest request) {
         IzanamiClient client = clientRef.get();
         if (client == null) {
             throw new IllegalStateException("Izanami client is not available");
@@ -205,17 +334,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
         return client.booleanValue(request);
     }
 
-    /**
-     * Evaluate a string feature flag.
-     * <p>
-     * This is a direct delegate to the Izanami client. The error strategy configured
-     * on the request (or the client default) will be applied.
-     *
-     * @param request the single feature request
-     * @return the feature string value
-     * @throws IllegalStateException if the client is not available
-     */
-    public CompletableFuture<String> stringValue(SingleFeatureRequest request) {
+    private CompletableFuture<String> evaluateString(SingleFeatureRequest request) {
         IzanamiClient client = clientRef.get();
         if (client == null) {
             throw new IllegalStateException("Izanami client is not available");
@@ -223,17 +342,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
         return client.stringValue(request);
     }
 
-    /**
-     * Evaluate a number feature flag.
-     * <p>
-     * This is a direct delegate to the Izanami client. The error strategy configured
-     * on the request (or the client default) will be applied.
-     *
-     * @param request the single feature request
-     * @return the feature number value as BigDecimal
-     * @throws IllegalStateException if the client is not available
-     */
-    public CompletableFuture<BigDecimal> numberValue(SingleFeatureRequest request) {
+    private CompletableFuture<BigDecimal> evaluateNumber(SingleFeatureRequest request) {
         IzanamiClient client = clientRef.get();
         if (client == null) {
             throw new IllegalStateException("Izanami client is not available");
