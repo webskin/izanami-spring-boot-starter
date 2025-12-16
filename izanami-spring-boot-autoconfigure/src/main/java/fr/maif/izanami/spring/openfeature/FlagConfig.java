@@ -27,47 +27,4 @@ public record FlagConfig(
     @Nullable String callbackBean
 ) {
 
-    /**
-     * Get the default value as a Boolean.
-     *
-     * @param callerDefault fallback if no configured default
-     * @return the boolean default value
-     */
-    @Nullable
-    public Boolean booleanDefault(@Nullable Boolean callerDefault) {
-        return defaultValue instanceof Boolean b ? b : callerDefault;
-    }
-
-    /**
-     * Get the default value as a String.
-     *
-     * @param callerDefault fallback if no configured default
-     * @return the string default value
-     */
-    @Nullable
-    public String stringDefault(@Nullable String callerDefault) {
-        return defaultValue instanceof String s ? s : callerDefault;
-    }
-
-    /**
-     * Get the default value as an Integer.
-     *
-     * @param callerDefault fallback if no configured default
-     * @return the integer default value
-     */
-    @Nullable
-    public Integer integerDefault(@Nullable Integer callerDefault) {
-        return defaultValue instanceof Integer i ? i : callerDefault;
-    }
-
-    /**
-     * Get the default value as a Double.
-     *
-     * @param callerDefault fallback if no configured default
-     * @return the double default value
-     */
-    @Nullable
-    public Double doubleDefault(@Nullable Double callerDefault) {
-        return defaultValue instanceof Double d ? d : callerDefault;
-    }
 }

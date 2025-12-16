@@ -134,22 +134,22 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
 
     @Override
     public ProviderEvaluation<Boolean> getBooleanEvaluation(String key, Boolean defaultValue, EvaluationContext ctx) {
-        return evaluatePrimitive(key, defaultValue, ctx, FlagValueType.BOOLEAN, this::extractBoolean, FlagConfig::booleanDefault);
+        return evaluatePrimitive(key, defaultValue, ctx, FlagValueType.BOOLEAN, this::extractBoolean);
     }
 
     @Override
     public ProviderEvaluation<String> getStringEvaluation(String key, String defaultValue, EvaluationContext ctx) {
-        return evaluatePrimitive(key, defaultValue, ctx, FlagValueType.STRING, this::extractString, FlagConfig::stringDefault);
+        return evaluatePrimitive(key, defaultValue, ctx, FlagValueType.STRING, this::extractString);
     }
 
     @Override
     public ProviderEvaluation<Integer> getIntegerEvaluation(String key, Integer defaultValue, EvaluationContext ctx) {
-        return evaluatePrimitive(key, defaultValue, ctx, FlagValueType.INTEGER, this::extractInteger, FlagConfig::integerDefault);
+        return evaluatePrimitive(key, defaultValue, ctx, FlagValueType.INTEGER, this::extractInteger);
     }
 
     @Override
     public ProviderEvaluation<Double> getDoubleEvaluation(String key, Double defaultValue, EvaluationContext ctx) {
-        return evaluatePrimitive(key, defaultValue, ctx, FlagValueType.DOUBLE, this::extractDouble, FlagConfig::doubleDefault);
+        return evaluatePrimitive(key, defaultValue, ctx, FlagValueType.DOUBLE, this::extractDouble);
     }
 
     @Override
@@ -173,8 +173,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         @Nullable T defaultValue,
         EvaluationContext ctx,
         FlagValueType expectedType,
-        PrimitiveExtractor<T> extractor,
-        DefaultValueConverter<T> defaultValueConverter
+        PrimitiveExtractor<T> extractor
     ) {
         Optional<FlagConfig> maybeConfig = resolveConfig(key);
         if (maybeConfig.isEmpty()) {
@@ -185,8 +184,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
             return typeMismatch(key, defaultValue, config, expectedType);
         }
 
-        T fallbackValue = defaultValueConverter.convert(config, defaultValue);
-        EvaluationOutcome<T> outcome = evaluateViaIzanami(config, ctx, fallbackValue, extractor);
+        EvaluationOutcome<T> outcome = evaluateViaIzanami(config, ctx, defaultValue, extractor);
         return toProviderEvaluation(outcome, config);
     }
 
@@ -228,7 +226,9 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
     private <T> EvaluationOutcome<T> handleApplicationError(FlagConfig config, T fallbackValue, String message) {
         ErrorStrategy strategy = config.errorStrategy();
         return switch (strategy) {
+            // TODO FAIL cannot work throw Openfeateur
             case FAIL -> throw new GeneralError(message);
+            // TODO Openfeature does not support null default values
             case NULL_VALUE -> new EvaluationOutcome<>(null, FlagValueSource.APPLICATION_ERROR_STRATEGY, null, message, Reason.ERROR.toString());
             case DEFAULT_VALUE, CALLBACK -> EvaluationOutcome.applicationFallback(fallbackValue, message);
         };

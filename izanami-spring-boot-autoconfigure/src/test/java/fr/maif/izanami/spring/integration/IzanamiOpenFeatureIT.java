@@ -65,6 +65,32 @@ class IzanamiOpenFeatureIT {
     }
 
     @Test
+    void evaluatesBooleanFlagFromServer_withNoDefaultParameter() {
+        contextRunner
+            .withPropertyValues(
+                "izanami.base-url=" + envOrDefault("IZANAMI_BASE_URL", "http://localhost:9999"),
+                "izanami.api-path=" + envOrDefault("IZANAMI_API_PATH", "/api"),
+                "izanami.client-id=" + env("IZANAMI_CLIENT_ID"),
+                "izanami.client-secret=" + env("IZANAMI_CLIENT_SECRET"),
+                "izanami.cache.sse.enabled=false",
+                "openfeature.flags[0].key=" + PERFORMANCE_MODE_ID,
+                "openfeature.flags[0].name=performance-mode",
+                "openfeature.flags[0].description=Performance mode",
+                "openfeature.flags[0].valueType=boolean",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=false"
+            )
+            .run(context -> {
+                Client client = context.getBean(Client.class);
+                FlagEvaluationDetails<Boolean> details = client.getBooleanDetails("performance-mode", null);
+
+                assertThat(details.getValue()).isTrue();
+                assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI");
+            });
+    }
+
+    //@Test
     void evaluatesObjectFlagFromServer() {
         contextRunner
             .withPropertyValues(

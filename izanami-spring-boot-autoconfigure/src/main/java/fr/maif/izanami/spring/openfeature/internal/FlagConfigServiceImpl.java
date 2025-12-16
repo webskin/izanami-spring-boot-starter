@@ -95,6 +95,16 @@ public final class FlagConfigServiceImpl implements FlagConfigService {
         FlagValueType valueType = raw.valueType();
         String flagIdentifier = raw.getName() != null ? raw.getName() : raw.getKey();
 
+        // Infer DEFAULT_VALUE strategy when defaultValue is provided without explicit strategy
+        if (strategy == null && raw.getDefaultValue() != null && raw.getCallbackBean() == null) {
+            strategy = ErrorStrategy.DEFAULT_VALUE;
+        }
+
+        // Infer CALLBACK strategy when callbackBean is provided without explicit strategy
+        if (strategy == null && raw.getCallbackBean() != null && raw.getDefaultValue() == null) {
+            strategy = ErrorStrategy.CALLBACK;
+        }
+
         // Validate: defaultValue only allowed with DEFAULT_VALUE strategy
         if (strategy != ErrorStrategy.DEFAULT_VALUE && raw.getDefaultValue() != null) {
             throw new IllegalArgumentException(
