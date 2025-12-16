@@ -185,6 +185,7 @@ public final class FlagConfigServiceImpl implements FlagConfigService {
             raw.getName(),
             raw.getDescription() == null ? raw.getName() : raw.getDescription(),
             valueType,
+            strategy,
             clientErrorStrategy,
             coercedDefaultValue,
             raw.getCallbackBean()

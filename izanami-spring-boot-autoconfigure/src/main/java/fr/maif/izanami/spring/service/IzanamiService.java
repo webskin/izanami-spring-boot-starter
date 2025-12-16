@@ -1,5 +1,8 @@
 package fr.maif.izanami.spring.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.openfeature.sdk.FlagValueType;
 import fr.maif.FeatureCacheConfiguration;
 import fr.maif.FeatureClientErrorStrategy;
 import fr.maif.IzanamiClient;
@@ -7,6 +10,8 @@ import fr.maif.features.results.IzanamiResult;
 import fr.maif.features.values.BooleanCastStrategy;
 import fr.maif.izanami.spring.autoconfigure.IzanamiProperties;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
+import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
+import fr.maif.izanami.spring.openfeature.FlagValueSource;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
 import fr.maif.requests.FeatureRequest;
 import fr.maif.requests.IzanamiConnectionInformation;
@@ -18,8 +23,7 @@ import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 
 import java.math.BigDecimal;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -42,6 +46,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
 
     private final IzanamiProperties properties;
     private final FlagConfigService flagConfigService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final AtomicReference<IzanamiClient> clientRef = new AtomicReference<>();
     private final AtomicReference<CompletableFuture<Void>> loadedRef = new AtomicReference<>(CompletableFuture.completedFuture(null));
@@ -266,6 +271,32 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
             return evaluateFeatureResult(flagConfig, user, context);
         }
 
+        /**
+         * Retrieve the raw feature result with metadata.
+         * <p>
+         * This method never throws; in case of any error, it returns {@link Optional#empty()}.
+         *
+         * @return optional containing the result with metadata if available
+         */
+        public Optional<ResultWithMetadata> featureResultWithMetadata() {
+            return evaluateFeatureResult(flagConfig, user, context).map(r -> {
+                FlagValueSource valueSource = (r instanceof IzanamiResult.Success)
+                    ? FlagValueSource.IZANAMI
+                    : FlagValueSource.IZANAMI_ERROR_STRATEGY;
+
+                Map<String, String> metadata = new LinkedHashMap<>();
+                metadata.put(FlagMetadataKeys.FLAG_CONFIG_KEY, flagConfig.key());
+                metadata.put(FlagMetadataKeys.FLAG_CONFIG_NAME, flagConfig.name());
+                metadata.put(FlagMetadataKeys.FLAG_CONFIG_DESCRIPTION, flagConfig.description());
+                metadata.put(FlagMetadataKeys.FLAG_CONFIG_VALUE_TYPE, flagConfig.valueType().name());
+                metadata.put(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE, stringifyDefaultValue(objectMapper, flagConfig));
+                metadata.put(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY, flagConfig.rawErrorStrategy().name());
+                metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, valueSource.name());
+
+                return new ResultWithMetadata(r, Collections.unmodifiableMap(metadata));
+            });
+        }
+
         private SingleFeatureRequest buildRequest() {
             SingleFeatureRequest request = SingleFeatureRequest.newSingleFeatureRequest(flagConfig.key())
                 .withErrorStrategy(flagConfig.errorStrategy())
@@ -337,6 +368,21 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
             throw new IzanamiClientNotAvailableException();
         }
         return client.numberValue(request);
+    }
+
+    public static String stringifyDefaultValue(ObjectMapper objectMapper, FlagConfig config) {
+        Object defaultValue = config.defaultValue();
+        if (defaultValue == null) {
+            return null;
+        }
+        if (config.valueType() == FlagValueType.OBJECT) {
+            try {
+                return objectMapper.writeValueAsString(defaultValue);
+            } catch (JsonProcessingException e) {
+                return defaultValue.toString();
+            }
+        }
+        return defaultValue.toString();
     }
 
     @Override

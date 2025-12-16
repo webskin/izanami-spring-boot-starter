@@ -20,7 +20,7 @@ import fr.maif.features.values.BooleanCastStrategy;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
 import fr.maif.izanami.spring.service.IzanamiClientNotAvailableException;
 import fr.maif.izanami.spring.service.IzanamiService;
-import fr.maif.requests.FeatureRequest;
+import fr.maif.izanami.spring.service.ResultWithMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.Nullable;
@@ -154,14 +154,14 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         if (maybeConfig.isEmpty()) {
             return notFound(key, defaultValue);
         }
-        FlagConfig config = maybeConfig.get();
-        if (config.valueType() != FlagValueType.OBJECT) {
-            return typeMismatch(key, defaultValue, config, FlagValueType.OBJECT);
+        FlagConfig flagConfig = maybeConfig.get();
+        if (flagConfig.valueType() != FlagValueType.OBJECT) {
+            return typeMismatch(key, defaultValue, flagConfig, FlagValueType.OBJECT);
         }
 
-        Value fallbackValue = toOpenFeatureValueOrNullSafe(config.defaultValue(), defaultValue);
-        EvaluationOutcome<Value> outcome = evaluateViaIzanami(config, ctx, fallbackValue, this::extractObject);
-        return toProviderEvaluation(outcome, config);
+        Value fallbackValue = toOpenFeatureValueOrNullSafe(flagConfig.defaultValue(), defaultValue);
+        EvaluationOutcome<Value> outcome = evaluateViaIzanami(flagConfig, ctx, fallbackValue, this::extractObject);
+        return toProviderEvaluation(outcome, flagConfig);
     }
 
     private <T> ProviderEvaluation<T> evaluatePrimitive(
@@ -175,13 +175,13 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         if (maybeConfig.isEmpty()) {
             return notFound(key, defaultValue);
         }
-        FlagConfig config = maybeConfig.get();
-        if (config.valueType() != expectedType) {
-            return typeMismatch(key, defaultValue, config, expectedType);
+        FlagConfig flagConfig = maybeConfig.get();
+        if (flagConfig.valueType() != expectedType) {
+            return typeMismatch(key, defaultValue, flagConfig, expectedType);
         }
 
-        EvaluationOutcome<T> outcome = evaluateViaIzanami(config, ctx, defaultValue, extractor);
-        return toProviderEvaluation(outcome, config);
+        EvaluationOutcome<T> outcome = evaluateViaIzanami(flagConfig, ctx, defaultValue, extractor);
+        return toProviderEvaluation(outcome, flagConfig);
     }
 
     private Optional<FlagConfig> resolveConfig(String key) {
@@ -189,73 +189,78 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
     }
 
     private <T> EvaluationOutcome<T> evaluateViaIzanami(
-        FlagConfig config,
+        FlagConfig flagConfig,
         EvaluationContext ctx,
         T fallbackValue,
         PrimitiveExtractor<T> extractor
     ) {
         IzanamiContext izanamiContext = IzanamiContext.from(ctx);
 
-        Optional<IzanamiResult.Result> maybeResult = queryIzanami(config, izanamiContext);
+        Optional<ResultWithMetadata> maybeResult = queryIzanami(flagConfig, izanamiContext);
         if (maybeResult.isEmpty()) {
-            return handleApplicationError(config, fallbackValue, "Izanami client not available or evaluation failed");
+            return handleApplicationError(flagConfig, fallbackValue, "Izanami client not available or evaluation failed");
         }
 
-        IzanamiResult.Result result = maybeResult.get();
-        FlagValueSource source =
-            (result instanceof IzanamiResult.Success) ? FlagValueSource.IZANAMI : FlagValueSource.IZANAMI_ERROR_STRATEGY;
+        ResultWithMetadata resultWithMetadata = maybeResult.get();
+        IzanamiResult.Result result = resultWithMetadata.result();
+        ImmutableMetadata metadata = computeImmutableMetadataFromResultWithMetadata(resultWithMetadata);
+
+        FlagValueSource source = (result instanceof IzanamiResult.Success)
+            ? FlagValueSource.IZANAMI
+            : FlagValueSource.IZANAMI_ERROR_STRATEGY;
 
         try {
-            T value = extractor.extract(result, config, fallbackValue);
+            T value = extractor.extract(result, flagConfig, fallbackValue);
             String reason = (source == FlagValueSource.IZANAMI) ? null : Reason.ERROR.toString();
-            return new EvaluationOutcome<>(value, source, null, null, reason);
+            return new EvaluationOutcome<>(value, source, metadata, null, null, reason);
         } catch (Exception e) {
-            return handleApplicationError(config, fallbackValue, e.getMessage());
+            return handleApplicationError(flagConfig, fallbackValue, e.getMessage());
         }
     }
 
-    private <T> EvaluationOutcome<T> handleApplicationError(FlagConfig config, T fallbackValue, String message) {
-        FeatureClientErrorStrategy<?> strategy = config.errorStrategy();
+    private <T> EvaluationOutcome<T> handleApplicationError(FlagConfig flagConfig, T fallbackValue, String message) {
+        FeatureClientErrorStrategy<?> strategy = flagConfig.errorStrategy();
+        ImmutableMetadata metadata = metadata(flagConfig, FlagValueSource.APPLICATION_ERROR_STRATEGY);
         if (strategy instanceof FeatureClientErrorStrategy.FailStrategy) {
             throw new GeneralError(message);
         }
         if (strategy instanceof FeatureClientErrorStrategy.NullValueStrategy) {
-            return new EvaluationOutcome<>(null, FlagValueSource.APPLICATION_ERROR_STRATEGY, null, message, Reason.ERROR.toString());
+            return new EvaluationOutcome<>(null, FlagValueSource.APPLICATION_ERROR_STRATEGY, metadata, null, message, Reason.ERROR.toString());
         }
         // DEFAULT_VALUE or CALLBACK strategy
-        return EvaluationOutcome.applicationFallback(fallbackValue, message);
+        return EvaluationOutcome.applicationFallback(fallbackValue, metadata, message);
     }
 
-    private Optional<IzanamiResult.Result> queryIzanami(FlagConfig config, IzanamiContext context) {
+    private Optional<ResultWithMetadata> queryIzanami(FlagConfig flagConfig, IzanamiContext context) {
         try {
             return izanamiService
-                .forFlagKey(config.key())
+                .forFlagKey(flagConfig.key())
                 .withUser(context.user())
                 .withContext(context.contextPath())
-                .featureResult();
+                .featureResultWithMetadata();
         } catch (IzanamiClientNotAvailableException e) {
             log.debug("Izanami client not available; returning empty result");
             return Optional.empty();
         }
     }
 
-    private Boolean extractBoolean(IzanamiResult.Result result, FlagConfig config, Boolean fallbackValue) {
+    private Boolean extractBoolean(IzanamiResult.Result result, FlagConfig flagConfig, Boolean fallbackValue) {
         return result.booleanValue(BooleanCastStrategy.LAX);
     }
 
-    private String extractString(IzanamiResult.Result result, FlagConfig config, String fallbackValue) {
+    private String extractString(IzanamiResult.Result result, FlagConfig flagConfig, String fallbackValue) {
         return result.stringValue();
     }
 
-    private Integer extractInteger(IzanamiResult.Result result, FlagConfig config, Integer fallbackValue) {
+    private Integer extractInteger(IzanamiResult.Result result, FlagConfig flagConfig, Integer fallbackValue) {
         return Optional.ofNullable(result.numberValue()).map(Number::intValue).orElse(null);
     }
 
-    private Double extractDouble(IzanamiResult.Result result, FlagConfig config, Double fallbackValue) {
+    private Double extractDouble(IzanamiResult.Result result, FlagConfig flagConfig, Double fallbackValue) {
         return Optional.ofNullable(result.numberValue()).map(Number::doubleValue).orElse(null);
     }
 
-    private Value extractObject(IzanamiResult.Result result, FlagConfig config, Value fallbackValue) {
+    private Value extractObject(IzanamiResult.Result result, FlagConfig flagConfig, Value fallbackValue) {
         String json = result.stringValue();
         if (json == null) {
             return new Value();
@@ -264,7 +269,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
             Object tree = objectMapper.readValue(json, Object.class);
             return objectToValue(tree);
         } catch (JsonProcessingException e) {
-            throw new InvalidObjectJsonException("Flag '" + config.name() + "' returned invalid JSON for valueType=object");
+            throw new InvalidObjectJsonException("Flag '" + flagConfig.name() + "' returned invalid JSON for valueType=object");
         }
     }
 
@@ -312,23 +317,23 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
     private <T> ProviderEvaluation<T> typeMismatch(
         String key,
         @Nullable T defaultValue,
-        FlagConfig config,
+        FlagConfig flagConfig,
         FlagValueType expectedType
     ) {
         return ProviderEvaluation.<T>builder()
             .value(defaultValue)
             .errorCode(ErrorCode.TYPE_MISMATCH)
-            .errorMessage("Feature flag '" + key + "' is configured as '" + config.valueType().name()
+            .errorMessage("Feature flag '" + key + "' is configured as '" + flagConfig.valueType().name()
                 + "' but evaluated as '" + expectedType.name() + "'")
-            .flagMetadata(metadata(config, FlagValueSource.APPLICATION_ERROR_STRATEGY))
+            .flagMetadata(metadata(flagConfig, FlagValueSource.APPLICATION_ERROR_STRATEGY))
             .build();
     }
 
     // TODO GAUVINMIC check
-    private <T> ProviderEvaluation<T> toProviderEvaluation(EvaluationOutcome<T> outcome, FlagConfig config) {
+    private <T> ProviderEvaluation<T> toProviderEvaluation(EvaluationOutcome<T> outcome, FlagConfig flagConfig) {
         ProviderEvaluation.ProviderEvaluationBuilder<T> builder = ProviderEvaluation.<T>builder()
             .value(outcome.value())
-            .flagMetadata(metadata(config, outcome.source()));
+            .flagMetadata(metadata(flagConfig, outcome.source()));
 
         if (outcome.errorCode() != null) {
             builder.errorCode(outcome.errorCode()).errorMessage(outcome.errorMessage());
@@ -348,32 +353,27 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         return builder.build();
     }
 
-    private ImmutableMetadata metadata(FlagConfig config, FlagValueSource source) {
-        String defaultValueString = stringifyDefaultValue(config);
-        return ImmutableMetadata.builder()
-            .addString(FlagMetadataKeys.FLAG_CONFIG_KEY, config.key())
-            .addString(FlagMetadataKeys.FLAG_CONFIG_NAME, config.name())
-            .addString(FlagMetadataKeys.FLAG_CONFIG_DESCRIPTION, config.description())
-            .addString(FlagMetadataKeys.FLAG_CONFIG_VALUE_TYPE, config.valueType().name())
-            .addString(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE, defaultValueString)
-            .addString(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY, config.errorStrategy().getClass().getSimpleName())
-            .addString(FlagMetadataKeys.FLAG_VALUE_SOURCE, source.name())
-            .build();
+    private ImmutableMetadata computeImmutableMetadataFromResultWithMetadata(ResultWithMetadata resultWithMetadata) {
+        ImmutableMetadata.ImmutableMetadataBuilder builder = ImmutableMetadata.builder();
+        resultWithMetadata.metadata().forEach((key, value) -> {
+            if (value != null) {
+                builder.addString(key, value);
+            }
+        });
+        return builder.build();
     }
 
-    private String stringifyDefaultValue(FlagConfig config) {
-        Object defaultValue = config.defaultValue();
-        if (defaultValue == null) {
-            return null;
-        }
-        if (config.valueType() == FlagValueType.OBJECT) {
-            try {
-                return objectMapper.writeValueAsString(defaultValue);
-            } catch (JsonProcessingException e) {
-                return defaultValue.toString();
-            }
-        }
-        return defaultValue.toString();
+    private ImmutableMetadata metadata(FlagConfig flagConfig, FlagValueSource source) {
+        String defaultValueString = IzanamiService.stringifyDefaultValue(objectMapper, flagConfig);
+        return ImmutableMetadata.builder()
+            .addString(FlagMetadataKeys.FLAG_CONFIG_KEY, flagConfig.key())
+            .addString(FlagMetadataKeys.FLAG_CONFIG_NAME, flagConfig.name())
+            .addString(FlagMetadataKeys.FLAG_CONFIG_DESCRIPTION, flagConfig.description())
+            .addString(FlagMetadataKeys.FLAG_CONFIG_VALUE_TYPE, flagConfig.valueType().name())
+            .addString(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE, defaultValueString)
+            .addString(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY, flagConfig.rawErrorStrategy().name())
+            .addString(FlagMetadataKeys.FLAG_VALUE_SOURCE, source.name())
+            .build();
     }
 
     private Value objectToValue(Object object) {
@@ -444,18 +444,19 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
     private record EvaluationOutcome<T>(
         T value,
         FlagValueSource source,
+        @Nullable ImmutableMetadata metadata,
         @Nullable ErrorCode errorCode,
         @Nullable String errorMessage,
         @Nullable String reason
     ) {
-        static <T> EvaluationOutcome<T> applicationFallback(T fallbackValue, @Nullable String message) {
-            return new EvaluationOutcome<>(fallbackValue, FlagValueSource.APPLICATION_ERROR_STRATEGY, null, message, Reason.DEFAULT.toString());
+        static <T> EvaluationOutcome<T> applicationFallback(T fallbackValue, ImmutableMetadata metadata, @Nullable String message) {
+            return new EvaluationOutcome<>(fallbackValue, FlagValueSource.APPLICATION_ERROR_STRATEGY, metadata, null, message, Reason.DEFAULT.toString());
         }
     }
 
     @FunctionalInterface
     private interface PrimitiveExtractor<T> {
-        T extract(IzanamiResult.Result result, FlagConfig config, T fallbackValue);
+        T extract(IzanamiResult.Result result, FlagConfig flagConfig, T fallbackValue);
     }
 
     private static final class InvalidObjectJsonException extends RuntimeException {

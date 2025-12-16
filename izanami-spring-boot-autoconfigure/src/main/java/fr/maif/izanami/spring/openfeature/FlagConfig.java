@@ -11,13 +11,14 @@ import org.springframework.lang.Nullable;
  * Instances are created by {@link fr.maif.izanami.spring.openfeature.internal.FlagConfigServiceImpl}
  * from the raw YAML-bound configuration, with default values already coerced to the correct type.
  *
- * @param key           the feature key
- * @param name          the OpenFeature flag key (human-friendly name)
- * @param description   the flag description
- * @param valueType     the configured value type (never null, defaults to BOOLEAN)
- * @param errorStrategy the configured error strategy (never null, defaults to DEFAULT_VALUE)
- * @param defaultValue  the default value, already coerced to the correct type based on valueType
- * @param callbackBean  the Spring bean name for error callback (used with CALLBACK strategy)
+ * @param key              the feature key
+ * @param name             the OpenFeature flag key (human-friendly name)
+ * @param description      the flag description
+ * @param valueType        the configured value type (never null, defaults to BOOLEAN)
+ * @param rawErrorStrategy the configured error strategy enum (never null, defaults to DEFAULT_VALUE)
+ * @param errorStrategy    the computed Izanami client error strategy
+ * @param defaultValue     the default value, already coerced to the correct type based on valueType
+ * @param callbackBean     the Spring bean name for error callback (used with CALLBACK strategy)
  */
 public record FlagConfig(
     @NonNull
@@ -28,6 +29,8 @@ public record FlagConfig(
     String description,
     @NonNull
     FlagValueType valueType,
+    @NonNull
+    ErrorStrategy rawErrorStrategy,
     @NonNull
     FeatureClientErrorStrategy<?> errorStrategy,
     @Nullable Object defaultValue,
