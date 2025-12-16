@@ -25,7 +25,10 @@ import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -108,7 +111,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
             FeatureClientErrorStrategy.defaultValueStrategy(false, "", BigDecimal.ZERO);
 
         Set<String> featureFlagIdsToPreload = flagConfigService.getAllFlagConfigs().stream()
-            .map(config -> config.key())
+            .map(FlagConfig::key)
             .collect(Collectors.toSet());
 
         IzanamiClient client = IzanamiClient.newBuilder(connectionInformation)
@@ -171,7 +174,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
         FlagConfig flagConfig = flagConfigService
             .getFlagConfigByKey(flagKey)
             .orElseThrow(() -> new FlagNotFoundException(flagKey, FlagNotFoundException.IdentifierType.KEY));
-        return new FeatureRequestBuilder(flagConfig);
+        return new FeatureRequestBuilder(this, flagConfig);
     }
 
     /**
@@ -193,7 +196,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
         FlagConfig flagConfig = flagConfigService
             .getFlagConfigByName(flagName)
             .orElseThrow(() -> new FlagNotFoundException(flagName, FlagNotFoundException.IdentifierType.NAME));
-        return new FeatureRequestBuilder(flagConfig);
+        return new FeatureRequestBuilder(this, flagConfig);
     }
 
     // =====================================================================
@@ -205,12 +208,14 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
      * <p>
      * Use {@link #forFlagKey(String)} or {@link #forFlagName(String)} to obtain an instance.
      */
-    public final class FeatureRequestBuilder {
+    public static final class FeatureRequestBuilder {
+        private final IzanamiService service;
         private final FlagConfig flagConfig;
         private String user;
         private String context;
 
-        private FeatureRequestBuilder(FlagConfig flagConfig) {
+        private FeatureRequestBuilder(IzanamiService service, FlagConfig flagConfig) {
+            this.service = service;
             this.flagConfig = flagConfig;
         }
 
@@ -243,7 +248,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
          * @throws IzanamiClientNotAvailableException if the Izanami client is not available
          */
         public CompletableFuture<Boolean> booleanValue() {
-            return evaluateBoolean(buildRequest());
+            return service.evaluateBoolean(buildRequest());
         }
 
         /**
@@ -253,7 +258,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
          * @throws IzanamiClientNotAvailableException if the Izanami client is not available
          */
         public CompletableFuture<String> stringValue() {
-            return evaluateString(buildRequest());
+            return service.evaluateString(buildRequest());
         }
 
         /**
@@ -263,26 +268,24 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
          * @throws IzanamiClientNotAvailableException if the Izanami client is not available
          */
         public CompletableFuture<BigDecimal> numberValue() {
-            return evaluateNumber(buildRequest());
+            return service.evaluateNumber(buildRequest());
         }
 
         /**
          * Retrieve the raw feature result.
-         * <p>
-         * This method never throws; in case of any error, it returns {@link Optional#empty()}.
          *
          * @return optional containing the result if available
+         * @throws IzanamiClientNotAvailableException if the Izanami client is not available
          */
         public Optional<IzanamiResult.Result> featureResult() {
-            return evaluateFeatureResult(flagConfig, user, context);
+            return service.evaluateFeatureResult(flagConfig, user, context);
         }
 
         /**
          * Retrieve the raw feature result with metadata.
-         * <p>
-         * This method never throws; in case of any error, it returns {@link Optional#empty()}.
          *
          * @return optional containing the result with metadata if available
+         * @throws IzanamiClientNotAvailableException if the Izanami client is not available
          */
         public Optional<ResultWithMetadata> featureResultWithMetadata() {
             Map<String, String> metadata = new LinkedHashMap<>();
@@ -290,10 +293,10 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
             metadata.put(FlagMetadataKeys.FLAG_CONFIG_NAME, flagConfig.name());
             metadata.put(FlagMetadataKeys.FLAG_CONFIG_DESCRIPTION, flagConfig.description());
             metadata.put(FlagMetadataKeys.FLAG_CONFIG_VALUE_TYPE, flagConfig.valueType().name());
-            metadata.put(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE, stringifyDefaultValue(objectMapper, flagConfig));
+            metadata.put(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE, stringifyDefaultValue(service.objectMapper, flagConfig));
             metadata.put(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY, flagConfig.rawErrorStrategy().name());
             try {
-                return evaluateFeatureResult(flagConfig, user, context).map(r -> {
+                return service.evaluateFeatureResult(flagConfig, user, context).map(r -> {
                     FlagValueSource valueSource = (r instanceof IzanamiResult.Success)
                         ? FlagValueSource.IZANAMI
                         : FlagValueSource.IZANAMI_ERROR_STRATEGY;
@@ -335,10 +338,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
             @Nullable String user,
             @Nullable String context
     ) {
-        IzanamiClient client = clientRef.get();
-        if (client == null) {
-            throw new IzanamiClientNotAvailableException();
-        }
+        IzanamiClient client = requireClient();
         try {
             FeatureRequest featureRequest = FeatureRequest.newFeatureRequest()
                 .withFeature(flagConfig.key())
@@ -361,28 +361,24 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
         }
     }
 
-    private CompletableFuture<Boolean> evaluateBoolean(SingleFeatureRequest request) {
+    private IzanamiClient requireClient() {
         IzanamiClient client = clientRef.get();
         if (client == null) {
             throw new IzanamiClientNotAvailableException();
         }
-        return client.booleanValue(request);
+        return client;
+    }
+
+    private CompletableFuture<Boolean> evaluateBoolean(SingleFeatureRequest request) {
+        return requireClient().booleanValue(request);
     }
 
     private CompletableFuture<String> evaluateString(SingleFeatureRequest request) {
-        IzanamiClient client = clientRef.get();
-        if (client == null) {
-            throw new IzanamiClientNotAvailableException();
-        }
-        return client.stringValue(request);
+        return requireClient().stringValue(request);
     }
 
     private CompletableFuture<BigDecimal> evaluateNumber(SingleFeatureRequest request) {
-        IzanamiClient client = clientRef.get();
-        if (client == null) {
-            throw new IzanamiClientNotAvailableException();
-        }
-        return client.numberValue(request);
+        return requireClient().numberValue(request);
     }
 
     public static String stringifyDefaultValue(ObjectMapper objectMapper, FlagConfig config) {
