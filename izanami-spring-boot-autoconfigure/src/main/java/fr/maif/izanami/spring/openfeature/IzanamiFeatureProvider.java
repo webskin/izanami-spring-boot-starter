@@ -78,6 +78,8 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
     private final FlagConfigService flagConfigService;
     private final IzanamiService izanamiService;
     private final ObjectMapper objectMapper;
+    private final EvaluationDependencies evaluationDependencies;
+    private final ValueConverter valueConverter;
 
     /**
      * Create a provider.
@@ -94,6 +96,8 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         this.flagConfigService = flagConfigService;
         this.izanamiService = izanamiService;
         this.objectMapper = objectMapper;
+        this.evaluationDependencies = new EvaluationDependencies(flagConfigService, izanamiService, objectMapper);
+        this.valueConverter = new ValueConverter(objectMapper);
     }
 
     @Override
@@ -119,50 +123,60 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
 
     @Override
     public ProviderEvaluation<Boolean> getBooleanEvaluation(String key, Boolean callerDefaultValue, EvaluationContext ctx) {
-        return new PrimitiveEvaluationExecution<>(key, callerDefaultValue, ctx, this::extractBoolean)
+        return new PrimitiveEvaluationExecution<>(evaluationDependencies, key, callerDefaultValue, ctx, this::extractBoolean)
             .evaluatePrimitive(FlagValueType.BOOLEAN);
     }
 
     @Override
     public ProviderEvaluation<String> getStringEvaluation(String key, String callerDefaultValue, EvaluationContext ctx) {
-        return new PrimitiveEvaluationExecution<>(key, callerDefaultValue, ctx, this::extractString)
+        return new PrimitiveEvaluationExecution<>(evaluationDependencies, key, callerDefaultValue, ctx, this::extractString)
             .evaluatePrimitive(FlagValueType.STRING);
     }
 
     @Override
     public ProviderEvaluation<Integer> getIntegerEvaluation(String key, Integer callerDefaultValue, EvaluationContext ctx) {
-        return new PrimitiveEvaluationExecution<>(key, callerDefaultValue, ctx, this::extractInteger)
+        return new PrimitiveEvaluationExecution<>(evaluationDependencies, key, callerDefaultValue, ctx, this::extractInteger)
             .evaluatePrimitive(FlagValueType.INTEGER);
     }
 
     @Override
     public ProviderEvaluation<Double> getDoubleEvaluation(String key, Double callerDefaultValue, EvaluationContext ctx) {
-        return new PrimitiveEvaluationExecution<>(key, callerDefaultValue, ctx, this::extractDouble)
+        return new PrimitiveEvaluationExecution<>(evaluationDependencies, key, callerDefaultValue, ctx, this::extractDouble)
             .evaluatePrimitive(FlagValueType.DOUBLE);
     }
 
     @Override
     public ProviderEvaluation<Value> getObjectEvaluation(String key, Value callerDefaultValue, EvaluationContext ctx) {
-        return new ObjectEvaluationExecution(key, callerDefaultValue, ctx, this::extractObject)
+        return new ObjectEvaluationExecution(evaluationDependencies, key, callerDefaultValue, ctx, this::extractObject)
             .evaluateObject();
     }
 
-    class EvaluationExecution<T> {
-        // TODO rename to flagKey
-        protected final String key;
+    @FunctionalInterface
+    interface FlagValueExtractor<T> {
+        T extract(IzanamiResult.Result result, FlagConfig flagConfig);
+    }
+
+    private record EvaluationDependencies(
+        FlagConfigService flagConfigService,
+        IzanamiService izanamiService,
+        ObjectMapper objectMapper
+    ) {}
+
+    static class EvaluationExecution<T> {
+        protected final EvaluationDependencies deps;
+        protected final String flagKey;
         protected final T callerDefaultValue;
         protected final EvaluationContext evaluationContext;
         protected final FlagValueExtractor<T> flagValueExtractor;
-
-        // TODO init early
         protected final FlagConfig flagConfig;
         protected final boolean flagConfigResolved;
 
-        EvaluationExecution(String key, T callerDefaultValue, EvaluationContext evaluationContext, FlagValueExtractor<T> flagValueExtractor) {
-            this.key = key;
+        EvaluationExecution(EvaluationDependencies deps, String flagKey, T callerDefaultValue, EvaluationContext evaluationContext, FlagValueExtractor<T> flagValueExtractor) {
+            this.deps = deps;
+            this.flagKey = flagKey;
             this.evaluationContext = evaluationContext;
             this.callerDefaultValue = callerDefaultValue;
-            this.flagConfig = flagConfigService.getFlagConfigByKey(key).orElse(null);
+            this.flagConfig = deps.flagConfigService().getFlagConfigByKey(flagKey).orElse(null);
             this.flagValueExtractor = flagValueExtractor;
             this.flagConfigResolved = this.flagConfig != null;
         }
@@ -181,7 +195,6 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
                     applicationErrorMetadata(flagConfig),
                     Reason.ERROR.name(),
                     ErrorCode.GENERAL,
-                    // TODO add flag name and key to error message
                     MessageFormat.format("Applying application error strategy. Unable to extract flag value: {0}. Use fallback value: {1}", e.getMessage(), callerDefaultValue)
                 );
             }
@@ -193,7 +206,6 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
                     applicationErrorMetadata(flagConfig),
                     Reason.ERROR.name(),
                     ErrorCode.GENERAL,
-                    // TODO add flag name and key to error message
                     "Applying application error strategy. Use fallback value: " + callerDefaultValue
                 );
             }
@@ -217,7 +229,6 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
                         metadata,
                         Reason.ERROR.name(),
                         ErrorCode.GENERAL,
-                        // TODO add flag name and key to error message
                         "Applying Izanami error strategy. Use fallback value: " + value
                     );
                 }
@@ -227,7 +238,6 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
                     metadata,
                     Reason.ERROR.name(),
                     ErrorCode.GENERAL,
-                    // TODO add flag name and key to error message
                     MessageFormat.format("Applying application error strategy. Unable to extract flag value: {0}. Use fallback value: {1}", e.getMessage(), callerDefaultValue)
                 );
             }
@@ -236,22 +246,20 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         private Optional<ResultWithMetadata> queryIzanami(FlagConfig flagConfig, EvaluationContext evaluationContext) throws IzanamiClientNotAvailableException {
             Value contextValue = evaluationContext.getValue(IZANAMI_CONTEXT_ATTRIBUTE);
             String context = contextValue != null ? contextValue.asString() : null;
-            return izanamiService
+            return deps.izanamiService()
                 .forFlagKey(flagConfig.key())
                 .withUser(evaluationContext.getTargetingKey())
                 .withContext(context)
                 .featureResultWithMetadata();
         }
 
-        protected ProviderEvaluation<T> typeMismatch(
-            FlagValueType expectedType
-        ) {
+        protected ProviderEvaluation<T> typeMismatch(FlagValueType expectedType) {
             return errorStrategyProviderEvaluation(
                 callerDefaultValue,
                 applicationErrorMetadata(flagConfig),
                 Reason.ERROR.name(),
                 ErrorCode.TYPE_MISMATCH,
-                "Feature flag '" + key + "' is configured as '" + flagConfig.valueType().name()
+                "Feature flag '" + flagKey + "' is configured as '" + flagConfig.valueType().name()
                     + "' but evaluated as '" + expectedType.name() + "'"
             );
         }
@@ -270,7 +278,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
             return ProviderEvaluation.<T>builder()
                 .value(getFlagNotFoundValue())
                 .errorCode(ErrorCode.FLAG_NOT_FOUND)
-                .errorMessage("Feature flag '" + key + "' not found in openfeature.flags")
+                .errorMessage("Feature flag '" + flagKey + "' not found in openfeature.flags")
                 .flagMetadata(flagNotFoundMetadata())
                 .build();
         }
@@ -281,13 +289,13 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
 
         private ImmutableMetadata flagNotFoundMetadata() {
             return ImmutableMetadata.builder()
-                .addString(FlagMetadataKeys.FLAG_CONFIG_KEY, key)
+                .addString(FlagMetadataKeys.FLAG_CONFIG_KEY, flagKey)
                 .addString(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.APPLICATION_ERROR_STRATEGY.name())
                 .build();
         }
 
         private ImmutableMetadata applicationErrorMetadata(FlagConfig flagConfig) {
-            String defaultValueString = IzanamiService.stringifyDefaultValue(objectMapper, flagConfig);
+            String defaultValueString = IzanamiService.stringifyDefaultValue(deps.objectMapper(), flagConfig);
             return ImmutableMetadata.builder()
                 .addString(FlagMetadataKeys.FLAG_CONFIG_KEY, flagConfig.key())
                 .addString(FlagMetadataKeys.FLAG_CONFIG_NAME, flagConfig.name())
@@ -300,9 +308,9 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         }
     }
 
-    class PrimitiveEvaluationExecution<T> extends EvaluationExecution<T> {
-        PrimitiveEvaluationExecution(String flagKey, T callerDefaultValue, EvaluationContext evaluationContext, FlagValueExtractor<T> flagValueExtractor) {
-            super(flagKey, callerDefaultValue, evaluationContext, flagValueExtractor);
+    static class PrimitiveEvaluationExecution<T> extends EvaluationExecution<T> {
+        PrimitiveEvaluationExecution(EvaluationDependencies deps, String flagKey, T callerDefaultValue, EvaluationContext evaluationContext, FlagValueExtractor<T> flagValueExtractor) {
+            super(deps, flagKey, callerDefaultValue, evaluationContext, flagValueExtractor);
         }
 
         public ProviderEvaluation<T> evaluatePrimitive(FlagValueType expectedType) {
@@ -316,9 +324,12 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         }
     }
 
-    class ObjectEvaluationExecution extends EvaluationExecution<Value> {
-        ObjectEvaluationExecution(String flagKey, Value callerDefaultValue, EvaluationContext evaluationContext, FlagValueExtractor<Value> flagValueExtractor) {
-            super(flagKey, callerDefaultValue, evaluationContext, flagValueExtractor);
+    static class ObjectEvaluationExecution extends EvaluationExecution<Value> {
+        private final ValueConverter valueConverter;
+
+        ObjectEvaluationExecution(EvaluationDependencies deps, String flagKey, Value callerDefaultValue, EvaluationContext evaluationContext, FlagValueExtractor<Value> flagValueExtractor) {
+            super(deps, flagKey, callerDefaultValue, evaluationContext, flagValueExtractor);
+            this.valueConverter = new ValueConverter(deps.objectMapper());
         }
 
         public ProviderEvaluation<Value> evaluateObject() {
@@ -328,7 +339,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
             if (flagConfig.valueType() != FlagValueType.OBJECT) {
                 return typeMismatch(FlagValueType.OBJECT);
             }
-            Value coercedCallerDefaultValue = toOpenFeatureValueOrNullSafe(flagConfig.defaultValue(), callerDefaultValue);
+            Value coercedCallerDefaultValue = valueConverter.toOpenFeatureValueOrNullSafe(flagConfig.defaultValue(), callerDefaultValue);
             return evaluateViaIzanami(coercedCallerDefaultValue);
         }
 
@@ -361,40 +372,96 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
     }
 
     private Value extractObject(IzanamiResult.Result result, FlagConfig flagConfig) {
-        // TODO is result.numberValue can be null ?
-        // TODO fallbackValue is not used
         String json = result.stringValue();
         if (json == null) {
             return new Value();
         }
         try {
             Object tree = objectMapper.readValue(json, Object.class);
-            return objectToValue(tree);
+            return valueConverter.objectToValue(tree);
         } catch (JsonProcessingException e) {
             throw new InvalidObjectJsonException("Flag '" + flagConfig.name() + "' returned invalid JSON for valueType=object");
         }
     }
 
-    private Value toOpenFeatureValueOrNullSafe(@Nullable Object configuredDefault, @Nullable Value callerDefault) {
-        if (configuredDefault == null) {
-            return callerDefault != null ? callerDefault : new Value();
+    static class ValueConverter {
+        private final ObjectMapper objectMapper;
+
+        ValueConverter(ObjectMapper objectMapper) {
+            this.objectMapper = objectMapper;
         }
-        if (configuredDefault instanceof Value v) {
-            return v;
-        }
-        if (configuredDefault instanceof String s) {
+
+        Value toOpenFeatureValueOrNullSafe(@Nullable Object configuredDefault, @Nullable Value callerDefault) {
+            if (configuredDefault == null) {
+                return callerDefault != null ? callerDefault : new Value();
+            }
+            if (configuredDefault instanceof Value v) {
+                return v;
+            }
+            if (configuredDefault instanceof String s) {
+                try {
+                    Object tree = objectMapper.readValue(s, Object.class);
+                    return objectToValue(tree);
+                } catch (JsonProcessingException e) {
+                    return new Value(s);
+                }
+            }
             try {
-                Object tree = objectMapper.readValue(s, Object.class);
-                return objectToValue(tree);
-            } catch (JsonProcessingException e) {
-                return new Value(s);
+                return objectToValue(configuredDefault);
+            } catch (Exception e) {
+                log.debug("Failed to convert configured default to OpenFeature Value, falling back to caller default: {}", e.getMessage());
+                return callerDefault != null ? callerDefault : new Value();
             }
         }
-        try {
-            return objectToValue(configuredDefault);
-        } catch (Exception e) {
-            log.debug("Failed to convert configured default to OpenFeature Value, falling back to caller default: {}", e.getMessage());
-            return callerDefault != null ? callerDefault : new Value();
+
+        Value objectToValue(Object object) {
+            if (object instanceof Value v) {
+                return v;
+            }
+            if (object == null) {
+                return new Value();
+            }
+            if (object instanceof String s) {
+                return new Value(s);
+            }
+            if (object instanceof Boolean b) {
+                return new Value(b);
+            }
+            if (object instanceof Integer i) {
+                return new Value(i);
+            }
+            if (object instanceof Double d) {
+                return new Value(d);
+            }
+            if (object instanceof Number n) {
+                try {
+                    return new Value((Object) n);
+                } catch (InstantiationException e) {
+                    return new Value(n.doubleValue());
+                }
+            }
+            if (object instanceof Structure s) {
+                return new Value(s);
+            }
+            if (object instanceof List<?> list) {
+                List<Value> values = list.stream().map(this::objectToValue).toList();
+                return new Value(values);
+            }
+            if (object instanceof Instant instant) {
+                return new Value(instant);
+            }
+            if (object instanceof Map<?, ?> map) {
+                Map<String, Value> attributes = new java.util.LinkedHashMap<>();
+                for (Map.Entry<?, ?> entry : map.entrySet()) {
+                    if (entry.getKey() == null) {
+                        continue;
+                    }
+                    attributes.put(entry.getKey().toString(), objectToValue(entry.getValue()));
+                }
+                return new Value(new MutableStructure(attributes));
+            }
+            throw new dev.openfeature.sdk.exceptions.TypeMismatchError(
+                "Flag value '" + object + "' had unexpected type " + object.getClass());
         }
     }
 
@@ -443,61 +510,6 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
             return Reason.DEFAULT.name();
         }
         return Reason.UNKNOWN.name();
-    }
-
-    private Value objectToValue(Object object) {
-        if (object instanceof Value v) {
-            return v;
-        }
-        if (object == null) {
-            return new Value();
-        }
-        if (object instanceof String s) {
-            return new Value(s);
-        }
-        if (object instanceof Boolean b) {
-            return new Value(b);
-        }
-        if (object instanceof Integer i) {
-            return new Value(i);
-        }
-        if (object instanceof Double d) {
-            return new Value(d);
-        }
-        if (object instanceof Number n) {
-            try {
-                return new Value((Object) n);
-            } catch (InstantiationException e) {
-                return new Value(n.doubleValue());
-            }
-        }
-        if (object instanceof Structure s) {
-            return new Value(s);
-        }
-        if (object instanceof List<?> list) {
-            List<Value> values = list.stream().map(this::objectToValue).toList();
-            return new Value(values);
-        }
-        if (object instanceof Instant instant) {
-            return new Value(instant);
-        }
-        if (object instanceof Map<?, ?> map) {
-            Map<String, Value> attributes = new java.util.LinkedHashMap<>();
-            for (Map.Entry<?, ?> entry : map.entrySet()) {
-                if (entry.getKey() == null) {
-                    continue;
-                }
-                attributes.put(entry.getKey().toString(), objectToValue(entry.getValue()));
-            }
-            return new Value(new MutableStructure(attributes));
-        }
-        throw new dev.openfeature.sdk.exceptions.TypeMismatchError(
-            "Flag value '" + object + "' had unexpected type " + object.getClass());
-    }
-
-    @FunctionalInterface
-    private interface FlagValueExtractor<T> {
-        T extract(IzanamiResult.Result result, FlagConfig flagConfig);
     }
 
     private static final class InvalidObjectJsonException extends RuntimeException {
