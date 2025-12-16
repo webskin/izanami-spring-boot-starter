@@ -6,9 +6,11 @@ import dev.openfeature.sdk.FlagValueType;
 import fr.maif.FeatureCacheConfiguration;
 import fr.maif.FeatureClientErrorStrategy;
 import fr.maif.IzanamiClient;
+import fr.maif.errors.IzanamiError;
 import fr.maif.features.results.IzanamiResult;
 import fr.maif.features.values.BooleanCastStrategy;
 import fr.maif.izanami.spring.autoconfigure.IzanamiProperties;
+import fr.maif.izanami.spring.openfeature.ErrorStrategy;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
 import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
 import fr.maif.izanami.spring.openfeature.FlagValueSource;
@@ -27,6 +29,8 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+
+import static java.util.Collections.unmodifiableMap;
 
 /**
  * Thin lifecycle wrapper around {@link IzanamiClient}.
@@ -279,22 +283,31 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
          * @return optional containing the result with metadata if available
          */
         public Optional<ResultWithMetadata> featureResultWithMetadata() {
-            return evaluateFeatureResult(flagConfig, user, context).map(r -> {
-                FlagValueSource valueSource = (r instanceof IzanamiResult.Success)
-                    ? FlagValueSource.IZANAMI
-                    : FlagValueSource.IZANAMI_ERROR_STRATEGY;
-
-                Map<String, String> metadata = new LinkedHashMap<>();
-                metadata.put(FlagMetadataKeys.FLAG_CONFIG_KEY, flagConfig.key());
-                metadata.put(FlagMetadataKeys.FLAG_CONFIG_NAME, flagConfig.name());
-                metadata.put(FlagMetadataKeys.FLAG_CONFIG_DESCRIPTION, flagConfig.description());
-                metadata.put(FlagMetadataKeys.FLAG_CONFIG_VALUE_TYPE, flagConfig.valueType().name());
-                metadata.put(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE, stringifyDefaultValue(objectMapper, flagConfig));
-                metadata.put(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY, flagConfig.rawErrorStrategy().name());
-                metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, valueSource.name());
-
-                return new ResultWithMetadata(r, Collections.unmodifiableMap(metadata));
-            });
+            Map<String, String> metadata = new LinkedHashMap<>();
+            metadata.put(FlagMetadataKeys.FLAG_CONFIG_KEY, flagConfig.key());
+            metadata.put(FlagMetadataKeys.FLAG_CONFIG_NAME, flagConfig.name());
+            metadata.put(FlagMetadataKeys.FLAG_CONFIG_DESCRIPTION, flagConfig.description());
+            metadata.put(FlagMetadataKeys.FLAG_CONFIG_VALUE_TYPE, flagConfig.valueType().name());
+            metadata.put(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE, stringifyDefaultValue(objectMapper, flagConfig));
+            metadata.put(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY, flagConfig.rawErrorStrategy().name());
+            try {
+                return evaluateFeatureResult(flagConfig, user, context).map(r -> {
+                    FlagValueSource valueSource = (r instanceof IzanamiResult.Success)
+                        ? FlagValueSource.IZANAMI
+                        : FlagValueSource.IZANAMI_ERROR_STRATEGY;
+                    metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, valueSource.name());
+                    return new ResultWithMetadata(r, unmodifiableMap(metadata));
+                });
+            } catch (Exception e) {
+                if (flagConfig.rawErrorStrategy() == ErrorStrategy.FAIL) {
+                    throw e;
+                }
+                metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
+                return Optional.of(new ResultWithMetadata(
+                    new IzanamiResult.Error(flagConfig.errorStrategy(), new IzanamiError(e.getMessage())),
+                    unmodifiableMap(metadata))
+                );
+            }
         }
 
         private SingleFeatureRequest buildRequest() {
