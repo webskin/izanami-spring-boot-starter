@@ -183,9 +183,9 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         }
 
         protected ProviderEvaluation<T> evaluateViaIzanami(T callerDefaultValue) {
-            Optional<ResultWithMetadata> maybeResult;
+            ResultWithMetadata resultWithMetadata;
             try {
-                maybeResult = queryIzanami(flagConfig, evaluationContext);
+                resultWithMetadata = queryIzanami(flagConfig, evaluationContext);
             } catch (Exception e) {
                 return errorStrategyProviderEvaluation(
                     callerDefaultValue,
@@ -195,18 +195,6 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
                     MessageFormat.format("Applying application error strategy. Unable to extract flag value: {0}. Use fallback value: {1}", e.getMessage(), callerDefaultValue)
                 );
             }
-
-            if (maybeResult.isEmpty()) {
-                // Izanami FAIL strategy
-                return errorStrategyProviderEvaluation(
-                    callerDefaultValue,
-                    applicationErrorMetadata(flagConfig),
-                    Reason.ERROR.name(),
-                    ErrorCode.GENERAL,
-                    "Applying application error strategy. Use fallback value: " + callerDefaultValue
-                );
-            }
-            ResultWithMetadata resultWithMetadata = maybeResult.get();
             IzanamiResult.Result result = resultWithMetadata.result();
             ImmutableMetadata metadata = computeImmutableMetadataFromResultWithMetadata(resultWithMetadata);
 
@@ -240,7 +228,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
             }
         }
 
-        private Optional<ResultWithMetadata> queryIzanami(FlagConfig flagConfig, EvaluationContext evaluationContext) throws IzanamiClientNotAvailableException {
+        private ResultWithMetadata queryIzanami(FlagConfig flagConfig, EvaluationContext evaluationContext) throws IzanamiClientNotAvailableException {
             Value contextValue = evaluationContext.getValue(IZANAMI_CONTEXT_ATTRIBUTE);
             String context = contextValue != null ? contextValue.asString() : null;
             return deps.izanamiService()

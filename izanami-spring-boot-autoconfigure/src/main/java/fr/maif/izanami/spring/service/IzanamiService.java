@@ -286,7 +286,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
          * @return a future containing an optional with the result if available
          * @throws IzanamiClientNotAvailableException if the Izanami client is not available
          */
-        public CompletableFuture<Optional<IzanamiResult.Result>> featureResult() {
+        public CompletableFuture<IzanamiResult.Result> featureResult() {
             return service.evaluateFeatureResult(flagConfig, user, context);
         }
 
@@ -296,7 +296,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
          * @return a future containing an optional with the result and metadata if available
          * @throws IzanamiClientNotAvailableException if the Izanami client is not available
          */
-        public CompletableFuture<Optional<ResultWithMetadata>> featureResultWithMetadata() {
+        public CompletableFuture<ResultWithMetadata> featureResultWithMetadata() {
             Map<String, String> metadata = new LinkedHashMap<>();
             metadata.put(FlagMetadataKeys.FLAG_CONFIG_KEY, flagConfig.key());
             metadata.put(FlagMetadataKeys.FLAG_CONFIG_NAME, flagConfig.name());
@@ -305,21 +305,21 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
             metadata.put(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE, stringifyDefaultValue(service.objectMapper, flagConfig));
             metadata.put(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY, flagConfig.rawErrorStrategy().name());
             try {
-                return service.evaluateFeatureResult(flagConfig, user, context).thenApply(mayBeResult -> mayBeResult.map(r -> {
+                return service.evaluateFeatureResult(flagConfig, user, context).thenApply(r -> {
                     FlagValueSource valueSource = (r instanceof IzanamiResult.Success)
                         ? FlagValueSource.IZANAMI
                         : FlagValueSource.IZANAMI_ERROR_STRATEGY;
                     metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, valueSource.name());
                     return new ResultWithMetadata(r, unmodifiableMap(metadata));
-                }));
+                });
             } catch (Exception e) {
                 if (flagConfig.rawErrorStrategy() == ErrorStrategy.FAIL) {
                     return CompletableFuture.failedFuture(e);
                 }
                 metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
-                return CompletableFuture.completedFuture(Optional.of(new ResultWithMetadata(
+                return CompletableFuture.completedFuture(new ResultWithMetadata(
                     new IzanamiResult.Error(flagConfig.errorStrategy(), new IzanamiError(e.getMessage())),
-                    unmodifiableMap(metadata))
+                    unmodifiableMap(metadata)
                 ));
             }
         }
@@ -342,7 +342,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
     // Internal evaluation methods
     // =====================================================================
 
-    private CompletableFuture<Optional<IzanamiResult.Result>> evaluateFeatureResult(
+    private CompletableFuture<IzanamiResult.Result> evaluateFeatureResult(
             FlagConfig flagConfig,
             @Nullable String user,
             @Nullable String context
@@ -362,11 +362,8 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
             return client
                 .featureValues(featureRequest)
                 .thenApply(r -> {
-                    if (r.results != null && !r.results.isEmpty()) {
-                        return Optional.of(r.results.values().iterator().next());
-                    } else {
-                        return Optional.empty();
-                    }
+                    // Has always a value
+                    return r.results.values().iterator().next();
                 });
         } catch (Exception e) {
             log.debug("Izanami evaluation failed; falling back to configured defaults: {}", e.getMessage());
