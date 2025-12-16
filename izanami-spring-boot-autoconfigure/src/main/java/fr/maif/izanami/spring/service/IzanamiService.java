@@ -339,7 +339,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
             if (result == null || result.results == null || result.results.isEmpty()) {
                 return Optional.empty();
             }
-            return Optional.ofNullable(result.results.values().iterator().next());
+            return Optional.of(result.results.values().iterator().next());
         } catch (Exception e) {
             log.debug("Izanami evaluation failed; falling back to configured defaults: {}", e.getMessage());
             return Optional.empty();

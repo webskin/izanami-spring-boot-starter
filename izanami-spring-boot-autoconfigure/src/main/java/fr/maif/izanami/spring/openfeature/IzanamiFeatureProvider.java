@@ -227,20 +227,12 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
     }
 
     private Optional<IzanamiResult.Result> queryIzanami(FlagConfig config, IzanamiContext context) {
-        FeatureRequest request = FeatureRequest.newFeatureRequest()
-            .withFeature(config.key())
-            .withErrorStrategy(config.errorStrategy())
-            .withBooleanCastStrategy(BooleanCastStrategy.LAX);
-
-        if (context.user() != null && !context.user().isBlank()) {
-            request.withUser(context.user());
-        }
-        if (context.contextPath() != null && !context.contextPath().isBlank()) {
-            request.withContext(context.contextPath());
-        }
-
         try {
-            return izanamiService.getFeatureResult(request);
+            return izanamiService
+                .forFlagKey(config.key())
+                .withUser(context.user())
+                .withContext(context.contextPath())
+                .featureResult();
         } catch (IzanamiClientNotAvailableException e) {
             log.debug("Izanami client not available; returning empty result");
             return Optional.empty();
