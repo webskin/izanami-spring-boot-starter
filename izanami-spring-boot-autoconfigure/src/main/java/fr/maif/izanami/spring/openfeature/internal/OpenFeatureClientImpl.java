@@ -472,7 +472,7 @@ public final class OpenFeatureClientImpl implements OpenFeatureClient {
     // ========== Private helper methods ==========
 
     private FlagConfig getValidatedFlagConfig(String key) {
-        FlagConfig config = flagConfigService.getFlagConfigByName(key)
+        FlagConfig config = flagConfigService.getFlagConfigByKey(key)
             .orElseThrow(() -> new OpenFeatureClientException(
                 "Flag '" + key + "' is not configured. "
                     + "Please add it to openfeature.flags configuration or use a method with explicit defaultValue."

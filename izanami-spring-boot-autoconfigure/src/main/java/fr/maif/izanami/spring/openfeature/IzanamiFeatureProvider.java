@@ -189,8 +189,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
     }
 
     private Optional<FlagConfig> resolveConfig(String key) {
-        return flagConfigService.getFlagConfigByName(key)
-            .or(() -> flagConfigService.getFlagConfigByKey(key));
+        return flagConfigService.getFlagConfigByKey(key);
     }
 
     private <T> EvaluationOutcome<T> evaluateViaIzanami(
