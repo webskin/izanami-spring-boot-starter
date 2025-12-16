@@ -5,7 +5,7 @@ import dev.openfeature.sdk.FlagEvaluationDetails;
 import dev.openfeature.sdk.FlagValueType;
 import dev.openfeature.sdk.OpenFeatureAPI;
 import dev.openfeature.sdk.Value;
-import fr.maif.izanami.spring.openfeature.ErrorStrategy;
+import fr.maif.FeatureClientErrorStrategy;
 import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
 import fr.maif.izanami.spring.openfeature.FlagsProperties;
 import fr.maif.izanami.spring.openfeature.IzanamiFeatureProvider;
@@ -88,7 +88,7 @@ class IzanamiAutoConfigurationTest {
                 assertThat(configService.getAllFlagConfigs()).hasSize(1);
                 assertThat(configService.getFlagConfigByName("new-dashboard")).isPresent();
                 assertThat(configService.getFlagConfigByName("new-dashboard").get().valueType()).isEqualTo(FlagValueType.OBJECT);
-                assertThat(configService.getFlagConfigByName("new-dashboard").get().errorStrategy()).isEqualTo(ErrorStrategy.DEFAULT_VALUE);
+                assertThat(configService.getFlagConfigByName("new-dashboard").get().errorStrategy()).isInstanceOf(FeatureClientErrorStrategy.DefaultValueStrategy.class);
             });
     }
 

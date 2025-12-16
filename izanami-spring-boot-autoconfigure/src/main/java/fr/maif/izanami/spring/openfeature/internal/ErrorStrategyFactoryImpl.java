@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.openfeature.sdk.FlagValueType;
 import fr.maif.FeatureClientErrorStrategy;
 import fr.maif.izanami.spring.openfeature.ErrorStrategy;
-import fr.maif.izanami.spring.openfeature.FlagConfig;
 import fr.maif.izanami.spring.openfeature.api.ErrorStrategyFactory;
 import fr.maif.izanami.spring.openfeature.api.IzanamiErrorCallback;
 import org.slf4j.Logger;
@@ -39,65 +38,75 @@ public final class ErrorStrategyFactoryImpl implements ErrorStrategyFactory {
     }
 
     @Override
-    public FeatureClientErrorStrategy<?> createErrorStrategy(FlagConfig config) {
-        return switch (config.errorStrategy()) {
+    public FeatureClientErrorStrategy<?> createErrorStrategy(
+            ErrorStrategy strategy,
+            FlagValueType valueType,
+            @Nullable Object defaultValue,
+            @Nullable String callbackBean,
+            String flagKey
+    ) {
+        return switch (strategy) {
             case DEFAULT_VALUE -> FeatureClientErrorStrategy.defaultValueStrategy(
-                asBooleanDefault(config),
-                asStringDefault(config),
-                asNumberDefault(config)
+                asBooleanDefault(valueType, defaultValue),
+                asStringDefault(valueType, defaultValue, flagKey),
+                asNumberDefault(valueType, defaultValue, flagKey)
             );
             case NULL_VALUE -> FeatureClientErrorStrategy.nullValueStrategy();
             case FAIL -> FeatureClientErrorStrategy.failStrategy();
-            case CALLBACK -> createCallbackStrategy(config);
+            case CALLBACK -> createCallbackStrategy(valueType, defaultValue, callbackBean, flagKey);
         };
     }
 
-    private FeatureClientErrorStrategy<?> createCallbackStrategy(FlagConfig config) {
-        IzanamiErrorCallback callback = resolveCallback(config);
+    private FeatureClientErrorStrategy<?> createCallbackStrategy(
+            FlagValueType valueType,
+            @Nullable Object defaultValue,
+            @Nullable String callbackBean,
+            String flagKey
+    ) {
+        IzanamiErrorCallback callback = resolveCallback(callbackBean, flagKey);
 
         if (callback == null) {
-            log.debug("No callback bean found for flag '{}', using type-safe defaults", config.name());
+            log.debug("No callback bean found for flag '{}', using type-safe defaults", flagKey);
             return FeatureClientErrorStrategy.callbackStrategy(
-                error -> completedFuture(asBooleanDefault(config)),
-                error -> completedFuture(asStringDefault(config)),
-                error -> completedFuture(asNumberDefault(config))
+                error -> completedFuture(asBooleanDefault(valueType, defaultValue)),
+                error -> completedFuture(asStringDefault(valueType, defaultValue, flagKey)),
+                error -> completedFuture(asNumberDefault(valueType, defaultValue, flagKey))
             );
         }
 
         return FeatureClientErrorStrategy.callbackStrategy(
-            error -> callback.onError(error, config, FlagValueType.BOOLEAN)
-                .thenApply(value -> coerceToBoolean(value, config)),
-            error -> callback.onError(error, config, FlagValueType.STRING)
-                .thenApply(value -> coerceToString(value, config)),
-            error -> callback.onError(error, config, FlagValueType.DOUBLE)
-                .thenApply(value -> coerceToNumber(value, config))
+            error -> callback.onError(error, flagKey, valueType, FlagValueType.BOOLEAN)
+                .thenApply(this::coerceToBoolean),
+            error -> callback.onError(error, flagKey, valueType, FlagValueType.STRING)
+                .thenApply(value -> coerceToString(value, flagKey)),
+            error -> callback.onError(error, flagKey, valueType, FlagValueType.DOUBLE)
+                .thenApply(value -> coerceToNumber(value, flagKey))
         );
     }
 
     @Nullable
-    private IzanamiErrorCallback resolveCallback(FlagConfig config) {
-        String beanName = config.callbackBean();
-        if (beanName == null || beanName.isBlank()) {
+    private IzanamiErrorCallback resolveCallback(@Nullable String callbackBean, String flagKey) {
+        if (callbackBean == null || callbackBean.isBlank()) {
             return null;
         }
 
         try {
-            Object bean = beanFactory.getBean(beanName);
+            Object bean = beanFactory.getBean(callbackBean);
             if (bean instanceof IzanamiErrorCallback callback) {
                 return callback;
             }
             log.error("Bean '{}' for flag '{}' does not implement IzanamiErrorCallback, found: {}",
-                beanName, config.name(), bean.getClass().getName());
+                callbackBean, flagKey, bean.getClass().getName());
             return null;
         } catch (NoSuchBeanDefinitionException e) {
             log.error("Callback bean '{}' not found for flag '{}'. "
                 + "Please ensure a bean with this name implementing IzanamiErrorCallback exists.",
-                beanName, config.name());
+                callbackBean, flagKey);
             return null;
         }
     }
 
-    private boolean coerceToBoolean(@Nullable Object value, FlagConfig config) {
+    private boolean coerceToBoolean(@Nullable Object value) {
         if (value == null) {
             return false;
         }
@@ -110,7 +119,7 @@ public final class ErrorStrategyFactoryImpl implements ErrorStrategyFactory {
         return Boolean.parseBoolean(value.toString());
     }
 
-    private String coerceToString(@Nullable Object value, FlagConfig config) {
+    private String coerceToString(@Nullable Object value, String flagKey) {
         if (value == null) {
             return "";
         }
@@ -118,12 +127,12 @@ public final class ErrorStrategyFactoryImpl implements ErrorStrategyFactory {
             return s;
         }
         if (!(value instanceof Number) && !(value instanceof Boolean)) {
-            return toJson(config, value);
+            return toJson(value, flagKey);
         }
         return value.toString();
     }
 
-    private BigDecimal coerceToNumber(@Nullable Object value, FlagConfig config) {
+    private BigDecimal coerceToNumber(@Nullable Object value, String flagKey) {
         if (value == null) {
             return BigDecimal.ZERO;
         }
@@ -137,16 +146,15 @@ public final class ErrorStrategyFactoryImpl implements ErrorStrategyFactory {
             return new BigDecimal(value.toString());
         } catch (NumberFormatException e) {
             log.warn("Callback for flag '{}' returned non-numeric value '{}' for NUMBER type",
-                config.name(), value);
+                flagKey, value);
             return BigDecimal.ZERO;
         }
     }
 
-    private boolean asBooleanDefault(FlagConfig config) {
-        if (config.valueType() != FlagValueType.BOOLEAN) {
+    private boolean asBooleanDefault(FlagValueType valueType, @Nullable Object defaultValue) {
+        if (valueType != FlagValueType.BOOLEAN) {
             return false;
         }
-        Object defaultValue = config.defaultValue();
         if (defaultValue == null) {
             return false;
         }
@@ -156,22 +164,20 @@ public final class ErrorStrategyFactoryImpl implements ErrorStrategyFactory {
         return Boolean.parseBoolean(defaultValue.toString());
     }
 
-    private String asStringDefault(FlagConfig config) {
-        Object defaultValue = config.defaultValue();
+    private String asStringDefault(FlagValueType valueType, @Nullable Object defaultValue, String flagKey) {
         if (defaultValue == null) {
             return "";
         }
-        if (config.valueType() == FlagValueType.OBJECT) {
-            return toJson(config, defaultValue);
+        if (valueType == FlagValueType.OBJECT) {
+            return toJson(defaultValue, flagKey);
         }
         return defaultValue.toString();
     }
 
-    private BigDecimal asNumberDefault(FlagConfig config) {
-        if (config.valueType() != FlagValueType.INTEGER && config.valueType() != FlagValueType.DOUBLE) {
+    private BigDecimal asNumberDefault(FlagValueType valueType, @Nullable Object defaultValue, String flagKey) {
+        if (valueType != FlagValueType.INTEGER && valueType != FlagValueType.DOUBLE) {
             return BigDecimal.ZERO;
         }
-        Object defaultValue = config.defaultValue();
         if (defaultValue == null) {
             return BigDecimal.ZERO;
         }
@@ -184,19 +190,19 @@ public final class ErrorStrategyFactoryImpl implements ErrorStrategyFactory {
         try {
             return new BigDecimal(defaultValue.toString());
         } catch (NumberFormatException e) {
-            log.warn("Invalid number default for flag '{}': '{}'", config.name(), defaultValue);
+            log.warn("Invalid number default for flag '{}': '{}'", flagKey, defaultValue);
             return BigDecimal.ZERO;
         }
     }
 
-    private String toJson(FlagConfig config, Object value) {
+    private String toJson(Object value, String flagKey) {
         if (value instanceof String s) {
             return s;
         }
         try {
             return objectMapper.writeValueAsString(value);
         } catch (JsonProcessingException e) {
-            log.warn("Failed to serialize object default for flag '{}', falling back to empty object: {}", config.name(), e.getMessage());
+            log.warn("Failed to serialize object default for flag '{}', falling back to empty object: {}", flagKey, e.getMessage());
             return "{}";
         }
     }

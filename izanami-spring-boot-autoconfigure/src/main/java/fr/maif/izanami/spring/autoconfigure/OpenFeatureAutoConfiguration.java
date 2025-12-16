@@ -5,7 +5,6 @@ import dev.openfeature.sdk.FeatureProvider;
 import dev.openfeature.sdk.OpenFeatureAPI;
 import fr.maif.IzanamiClient;
 import fr.maif.izanami.spring.openfeature.IzanamiFeatureProvider;
-import fr.maif.izanami.spring.openfeature.api.ErrorStrategyFactory;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
 import fr.maif.izanami.spring.openfeature.api.ExtendedOpenFeatureClient;
 import fr.maif.izanami.spring.openfeature.api.ExtendedOpenFeatureClientFactory;
@@ -35,7 +34,6 @@ public class OpenFeatureAutoConfiguration {
      *
      * @param flagConfigService    flag configuration service
      * @param izanamiService       Izanami service
-     * @param errorStrategyFactory error strategy factory
      * @param objectMapperProvider optional Spring {@link ObjectMapper}
      * @return the provider implementation
      */
@@ -44,11 +42,10 @@ public class OpenFeatureAutoConfiguration {
     public IzanamiFeatureProvider izanamiFeatureProvider(
         FlagConfigService flagConfigService,
         IzanamiService izanamiService,
-        ErrorStrategyFactory errorStrategyFactory,
         ObjectProvider<ObjectMapper> objectMapperProvider
     ) {
         ObjectMapper objectMapper = objectMapperProvider.getIfAvailable(ObjectMapper::new);
-        return new IzanamiFeatureProvider(flagConfigService, izanamiService, errorStrategyFactory, objectMapper);
+        return new IzanamiFeatureProvider(flagConfigService, izanamiService, objectMapper);
     }
 
     /**

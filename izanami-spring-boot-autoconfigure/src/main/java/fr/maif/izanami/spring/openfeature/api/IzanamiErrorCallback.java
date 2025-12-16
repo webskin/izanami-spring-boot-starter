@@ -1,7 +1,6 @@
 package fr.maif.izanami.spring.openfeature.api;
 
 import dev.openfeature.sdk.FlagValueType;
-import fr.maif.izanami.spring.openfeature.FlagConfig;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -26,9 +25,10 @@ import java.util.concurrent.CompletableFuture;
  * @Component("myErrorHandler")
  * public class MyErrorHandler implements IzanamiErrorCallback {
  *     @Override
- *     public CompletableFuture<Object> onError(Throwable error, FlagConfig flagConfig, FlagValueType valueType) {
- *         log.warn("Izanami error for flag '{}': {}", flagConfig.name(), error.getMessage());
- *         return switch (valueType) {
+ *     public CompletableFuture<Object> onError(Throwable error, String flagKey,
+ *             FlagValueType configuredType, FlagValueType requestedType) {
+ *         log.warn("Izanami error for flag '{}': {}", flagKey, error.getMessage());
+ *         return switch (requestedType) {
  *             case BOOLEAN -> CompletableFuture.completedFuture(false);
  *             case STRING -> CompletableFuture.completedFuture("");
  *             case INTEGER, DOUBLE -> CompletableFuture.completedFuture(0);
@@ -47,7 +47,7 @@ public interface IzanamiErrorCallback {
     /**
      * Handle an Izanami evaluation error and provide a fallback value.
      * <p>
-     * The returned value should be compatible with the flag's {@code valueType}:
+     * The returned value should be compatible with the {@code requestedType}:
      * <ul>
      *   <li>{@link FlagValueType#BOOLEAN}: return {@link Boolean}</li>
      *   <li>{@link FlagValueType#STRING}: return {@link String}</li>
@@ -55,10 +55,11 @@ public interface IzanamiErrorCallback {
      *   <li>{@link FlagValueType#OBJECT}: return {@link String} (JSON) or a serializable object</li>
      * </ul>
      *
-     * @param error      the error that occurred during evaluation
-     * @param flagConfig the configuration of the flag being evaluated
-     * @param valueType  the expected value type
+     * @param error          the error that occurred during evaluation
+     * @param flagKey        the key of the flag being evaluated
+     * @param configuredType the flag's configured value type
+     * @param requestedType  the value type being requested by the Izanami client
      * @return a {@link CompletableFuture} with the fallback value
      */
-    CompletableFuture<Object> onError(Throwable error, FlagConfig flagConfig, FlagValueType valueType);
+    CompletableFuture<Object> onError(Throwable error, String flagKey, FlagValueType configuredType, FlagValueType requestedType);
 }

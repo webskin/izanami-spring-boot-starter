@@ -1,6 +1,7 @@
 package fr.maif.izanami.spring.openfeature;
 
 import dev.openfeature.sdk.FlagValueType;
+import fr.maif.FeatureClientErrorStrategy;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 
@@ -28,7 +29,7 @@ public record FlagConfig(
     @NonNull
     FlagValueType valueType,
     @NonNull
-    ErrorStrategy errorStrategy,
+    FeatureClientErrorStrategy<?> errorStrategy,
     @Nullable Object defaultValue,
     @Nullable String callbackBean
 ) {

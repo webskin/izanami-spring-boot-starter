@@ -91,18 +91,6 @@ public class IzanamiAutoConfiguration {
     }
 
     /**
-     * Create the flag configuration service.
-     *
-     * @param flagsProperties bound {@link FlagsProperties}
-     * @return a {@link FlagConfigService}
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public FlagConfigService flagConfigService(FlagsProperties flagsProperties) {
-        return new FlagConfigServiceImpl(flagsProperties);
-    }
-
-    /**
      * Create the error strategy factory used to translate flag configuration into Izanami client error strategies.
      *
      * @param objectMapperProvider Spring-managed {@link ObjectMapper} (optional)
@@ -117,6 +105,19 @@ public class IzanamiAutoConfiguration {
     ) {
         ObjectMapper objectMapper = objectMapperProvider.getIfAvailable(ObjectMapper::new);
         return new ErrorStrategyFactoryImpl(objectMapper, beanFactory);
+    }
+
+    /**
+     * Create the flag configuration service.
+     *
+     * @param flagsProperties      bound {@link FlagsProperties}
+     * @param errorStrategyFactory factory for creating Izanami client error strategies
+     * @return a {@link FlagConfigService}
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public FlagConfigService flagConfigService(FlagsProperties flagsProperties, ErrorStrategyFactory errorStrategyFactory) {
+        return new FlagConfigServiceImpl(flagsProperties, errorStrategyFactory);
     }
 
     /**

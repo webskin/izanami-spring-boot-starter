@@ -17,7 +17,6 @@ import dev.openfeature.sdk.exceptions.GeneralError;
 import fr.maif.FeatureClientErrorStrategy;
 import fr.maif.features.results.IzanamiResult;
 import fr.maif.features.values.BooleanCastStrategy;
-import fr.maif.izanami.spring.openfeature.api.ErrorStrategyFactory;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
 import fr.maif.izanami.spring.service.IzanamiService;
 import fr.maif.requests.FeatureRequest;
@@ -88,26 +87,22 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
 
     private final FlagConfigService flagConfigService;
     private final IzanamiService izanamiService;
-    private final ErrorStrategyFactory errorStrategyFactory;
     private final ObjectMapper objectMapper;
 
     /**
      * Create a provider.
      *
-     * @param flagConfigService    access to configured flags
-     * @param izanamiService       Izanami client wrapper
-     * @param errorStrategyFactory per-flag error strategy factory
-     * @param objectMapper         mapper used for JSON parsing/serialization (object flags)
+     * @param flagConfigService access to configured flags
+     * @param izanamiService    Izanami client wrapper
+     * @param objectMapper      mapper used for JSON parsing/serialization (object flags)
      */
     public IzanamiFeatureProvider(
         FlagConfigService flagConfigService,
         IzanamiService izanamiService,
-        ErrorStrategyFactory errorStrategyFactory,
         ObjectMapper objectMapper
     ) {
         this.flagConfigService = flagConfigService;
         this.izanamiService = izanamiService;
-        this.errorStrategyFactory = errorStrategyFactory;
         this.objectMapper = objectMapper;
     }
 
@@ -223,22 +218,21 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
     }
 
     private <T> EvaluationOutcome<T> handleApplicationError(FlagConfig config, T fallbackValue, String message) {
-        ErrorStrategy strategy = config.errorStrategy();
-        return switch (strategy) {
-            // TODO FAIL cannot work throw Openfeateur
-            case FAIL -> throw new GeneralError(message);
-            // TODO Openfeature does not support null default values
-            case NULL_VALUE -> new EvaluationOutcome<>(null, FlagValueSource.APPLICATION_ERROR_STRATEGY, null, message, Reason.ERROR.toString());
-            case DEFAULT_VALUE, CALLBACK -> EvaluationOutcome.applicationFallback(fallbackValue, message);
-        };
+        FeatureClientErrorStrategy<?> strategy = config.errorStrategy();
+        if (strategy instanceof FeatureClientErrorStrategy.FailStrategy) {
+            throw new GeneralError(message);
+        }
+        if (strategy instanceof FeatureClientErrorStrategy.NullValueStrategy) {
+            return new EvaluationOutcome<>(null, FlagValueSource.APPLICATION_ERROR_STRATEGY, null, message, Reason.ERROR.toString());
+        }
+        // DEFAULT_VALUE or CALLBACK strategy
+        return EvaluationOutcome.applicationFallback(fallbackValue, message);
     }
 
     private Optional<IzanamiResult.Result> queryIzanami(FlagConfig config, IzanamiContext context) {
-        FeatureClientErrorStrategy<?> errorStrategy = errorStrategyFactory.createErrorStrategy(config);
-
         FeatureRequest request = FeatureRequest.newFeatureRequest()
             .withFeature(config.key())
-            .withErrorStrategy(errorStrategy)
+            .withErrorStrategy(config.errorStrategy())
             .withBooleanCastStrategy(BooleanCastStrategy.LAX);
 
         if (context.user() != null && !context.user().isBlank()) {
@@ -248,8 +242,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
             request.withContext(context.contextPath());
         }
 
-        // TODO
-        boolean propagateErrors = config.errorStrategy() == ErrorStrategy.FAIL;
+        boolean propagateErrors = config.errorStrategy() instanceof FeatureClientErrorStrategy.FailStrategy;
         return izanamiService.getFeatureResult(request, propagateErrors);
     }
 
@@ -370,7 +363,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
             .addString(FlagMetadataKeys.FLAG_CONFIG_DESCRIPTION, config.description())
             .addString(FlagMetadataKeys.FLAG_CONFIG_VALUE_TYPE, config.valueType().name())
             .addString(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE, defaultValueString)
-            .addString(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY, config.errorStrategy().name())
+            .addString(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY, config.errorStrategy().getClass().getSimpleName())
             .addString(FlagMetadataKeys.FLAG_VALUE_SOURCE, source.name())
             .build();
     }

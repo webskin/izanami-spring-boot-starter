@@ -1,9 +1,11 @@
 package fr.maif.izanami.spring.openfeature.internal;
 
 import dev.openfeature.sdk.FlagValueType;
+import fr.maif.FeatureClientErrorStrategy;
 import fr.maif.izanami.spring.openfeature.ErrorStrategy;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
 import fr.maif.izanami.spring.openfeature.FlagsProperties;
+import fr.maif.izanami.spring.openfeature.api.ErrorStrategyFactory;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,13 +28,17 @@ public final class FlagConfigServiceImpl implements FlagConfigService {
     private final Map<String, FlagConfig> configsByName;
     private final Map<String, FlagConfig> configsById;
     private final Map<String, String> nameToId;
+    private final ErrorStrategyFactory errorStrategyFactory;
 
     /**
      * Create a service from configured {@code openfeature.flags}.
      *
-     * @param flagsProperties properties containing raw flag configurations
+     * @param flagsProperties      properties containing raw flag configurations
+     * @param errorStrategyFactory factory for creating Izanami client error strategies
      */
-    public FlagConfigServiceImpl(FlagsProperties flagsProperties) {
+    public FlagConfigServiceImpl(FlagsProperties flagsProperties, ErrorStrategyFactory errorStrategyFactory) {
+        this.errorStrategyFactory = errorStrategyFactory;
+
         Map<String, FlagConfig> byName = new LinkedHashMap<>();
         Map<String, FlagConfig> byId = new LinkedHashMap<>();
         Map<String, String> nameToIdMap = new LinkedHashMap<>();
@@ -91,9 +97,24 @@ public final class FlagConfigServiceImpl implements FlagConfigService {
      * Validates configuration rules and coerces the default value to the correct type.
      */
     private FlagConfig transformAndValidate(RawFlagConfig raw) {
+        // Validate: key and name must not be null
+        if (raw.getKey() == null || raw.getKey().isBlank()) {
+            throw new IllegalArgumentException(
+                "Flag configuration is missing required 'key' property. "
+                    + "Please specify a key (UUID) for each flag."
+            );
+        }
+        if (raw.getName() == null || raw.getName().isBlank()) {
+            throw new IllegalArgumentException(
+                "Flag '" + raw.getKey() + "' is missing required 'name' property. "
+                    + "Please specify a name for each flag."
+            );
+        }
+
+        String flagKey = raw.getKey();
+        String flagName = raw.getName();
         ErrorStrategy strategy = raw.errorStrategy();
         FlagValueType valueType = raw.valueType();
-        String flagIdentifier = raw.getName() != null ? raw.getName() : raw.getKey();
 
         // Infer DEFAULT_VALUE strategy when defaultValue is provided without explicit strategy
         if (strategy == null && raw.getDefaultValue() != null && raw.getCallbackBean() == null) {
@@ -113,7 +134,7 @@ public final class FlagConfigServiceImpl implements FlagConfigService {
         // Validate: valueType must not be null
         if (valueType == null) {
             throw new IllegalArgumentException(
-                "Flag '" + flagIdentifier + "' has no valueType configured. "
+                "Flag '" + flagName + "' (key=" + flagKey + ") has no valueType configured. "
                     + "Please specify a valueType (BOOLEAN, STRING, INTEGER, DOUBLE, or OBJECT)."
             );
         }
@@ -121,7 +142,7 @@ public final class FlagConfigServiceImpl implements FlagConfigService {
         // Validate: defaultValue only allowed with DEFAULT_VALUE strategy
         if (strategy != ErrorStrategy.DEFAULT_VALUE && raw.getDefaultValue() != null) {
             throw new IllegalArgumentException(
-                "Flag '" + flagIdentifier + "' has errorStrategy=" + strategy.name()
+                "Flag '" + flagName + "' (key=" + flagKey + ") has errorStrategy=" + strategy.name()
                     + " but also defines a defaultValue. "
                     + "The defaultValue property is only valid with errorStrategy=DEFAULT_VALUE."
             );
@@ -130,14 +151,14 @@ public final class FlagConfigServiceImpl implements FlagConfigService {
         // Validate: CALLBACK strategy should have callbackBean
         if (strategy == ErrorStrategy.CALLBACK
                 && (raw.getCallbackBean() == null || raw.getCallbackBean().isBlank())) {
-            log.warn("Flag '{}' has errorStrategy=CALLBACK but no callbackBean specified; "
-                + "will fall back to type-safe defaults on error", flagIdentifier);
+            log.warn("Flag '{}' (key={}) has errorStrategy=CALLBACK but no callbackBean specified; "
+                + "will fall back to type-safe defaults on error", flagName, flagKey);
         }
 
         // Validate: callbackBean only allowed with CALLBACK strategy
         if (strategy != ErrorStrategy.CALLBACK && raw.getCallbackBean() != null) {
             throw new IllegalArgumentException(
-                "Flag '" + flagIdentifier + "' has callbackBean='" + raw.getCallbackBean()
+                "Flag '" + flagName + "' (key=" + flagKey + ") has callbackBean='" + raw.getCallbackBean()
                     + "' but errorStrategy=" + strategy.name() + ". "
                     + "The callbackBean property is only valid with errorStrategy=CALLBACK."
             );
@@ -145,23 +166,32 @@ public final class FlagConfigServiceImpl implements FlagConfigService {
 
         // Extract and validate raw default value
         Object rawDefaultValue = raw.unwrapRawDefaultValue();
-        validateDefaultValueType(rawDefaultValue, valueType, flagIdentifier);
+        validateDefaultValueType(rawDefaultValue, valueType, flagKey, flagName);
 
         // Coerce the default value to the correct type
         Object coercedDefaultValue = coerceDefaultValue(rawDefaultValue, valueType, strategy);
 
+        // Compute the Izanami client error strategy once
+        FeatureClientErrorStrategy<?> clientErrorStrategy = errorStrategyFactory.createErrorStrategy(
+            strategy,
+            valueType,
+            coercedDefaultValue,
+            raw.getCallbackBean(),
+            flagKey
+        );
+
         return new FlagConfig(
-            raw.getKey(),
+            flagKey,
             raw.getName(),
             raw.getDescription() == null ? raw.getName() : raw.getDescription(),
             valueType,
-            strategy,
+            clientErrorStrategy,
             coercedDefaultValue,
             raw.getCallbackBean()
         );
     }
 
-    private void validateDefaultValueType(Object defaultValue, FlagValueType valueType, String flagIdentifier) {
+    private void validateDefaultValueType(Object defaultValue, FlagValueType valueType, String flagKey, String flagName) {
         if (defaultValue == null) {
             return;
         }
@@ -170,7 +200,7 @@ public final class FlagConfigServiceImpl implements FlagConfigService {
             case BOOLEAN -> {
                 if (!(defaultValue instanceof Boolean || defaultValue instanceof String || defaultValue instanceof Number)) {
                     throw new IllegalArgumentException(
-                        "Flag '" + flagIdentifier + "' has valueType=BOOLEAN but defaultValue cannot be converted to Boolean: " + defaultValue.getClass().getSimpleName()
+                        "Flag '" + flagName + "' (key=" + flagKey + ") has valueType=BOOLEAN but defaultValue cannot be converted to Boolean: " + defaultValue.getClass().getSimpleName()
                     );
                 }
             }
@@ -186,14 +216,14 @@ public final class FlagConfigServiceImpl implements FlagConfigService {
                         Double.parseDouble(s);
                     } catch (NumberFormatException e) {
                         throw new IllegalArgumentException(
-                            "Flag '" + flagIdentifier + "' has valueType=" + valueType.name()
+                            "Flag '" + flagName + "' (key=" + flagKey + ") has valueType=" + valueType.name()
                                 + " but defaultValue '" + s + "' is not a valid number"
                         );
                     }
                     return;
                 }
                 throw new IllegalArgumentException(
-                    "Flag '" + flagIdentifier + "' has valueType=" + valueType.name()
+                    "Flag '" + flagName + "' (key=" + flagKey + ") has valueType=" + valueType.name()
                         + " but defaultValue cannot be converted to a number: " + defaultValue.getClass().getSimpleName()
                 );
             }
@@ -201,7 +231,7 @@ public final class FlagConfigServiceImpl implements FlagConfigService {
                 // Object type accepts Map, List, or String (JSON)
                 if (!(defaultValue instanceof Map || defaultValue instanceof List || defaultValue instanceof String)) {
                     throw new IllegalArgumentException(
-                        "Flag '" + flagIdentifier + "' has valueType=OBJECT but defaultValue is not a Map, List, or String: " + defaultValue.getClass().getSimpleName()
+                        "Flag '" + flagName + "' (key=" + flagKey + ") has valueType=OBJECT but defaultValue is not a Map, List, or String: " + defaultValue.getClass().getSimpleName()
                     );
                 }
             }

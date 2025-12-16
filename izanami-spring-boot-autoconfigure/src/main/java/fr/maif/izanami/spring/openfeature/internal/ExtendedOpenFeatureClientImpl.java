@@ -13,7 +13,7 @@ import dev.openfeature.sdk.ProviderEvent;
 import dev.openfeature.sdk.ProviderState;
 import dev.openfeature.sdk.TrackingEventDetails;
 import dev.openfeature.sdk.Value;
-import fr.maif.izanami.spring.openfeature.ErrorStrategy;
+import fr.maif.FeatureClientErrorStrategy;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
 import fr.maif.izanami.spring.openfeature.api.ExtendedOpenFeatureClient;
@@ -478,9 +478,9 @@ public final class ExtendedOpenFeatureClientImpl implements ExtendedOpenFeatureC
                     + "Please add it to openfeature.flags configuration or use a method with explicit defaultValue."
             ));
 
-        if (config.errorStrategy() != ErrorStrategy.DEFAULT_VALUE) {
+        if (!(config.errorStrategy() instanceof FeatureClientErrorStrategy.DefaultValueStrategy)) {
             throw new ExtendedOpenFeatureClientException(
-                "Flag '" + key + "' has errorStrategy=" + config.errorStrategy().name()
+                "Flag '" + key + "' has errorStrategy=" + config.errorStrategy().getClass().getSimpleName()
                     + " but a method requiring auto-computed defaultValue was called. "
                     + "Either configure the flag with errorStrategy=DEFAULT_VALUE or use a method with explicit defaultValue."
             );
