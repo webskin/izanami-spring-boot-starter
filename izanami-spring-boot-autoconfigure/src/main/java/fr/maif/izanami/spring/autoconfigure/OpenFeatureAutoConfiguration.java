@@ -5,15 +5,15 @@ import dev.openfeature.sdk.FeatureProvider;
 import dev.openfeature.sdk.OpenFeatureAPI;
 import fr.maif.IzanamiClient;
 import fr.maif.izanami.spring.openfeature.IzanamiFeatureProvider;
-import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
+import fr.maif.izanami.spring.openfeature.ValueConverter;
 import fr.maif.izanami.spring.openfeature.api.ExtendedOpenFeatureClient;
 import fr.maif.izanami.spring.openfeature.api.ExtendedOpenFeatureClientFactory;
+import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
 import fr.maif.izanami.spring.openfeature.internal.ExtendedOpenFeatureClientFactoryImpl;
 import fr.maif.izanami.spring.service.IzanamiService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -30,11 +30,24 @@ public class OpenFeatureAutoConfiguration {
     private static final Logger log = LoggerFactory.getLogger(OpenFeatureAutoConfiguration.class);
 
     /**
+     * Create the ValueConverter for converting Java objects to OpenFeature Values.
+     *
+     * @param objectMapper Jackson ObjectMapper
+     * @return the value converter
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public ValueConverter valueConverter(ObjectMapper objectMapper) {
+        return new ValueConverter(objectMapper);
+    }
+
+    /**
      * Create the Izanami-backed OpenFeature provider.
      *
-     * @param flagConfigService    flag configuration service
-     * @param izanamiService       Izanami service
-     * @param objectMapperProvider optional Spring {@link ObjectMapper}
+     * @param flagConfigService flag configuration service
+     * @param izanamiService    Izanami service
+     * @param objectMapper      Jackson ObjectMapper
+     * @param valueConverter    converter for Java objects to OpenFeature Values
      * @return the provider implementation
      */
     @Bean
@@ -42,10 +55,10 @@ public class OpenFeatureAutoConfiguration {
     public IzanamiFeatureProvider izanamiFeatureProvider(
         FlagConfigService flagConfigService,
         IzanamiService izanamiService,
-        ObjectProvider<ObjectMapper> objectMapperProvider
+        ObjectMapper objectMapper,
+        ValueConverter valueConverter
     ) {
-        ObjectMapper objectMapper = objectMapperProvider.getIfAvailable(ObjectMapper::new);
-        return new IzanamiFeatureProvider(flagConfigService, izanamiService, objectMapper);
+        return new IzanamiFeatureProvider(flagConfigService, izanamiService, objectMapper, valueConverter);
     }
 
     /**
@@ -77,14 +90,16 @@ public class OpenFeatureAutoConfiguration {
      *
      * @param openFeatureAPI    configured OpenFeature API
      * @param flagConfigService flag configuration service
+     * @param valueConverter    converter for Java objects to OpenFeature Values
      * @return a client factory instance
      */
     @Bean
     @ConditionalOnMissingBean(ExtendedOpenFeatureClientFactory.class)
     public ExtendedOpenFeatureClientFactory extendedOpenFeatureClientFactory(
             OpenFeatureAPI openFeatureAPI,
-            FlagConfigService flagConfigService) {
-        return new ExtendedOpenFeatureClientFactoryImpl(openFeatureAPI, flagConfigService);
+            FlagConfigService flagConfigService,
+            ValueConverter valueConverter) {
+        return new ExtendedOpenFeatureClientFactoryImpl(openFeatureAPI, flagConfigService, valueConverter);
     }
 
     /**

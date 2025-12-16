@@ -11,12 +11,8 @@ import fr.maif.izanami.spring.service.IzanamiService;
 import fr.maif.izanami.spring.service.ResultWithMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.lang.Nullable;
 
 import java.text.MessageFormat;
-import java.time.Instant;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -86,16 +82,18 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
      * @param flagConfigService access to configured flags
      * @param izanamiService    Izanami client wrapper
      * @param objectMapper      mapper used for JSON parsing/serialization (object flags)
+     * @param valueConverter    converter for Java objects to OpenFeature Values
      */
     public IzanamiFeatureProvider(
         FlagConfigService flagConfigService,
         IzanamiService izanamiService,
-        ObjectMapper objectMapper
+        ObjectMapper objectMapper,
+        ValueConverter valueConverter
     ) {
         this.izanamiService = izanamiService;
         this.objectMapper = objectMapper;
-        this.evaluationDependencies = new EvaluationDependencies(flagConfigService, izanamiService, objectMapper);
-        this.valueConverter = new ValueConverter(objectMapper);
+        this.valueConverter = valueConverter;
+        this.evaluationDependencies = new EvaluationDependencies(flagConfigService, izanamiService, objectMapper, valueConverter);
     }
 
     @Override
@@ -157,7 +155,8 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
     public record EvaluationDependencies(
         FlagConfigService flagConfigService,
         IzanamiService izanamiService,
-        ObjectMapper objectMapper
+        ObjectMapper objectMapper,
+        ValueConverter valueConverter
     ) {}
 
     static class EvaluationExecution<T> {
@@ -323,11 +322,8 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
     }
 
     static class ObjectEvaluationExecution extends EvaluationExecution<Value> {
-        private final ValueConverter valueConverter;
-
         ObjectEvaluationExecution(EvaluationDependencies deps, String flagKey, Value callerDefaultValue, EvaluationContext evaluationContext, FlagValueExtractor<Value> flagValueExtractor) {
             super(deps, flagKey, callerDefaultValue, evaluationContext, flagValueExtractor);
-            this.valueConverter = new ValueConverter(deps.objectMapper());
         }
 
         public ProviderEvaluation<Value> evaluateObject() {
@@ -337,7 +333,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
             if (flagConfig.valueType() != FlagValueType.OBJECT) {
                 return typeMismatch(FlagValueType.OBJECT);
             }
-            Value coercedCallerDefaultValue = valueConverter.toOpenFeatureValueOrNullSafe(flagConfig.defaultValue(), callerDefaultValue);
+            Value coercedCallerDefaultValue = deps.valueConverter().toOpenFeatureValueOrNullSafe(flagConfig.defaultValue(), callerDefaultValue);
             return evaluateViaIzanami(coercedCallerDefaultValue);
         }
 
@@ -379,87 +375,6 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
             return valueConverter.objectToValue(tree);
         } catch (JsonProcessingException e) {
             throw new InvalidObjectJsonException("Flag '" + flagConfig.name() + "' returned invalid JSON for valueType=object");
-        }
-    }
-
-    static class ValueConverter {
-        private final ObjectMapper objectMapper;
-
-        ValueConverter(ObjectMapper objectMapper) {
-            this.objectMapper = objectMapper;
-        }
-
-        Value toOpenFeatureValueOrNullSafe(@Nullable Object configuredDefault, @Nullable Value callerDefault) {
-            if (configuredDefault == null) {
-                return callerDefault != null ? callerDefault : new Value();
-            }
-            if (configuredDefault instanceof Value v) {
-                return v;
-            }
-            if (configuredDefault instanceof String s) {
-                try {
-                    Object tree = objectMapper.readValue(s, Object.class);
-                    return objectToValue(tree);
-                } catch (JsonProcessingException e) {
-                    return new Value(s);
-                }
-            }
-            try {
-                return objectToValue(configuredDefault);
-            } catch (Exception e) {
-                log.debug("Failed to convert configured default to OpenFeature Value, falling back to caller default: {}", e.getMessage());
-                return callerDefault != null ? callerDefault : new Value();
-            }
-        }
-
-        Value objectToValue(Object object) {
-            if (object instanceof Value v) {
-                return v;
-            }
-            if (object == null) {
-                return new Value();
-            }
-            if (object instanceof String s) {
-                return new Value(s);
-            }
-            if (object instanceof Boolean b) {
-                return new Value(b);
-            }
-            if (object instanceof Integer i) {
-                return new Value(i);
-            }
-            if (object instanceof Double d) {
-                return new Value(d);
-            }
-            if (object instanceof Number n) {
-                try {
-                    return new Value((Object) n);
-                } catch (InstantiationException e) {
-                    return new Value(n.doubleValue());
-                }
-            }
-            if (object instanceof Structure s) {
-                return new Value(s);
-            }
-            if (object instanceof List<?> list) {
-                List<Value> values = list.stream().map(this::objectToValue).toList();
-                return new Value(values);
-            }
-            if (object instanceof Instant instant) {
-                return new Value(instant);
-            }
-            if (object instanceof Map<?, ?> map) {
-                Map<String, Value> attributes = new java.util.LinkedHashMap<>();
-                for (Map.Entry<?, ?> entry : map.entrySet()) {
-                    if (entry.getKey() == null) {
-                        continue;
-                    }
-                    attributes.put(entry.getKey().toString(), objectToValue(entry.getValue()));
-                }
-                return new Value(new MutableStructure(attributes));
-            }
-            throw new dev.openfeature.sdk.exceptions.TypeMismatchError(
-                "Flag value '" + object + "' had unexpected type " + object.getClass());
         }
     }
 

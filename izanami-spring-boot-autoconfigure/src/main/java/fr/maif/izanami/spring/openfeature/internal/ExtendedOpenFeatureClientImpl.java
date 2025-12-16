@@ -7,22 +7,18 @@ import dev.openfeature.sdk.EventDetails;
 import dev.openfeature.sdk.FlagEvaluationDetails;
 import dev.openfeature.sdk.FlagEvaluationOptions;
 import dev.openfeature.sdk.Hook;
-import dev.openfeature.sdk.MutableStructure;
-import dev.openfeature.sdk.Structure;
 import dev.openfeature.sdk.ProviderEvent;
 import dev.openfeature.sdk.ProviderState;
 import dev.openfeature.sdk.TrackingEventDetails;
 import dev.openfeature.sdk.Value;
 import fr.maif.FeatureClientErrorStrategy;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
-import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
+import fr.maif.izanami.spring.openfeature.ValueConverter;
 import fr.maif.izanami.spring.openfeature.api.ExtendedOpenFeatureClient;
 import fr.maif.izanami.spring.openfeature.api.ExtendedOpenFeatureClientException;
+import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
 
-import java.time.Instant;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
 
 /**
@@ -33,10 +29,12 @@ public final class ExtendedOpenFeatureClientImpl implements ExtendedOpenFeatureC
 
     private final Client delegate;
     private final FlagConfigService flagConfigService;
+    private final ValueConverter valueConverter;
 
-    public ExtendedOpenFeatureClientImpl(Client delegate, FlagConfigService flagConfigService) {
+    public ExtendedOpenFeatureClientImpl(Client delegate, FlagConfigService flagConfigService, ValueConverter valueConverter) {
         this.delegate = delegate;
         this.flagConfigService = flagConfigService;
+        this.valueConverter = valueConverter;
     }
 
     // ========== Boolean evaluation methods (auto-computed default value) ==========
@@ -513,51 +511,6 @@ public final class ExtendedOpenFeatureClientImpl implements ExtendedOpenFeatureC
 
     private Value getAutoDefaultValueAsValue(String key) {
         FlagConfig config = getValidatedFlagConfig(key);
-        return objectToValue(config.defaultValue());
-    }
-
-    private Value objectToValue(Object object) {
-        if (object instanceof Value v) {
-            return v;
-        }
-        if (object == null) {
-            return new Value();
-        }
-        if (object instanceof String s) {
-            return new Value(s);
-        }
-        if (object instanceof Boolean b) {
-            return new Value(b);
-        }
-        if (object instanceof Integer i) {
-            return new Value(i);
-        }
-        if (object instanceof Double d) {
-            return new Value(d);
-        }
-        if (object instanceof Number n) {
-            return new Value(n.doubleValue());
-        }
-        if (object instanceof Structure s) {
-            return new Value(s);
-        }
-        if (object instanceof List<?> list) {
-            List<Value> values = list.stream().map(this::objectToValue).toList();
-            return new Value(values);
-        }
-        if (object instanceof Instant instant) {
-            return new Value(instant);
-        }
-        if (object instanceof Map<?, ?> map) {
-            Map<String, Value> attributes = new LinkedHashMap<>();
-            for (Map.Entry<?, ?> entry : map.entrySet()) {
-                if (entry.getKey() == null) {
-                    continue;
-                }
-                attributes.put(entry.getKey().toString(), objectToValue(entry.getValue()));
-            }
-            return new Value(new MutableStructure(attributes));
-        }
-        return new Value(object.toString());
+        return valueConverter.objectToValue(config.defaultValue());
     }
 }
