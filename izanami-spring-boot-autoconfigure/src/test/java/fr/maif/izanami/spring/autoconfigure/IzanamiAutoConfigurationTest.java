@@ -11,6 +11,7 @@ import fr.maif.izanami.spring.openfeature.FlagsProperties;
 import fr.maif.izanami.spring.openfeature.IzanamiFeatureProvider;
 import fr.maif.izanami.spring.openfeature.api.ErrorStrategyFactory;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
+import fr.maif.izanami.spring.openfeature.api.OpenFeatureClient;
 import fr.maif.izanami.spring.service.IzanamiService;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -43,6 +44,7 @@ class IzanamiAutoConfigurationTest {
 
             assertThat(context).hasSingleBean(IzanamiFeatureProvider.class);
             assertThat(context).hasSingleBean(OpenFeatureAPI.class);
+            assertThat(context).hasSingleBean(OpenFeatureClient.class);
             assertThat(context).hasSingleBean(Client.class);
 
             OpenFeatureAPI api = context.getBean(OpenFeatureAPI.class);
@@ -62,6 +64,7 @@ class IzanamiAutoConfigurationTest {
                 assertThat(context).doesNotHaveBean(IzanamiService.class);
                 assertThat(context).doesNotHaveBean(IzanamiFeatureProvider.class);
                 assertThat(context).doesNotHaveBean(OpenFeatureAPI.class);
+                assertThat(context).doesNotHaveBean(OpenFeatureClient.class);
                 assertThat(context).doesNotHaveBean(Client.class);
             });
     }

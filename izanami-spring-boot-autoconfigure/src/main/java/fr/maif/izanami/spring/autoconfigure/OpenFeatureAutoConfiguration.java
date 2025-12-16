@@ -8,6 +8,8 @@ import fr.maif.IzanamiClient;
 import fr.maif.izanami.spring.openfeature.IzanamiFeatureProvider;
 import fr.maif.izanami.spring.openfeature.api.ErrorStrategyFactory;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
+import fr.maif.izanami.spring.openfeature.api.OpenFeatureClient;
+import fr.maif.izanami.spring.openfeature.internal.OpenFeatureClientImpl;
 import fr.maif.izanami.spring.service.IzanamiService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,15 +73,20 @@ public class OpenFeatureAutoConfiguration {
     }
 
     /**
-     * Expose the default OpenFeature {@link Client} for injection.
+     * Expose the extended {@link OpenFeatureClient} for injection.
+     * <p>
+     * This client extends the standard OpenFeature {@link Client} with additional methods
+     * that auto-compute default values from flag configuration for Boolean and Object types.
      *
-     * @param openFeatureAPI configured OpenFeature API
-     * @return a client instance
+     * @param openFeatureAPI    configured OpenFeature API
+     * @param flagConfigService flag configuration service
+     * @return an extended client instance
      */
     @Bean
-    @ConditionalOnMissingBean(Client.class)
-    public Client openFeatureClient(OpenFeatureAPI openFeatureAPI) {
-        return openFeatureAPI.getClient();
+    @ConditionalOnMissingBean(OpenFeatureClient.class)
+    public OpenFeatureClient openFeatureClient(OpenFeatureAPI openFeatureAPI, FlagConfigService flagConfigService) {
+        Client delegate = openFeatureAPI.getClient();
+        return new OpenFeatureClientImpl(delegate, flagConfigService);
     }
 
     /**
