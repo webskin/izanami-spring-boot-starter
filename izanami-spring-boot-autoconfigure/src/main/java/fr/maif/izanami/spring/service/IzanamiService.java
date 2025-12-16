@@ -50,7 +50,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
 
     private final IzanamiProperties properties;
     private final FlagConfigService flagConfigService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     private final AtomicReference<IzanamiClient> clientRef = new AtomicReference<>();
     private final AtomicReference<CompletableFuture<Void>> loadedRef = new AtomicReference<>(CompletableFuture.completedFuture(null));
@@ -61,10 +61,12 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
      *
      * @param properties        Izanami properties
      * @param flagConfigService flag configuration service providing IDs to preload
+     * @param objectMapper      Jackson ObjectMapper for JSON serialization
      */
-    public IzanamiService(IzanamiProperties properties, FlagConfigService flagConfigService) {
+    public IzanamiService(IzanamiProperties properties, FlagConfigService flagConfigService, ObjectMapper objectMapper) {
         this.properties = properties;
         this.flagConfigService = flagConfigService;
+        this.objectMapper = objectMapper;
     }
 
     @Override

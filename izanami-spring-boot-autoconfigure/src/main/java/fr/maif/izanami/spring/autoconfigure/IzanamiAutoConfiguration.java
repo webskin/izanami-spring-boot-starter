@@ -12,9 +12,11 @@ import fr.maif.izanami.spring.openfeature.internal.FlagConfigServiceImpl;
 import fr.maif.izanami.spring.service.IzanamiService;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
 import org.springframework.boot.context.properties.ConfigurationPropertiesBinding;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -29,8 +31,22 @@ import org.springframework.core.convert.converter.Converter;
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnClass(IzanamiClient.class)
 @ConditionalOnProperty(name = "izanami.enabled", havingValue = "true", matchIfMissing = true)
+@AutoConfigureAfter(JacksonAutoConfiguration.class)
 @EnableConfigurationProperties({IzanamiProperties.class, FlagsProperties.class})
 public class IzanamiAutoConfiguration {
+
+    /**
+     * Create a default ObjectMapper if none is provided.
+     * <p>
+     * This ensures Izanami works even without Spring Boot's Jackson auto-configuration.
+     *
+     * @return a default ObjectMapper
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public ObjectMapper objectMapper() {
+        return new ObjectMapper();
+    }
 
     /**
      * Register the converter used to bind {@code openfeature.flags[*].valueType}.
@@ -125,11 +141,12 @@ public class IzanamiAutoConfiguration {
      *
      * @param properties        Izanami properties
      * @param flagConfigService flag configuration service (used to preload ids)
+     * @param objectMapper      Jackson ObjectMapper for JSON serialization
      * @return an {@link IzanamiService}
      */
     @Bean
     @ConditionalOnMissingBean
-    public IzanamiService izanamiService(IzanamiProperties properties, FlagConfigService flagConfigService) {
-        return new IzanamiService(properties, flagConfigService);
+    public IzanamiService izanamiService(IzanamiProperties properties, FlagConfigService flagConfigService, ObjectMapper objectMapper) {
+        return new IzanamiService(properties, flagConfigService, objectMapper);
     }
 }
