@@ -1,15 +1,22 @@
 package fr.maif.izanami.spring.integration;
 
+import dev.openfeature.sdk.FlagValueType;
 import fr.maif.features.values.BooleanCastStrategy;
 import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
+import fr.maif.izanami.spring.openfeature.api.IzanamiErrorCallback;
 import fr.maif.izanami.spring.service.IzanamiService;
 import fr.maif.izanami.spring.service.ResultWithMetadata;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 import java.math.BigDecimal;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Integration tests for {@link IzanamiService} running against a real Izanami server.
@@ -472,5 +479,79 @@ class IzanamiServiceIT extends BaseIzanamiIT {
                 assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                     .isEqualTo("IZANAMI_ERROR_STRATEGY");
             });
+    }
+
+    // ========== Error strategy tests (FAIL, NULL_VALUE, CALLBACK) ==========
+
+    @Test
+    void throwsWhenServerUnavailableWithFailStrategy() {
+        contextRunner
+            .withPropertyValues(withUnavailableServerAndFlagConfig(
+                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
+                "openfeature.flags[0].name=secret-codename",
+                "openfeature.flags[0].description=The secret codename",
+                "openfeature.flags[0].valueType=string",
+                "openfeature.flags[0].errorStrategy=FAIL"
+            ))
+            .run(context -> {
+                IzanamiService service = context.getBean(IzanamiService.class);
+
+                assertThatThrownBy(() -> service.forFlagKey(SECRET_CODENAME_ID).stringValue().join())
+                    .isInstanceOf(CompletionException.class);
+            });
+    }
+
+    @Test
+    void returnsNullWhenServerUnavailableWithNullValueStrategy() {
+        contextRunner
+            .withPropertyValues(withUnavailableServerAndFlagConfig(
+                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
+                "openfeature.flags[0].name=secret-codename",
+                "openfeature.flags[0].description=The secret codename",
+                "openfeature.flags[0].valueType=string",
+                "openfeature.flags[0].errorStrategy=NULL_VALUE"
+            ))
+            .run(context -> {
+                IzanamiService service = context.getBean(IzanamiService.class);
+                String value = service.forFlagKey(SECRET_CODENAME_ID).stringValue().join();
+
+                assertThat(value).isNull();
+            });
+    }
+
+    @Test
+    void returnsCallbackValueWhenServerUnavailableWithCallbackStrategy() {
+        contextRunner
+            .withUserConfiguration(TestCallbackConfiguration.class)
+            .withPropertyValues(withUnavailableServerAndFlagConfig(
+                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
+                "openfeature.flags[0].name=secret-codename",
+                "openfeature.flags[0].description=The secret codename",
+                "openfeature.flags[0].valueType=string",
+                "openfeature.flags[0].errorStrategy=CALLBACK",
+                "openfeature.flags[0].callbackBean=testErrorCallback"
+            ))
+            .run(context -> {
+                IzanamiService service = context.getBean(IzanamiService.class);
+                String value = service.forFlagKey(SECRET_CODENAME_ID).stringValue().join();
+
+                assertThat(value).isEqualTo("callback-fallback-value");
+            });
+    }
+
+    /**
+     * Test configuration providing a callback bean for error handling tests.
+     */
+    @Configuration
+    static class TestCallbackConfiguration {
+        @Bean("testErrorCallback")
+        IzanamiErrorCallback testErrorCallback() {
+            return (error, flagKey, configuredType, requestedType) -> {
+                if (requestedType == FlagValueType.STRING) {
+                    return CompletableFuture.completedFuture("callback-fallback-value");
+                }
+                return CompletableFuture.completedFuture(null);
+            };
+        }
     }
 }
