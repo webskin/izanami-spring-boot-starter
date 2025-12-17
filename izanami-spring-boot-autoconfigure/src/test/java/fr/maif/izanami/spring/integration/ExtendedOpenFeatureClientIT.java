@@ -217,4 +217,142 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
                     .isEqualTo("IZANAMI");
             });
     }
+
+    // ========== Unavailable server fallback tests ==========
+
+    @Test
+    void returnsBooleanDefaultWhenServerUnavailable() {
+        contextRunner
+            .withPropertyValues(withUnavailableServerAndFlagConfig(
+                "openfeature.flags[0].key=" + TURBO_MODE_ID,
+                "openfeature.flags[0].name=turbo-mode",
+                "openfeature.flags[0].description=Enable turbo mode",
+                "openfeature.flags[0].valueType=boolean",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=false"
+            ))
+            .run(context -> {
+                ExtendedOpenFeatureClient client = context.getBean(ExtendedOpenFeatureClient.class);
+                FlagEvaluationDetails<Boolean> details = client.getBooleanDetails(TURBO_MODE_ID);
+
+                assertThat(details.getValue()).isFalse();
+                assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI_ERROR_STRATEGY");
+            });
+    }
+
+    @Test
+    void returnsStringDefaultWhenServerUnavailable() {
+        contextRunner
+            .withPropertyValues(withUnavailableServerAndFlagConfig(
+                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
+                "openfeature.flags[0].name=secret-codename",
+                "openfeature.flags[0].description=The secret codename",
+                "openfeature.flags[0].valueType=string",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=classified"
+            ))
+            .run(context -> {
+                ExtendedOpenFeatureClient client = context.getBean(ExtendedOpenFeatureClient.class);
+                FlagEvaluationDetails<String> details = client.getStringDetails(SECRET_CODENAME_ID);
+
+                assertThat(details.getValue()).isEqualTo("classified");
+                assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI_ERROR_STRATEGY");
+            });
+    }
+
+    @Test
+    void returnsIntegerDefaultWhenServerUnavailable() {
+        contextRunner
+            .withPropertyValues(withUnavailableServerAndFlagConfig(
+                "openfeature.flags[0].key=" + MAX_POWER_LEVEL_ID,
+                "openfeature.flags[0].name=max-power-level",
+                "openfeature.flags[0].description=Maximum power level",
+                "openfeature.flags[0].valueType=integer",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=100"
+            ))
+            .run(context -> {
+                ExtendedOpenFeatureClient client = context.getBean(ExtendedOpenFeatureClient.class);
+                FlagEvaluationDetails<Integer> details = client.getIntegerDetails(MAX_POWER_LEVEL_ID);
+
+                assertThat(details.getValue()).isEqualTo(100);
+                assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI_ERROR_STRATEGY");
+            });
+    }
+
+    @Test
+    void returnsDoubleDefaultWhenServerUnavailable() {
+        contextRunner
+            .withPropertyValues(withUnavailableServerAndFlagConfig(
+                "openfeature.flags[0].key=" + DISCOUNT_RATE_ID,
+                "openfeature.flags[0].name=discount-rate",
+                "openfeature.flags[0].description=Current discount rate",
+                "openfeature.flags[0].valueType=double",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=1.2"
+            ))
+            .run(context -> {
+                ExtendedOpenFeatureClient client = context.getBean(ExtendedOpenFeatureClient.class);
+                FlagEvaluationDetails<Double> details = client.getDoubleDetails(DISCOUNT_RATE_ID);
+
+                assertThat(details.getValue()).isEqualTo(1.2);
+                assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI_ERROR_STRATEGY");
+            });
+    }
+
+    // ========== APPLICATION_ERROR_STRATEGY tests ==========
+
+    @Test
+    void returnsCallerDefaultWhenFlagNotConfigured() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + TURBO_MODE_ID,
+                "openfeature.flags[0].name=turbo-mode",
+                "openfeature.flags[0].description=Enable turbo mode",
+                "openfeature.flags[0].valueType=boolean",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=false"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                ExtendedOpenFeatureClient client = context.getBean(ExtendedOpenFeatureClient.class);
+                // Request a flag key that is NOT configured in openfeature.flags
+                FlagEvaluationDetails<Boolean> details = client.getBooleanDetails("not-configured-flag-key", true);
+
+                assertThat(details.getValue()).isTrue(); // caller default
+                assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("APPLICATION_ERROR_STRATEGY");
+                assertThat(details.getErrorCode()).isEqualTo(dev.openfeature.sdk.ErrorCode.FLAG_NOT_FOUND);
+            });
+    }
+
+    @Test
+    void returnsCallerDefaultWhenTypeMismatch() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + TURBO_MODE_ID,
+                "openfeature.flags[0].name=turbo-mode",
+                "openfeature.flags[0].description=Enable turbo mode",
+                "openfeature.flags[0].valueType=boolean",  // configured as boolean
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=false"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                ExtendedOpenFeatureClient client = context.getBean(ExtendedOpenFeatureClient.class);
+                // Request as STRING when configured as BOOLEAN -> type mismatch
+                FlagEvaluationDetails<String> details = client.getStringDetails(TURBO_MODE_ID, "caller-default");
+
+                assertThat(details.getValue()).isEqualTo("caller-default");
+                assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("APPLICATION_ERROR_STRATEGY");
+                assertThat(details.getErrorCode()).isEqualTo(dev.openfeature.sdk.ErrorCode.TYPE_MISMATCH);
+            });
+    }
 }

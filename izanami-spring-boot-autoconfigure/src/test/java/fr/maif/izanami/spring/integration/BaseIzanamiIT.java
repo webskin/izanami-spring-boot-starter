@@ -50,9 +50,26 @@ abstract class BaseIzanamiIT {
         };
     }
 
+    protected static String[] unavailableServerProperties() {
+        return new String[] {
+            "izanami.base-url=http://unavailable:9999",
+            "izanami.api-path=/api",
+            "izanami.client-id=test-client",
+            "izanami.client-secret=test-secret",
+            "izanami.cache.sse.enabled=false"
+        };
+    }
+
     protected static String[] withFlagConfig(String... flagProperties) {
         return Stream.concat(
             Stream.of(izanamiClientProperties()),
+            Stream.of(flagProperties)
+        ).flatMap(Stream::of).toArray(String[]::new);
+    }
+
+    protected static String[] withUnavailableServerAndFlagConfig(String... flagProperties) {
+        return Stream.concat(
+            Stream.of(unavailableServerProperties()),
             Stream.of(flagProperties)
         ).flatMap(Stream::of).toArray(String[]::new);
     }

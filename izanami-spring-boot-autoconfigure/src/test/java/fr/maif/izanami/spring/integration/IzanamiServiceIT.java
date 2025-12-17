@@ -1,6 +1,9 @@
 package fr.maif.izanami.spring.integration;
 
+import fr.maif.features.values.BooleanCastStrategy;
+import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
 import fr.maif.izanami.spring.service.IzanamiService;
+import fr.maif.izanami.spring.service.ResultWithMetadata;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
@@ -183,6 +186,291 @@ class IzanamiServiceIT extends BaseIzanamiIT {
                 BigDecimal value = service.forFlagName("discount-rate").numberValue().join();
 
                 assertThat(value).isEqualByComparingTo(new BigDecimal("0.15"));
+            });
+    }
+
+    // ========== Unavailable server fallback tests ==========
+
+    @Test
+    void returnsBooleanDefaultWhenServerUnavailable() {
+        contextRunner
+            .withPropertyValues(withUnavailableServerAndFlagConfig(
+                "openfeature.flags[0].key=" + TURBO_MODE_ID,
+                "openfeature.flags[0].name=turbo-mode",
+                "openfeature.flags[0].description=Enable turbo mode",
+                "openfeature.flags[0].valueType=boolean",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=false"
+            ))
+            .run(context -> {
+                IzanamiService service = context.getBean(IzanamiService.class);
+                Boolean value = service.forFlagKey(TURBO_MODE_ID).booleanValue().join();
+
+                assertThat(value).isFalse();
+            });
+    }
+
+    @Test
+    void returnsStringDefaultWhenServerUnavailable() {
+        contextRunner
+            .withPropertyValues(withUnavailableServerAndFlagConfig(
+                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
+                "openfeature.flags[0].name=secret-codename",
+                "openfeature.flags[0].description=The secret codename",
+                "openfeature.flags[0].valueType=string",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=classified"
+            ))
+            .run(context -> {
+                IzanamiService service = context.getBean(IzanamiService.class);
+                String value = service.forFlagKey(SECRET_CODENAME_ID).stringValue().join();
+
+                assertThat(value).isEqualTo("classified");
+            });
+    }
+
+    @Test
+    void returnsIntegerDefaultWhenServerUnavailable() {
+        contextRunner
+            .withPropertyValues(withUnavailableServerAndFlagConfig(
+                "openfeature.flags[0].key=" + MAX_POWER_LEVEL_ID,
+                "openfeature.flags[0].name=max-power-level",
+                "openfeature.flags[0].description=Maximum power level",
+                "openfeature.flags[0].valueType=integer",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=100"
+            ))
+            .run(context -> {
+                IzanamiService service = context.getBean(IzanamiService.class);
+                BigDecimal value = service.forFlagKey(MAX_POWER_LEVEL_ID).numberValue().join();
+
+                assertThat(value).isEqualByComparingTo(new BigDecimal("100"));
+            });
+    }
+
+    @Test
+    void returnsDoubleDefaultWhenServerUnavailable() {
+        contextRunner
+            .withPropertyValues(withUnavailableServerAndFlagConfig(
+                "openfeature.flags[0].key=" + DISCOUNT_RATE_ID,
+                "openfeature.flags[0].name=discount-rate",
+                "openfeature.flags[0].description=Current discount rate",
+                "openfeature.flags[0].valueType=double",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=0.0"
+            ))
+            .run(context -> {
+                IzanamiService service = context.getBean(IzanamiService.class);
+                BigDecimal value = service.forFlagKey(DISCOUNT_RATE_ID).numberValue().join();
+
+                assertThat(value).isEqualByComparingTo(new BigDecimal("0.0"));
+            });
+    }
+
+    // ========== featureResultWithMetadata integration tests ==========
+
+    @Test
+    void evaluatesBooleanResultWithMetadataFromServer() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + TURBO_MODE_ID,
+                "openfeature.flags[0].name=turbo-mode",
+                "openfeature.flags[0].description=Enable turbo mode",
+                "openfeature.flags[0].valueType=boolean",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=false"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                IzanamiService service = context.getBean(IzanamiService.class);
+                ResultWithMetadata result = service.forFlagKey(TURBO_MODE_ID).featureResultWithMetadata().join();
+
+                assertThat(result.result().booleanValue(BooleanCastStrategy.LAX)).isTrue();
+                assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI");
+            });
+    }
+
+    @Test
+    void evaluatesStringResultWithMetadataFromServer() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
+                "openfeature.flags[0].name=secret-codename",
+                "openfeature.flags[0].description=The secret codename",
+                "openfeature.flags[0].valueType=string",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=classified"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                IzanamiService service = context.getBean(IzanamiService.class);
+                ResultWithMetadata result = service.forFlagKey(SECRET_CODENAME_ID).featureResultWithMetadata().join();
+
+                assertThat(result.result().stringValue()).isEqualTo("Operation Thunderbolt");
+                assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI");
+            });
+    }
+
+    @Test
+    void evaluatesIntegerResultWithMetadataFromServer() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + MAX_POWER_LEVEL_ID,
+                "openfeature.flags[0].name=max-power-level",
+                "openfeature.flags[0].description=Maximum power level",
+                "openfeature.flags[0].valueType=integer",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=100"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                IzanamiService service = context.getBean(IzanamiService.class);
+                ResultWithMetadata result = service.forFlagKey(MAX_POWER_LEVEL_ID).featureResultWithMetadata().join();
+
+                assertThat(result.result().numberValue().intValue()).isEqualTo(9001);
+                assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI");
+            });
+    }
+
+    @Test
+    void evaluatesDoubleResultWithMetadataFromServer() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + DISCOUNT_RATE_ID,
+                "openfeature.flags[0].name=discount-rate",
+                "openfeature.flags[0].description=Current discount rate",
+                "openfeature.flags[0].valueType=double",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=0.0"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                IzanamiService service = context.getBean(IzanamiService.class);
+                ResultWithMetadata result = service.forFlagKey(DISCOUNT_RATE_ID).featureResultWithMetadata().join();
+
+                assertThat(result.result().numberValue().doubleValue()).isEqualTo(0.15);
+                assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI");
+            });
+    }
+
+    // ========== featureResultWithMetadata unavailable server fallback tests ==========
+
+    @Test
+    void returnsBooleanDefaultWithMetadataWhenServerUnavailable() {
+        contextRunner
+            .withPropertyValues(withUnavailableServerAndFlagConfig(
+                "openfeature.flags[0].key=" + TURBO_MODE_ID,
+                "openfeature.flags[0].name=turbo-mode",
+                "openfeature.flags[0].description=Enable turbo mode",
+                "openfeature.flags[0].valueType=boolean",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=false"
+            ))
+            .run(context -> {
+                IzanamiService service = context.getBean(IzanamiService.class);
+                ResultWithMetadata result = service.forFlagKey(TURBO_MODE_ID).featureResultWithMetadata().join();
+
+                assertThat(result.result().booleanValue(BooleanCastStrategy.LAX)).isFalse();
+                assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI_ERROR_STRATEGY");
+            });
+    }
+
+    @Test
+    void returnsStringDefaultWithMetadataWhenServerUnavailable() {
+        contextRunner
+            .withPropertyValues(withUnavailableServerAndFlagConfig(
+                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
+                "openfeature.flags[0].name=secret-codename",
+                "openfeature.flags[0].description=The secret codename",
+                "openfeature.flags[0].valueType=string",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=classified"
+            ))
+            .run(context -> {
+                IzanamiService service = context.getBean(IzanamiService.class);
+                ResultWithMetadata result = service.forFlagKey(SECRET_CODENAME_ID).featureResultWithMetadata().join();
+
+                assertThat(result.result().stringValue()).isEqualTo("classified");
+                assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI_ERROR_STRATEGY");
+            });
+    }
+
+    @Test
+    void returnsIntegerDefaultWithMetadataWhenServerUnavailable() {
+        contextRunner
+            .withPropertyValues(withUnavailableServerAndFlagConfig(
+                "openfeature.flags[0].key=" + MAX_POWER_LEVEL_ID,
+                "openfeature.flags[0].name=max-power-level",
+                "openfeature.flags[0].description=Maximum power level",
+                "openfeature.flags[0].valueType=integer",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=100"
+            ))
+            .run(context -> {
+                IzanamiService service = context.getBean(IzanamiService.class);
+                ResultWithMetadata result = service.forFlagKey(MAX_POWER_LEVEL_ID).featureResultWithMetadata().join();
+
+                assertThat(result.result().numberValue().intValue()).isEqualTo(100);
+                assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI_ERROR_STRATEGY");
+            });
+    }
+
+    @Test
+    void returnsDoubleDefaultWithMetadataWhenServerUnavailable() {
+        contextRunner
+            .withPropertyValues(withUnavailableServerAndFlagConfig(
+                "openfeature.flags[0].key=" + DISCOUNT_RATE_ID,
+                "openfeature.flags[0].name=discount-rate",
+                "openfeature.flags[0].description=Current discount rate",
+                "openfeature.flags[0].valueType=double",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=0.0"
+            ))
+            .run(context -> {
+                IzanamiService service = context.getBean(IzanamiService.class);
+                ResultWithMetadata result = service.forFlagKey(DISCOUNT_RATE_ID).featureResultWithMetadata().join();
+
+                assertThat(result.result().numberValue().doubleValue()).isEqualTo(0.0);
+                assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI_ERROR_STRATEGY");
+            });
+    }
+
+    // ========== Non-existent flag tests ==========
+
+    private static final String NON_EXISTENT_FLAG_ID = "00000000-0000-0000-0000-000000000000";
+
+    @Test
+    void returnsDefaultWhenFlagDoesNotExistOnServer() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + NON_EXISTENT_FLAG_ID,
+                "openfeature.flags[0].name=non-existent-flag",
+                "openfeature.flags[0].description=A flag that does not exist on the server",
+                "openfeature.flags[0].valueType=boolean",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=true"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                IzanamiService service = context.getBean(IzanamiService.class);
+                ResultWithMetadata result = service.forFlagKey(NON_EXISTENT_FLAG_ID).featureResultWithMetadata().join();
+
+                assertThat(result.result().booleanValue(BooleanCastStrategy.LAX)).isTrue();
+                assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI_ERROR_STRATEGY");
             });
     }
 }
