@@ -481,6 +481,60 @@ class IzanamiFeatureProviderTest {
         }
 
         @Test
+        void getObjectEvaluation_withObjectDefaultValue_returnsValue() {
+            Map<String, Object> objectValue = Map.of("key1", "value1", "key2", 42);
+            FlagConfig config = new FlagConfig(
+                "object-flag", "object-flag", "Test flag description", FlagValueType.OBJECT,
+                ErrorStrategy.DEFAULT_VALUE,
+                FeatureClientErrorStrategy.defaultValueStrategy(false, "", BigDecimal.ZERO),
+                objectValue, null
+            );
+            setupFlagConfig("object-flag", config);
+
+            IzanamiResult.Success mockSuccess = mock(IzanamiResult.Success.class);
+            when(mockSuccess.stringValue()).thenReturn("{\"key1\": \"value1\", \"key2\": 42}");
+            setupSuccessfulEvaluation("object-flag", mockSuccess);
+
+            ProviderEvaluation<Value> result = provider.getObjectEvaluation(
+                "object-flag", new Value(), emptyContext()
+            );
+
+            assertThat(result.getValue().isStructure()).isTrue();
+            Structure structure = result.getValue().asStructure();
+            assertThat(structure.getValue("key1").asString()).isEqualTo("value1");
+            assertThat(structure.getValue("key2").asInteger()).isEqualTo(42);
+        }
+
+        @Test
+        void getObjectEvaluation_withNestedJsonObject_returnsNestedValue() {
+            FlagConfig config = testFlagConfig("json-config", "json-config", FlagValueType.OBJECT, Map.of());
+            setupFlagConfig("json-config", config);
+
+            IzanamiResult.Success mockSuccess = mock(IzanamiResult.Success.class);
+            when(mockSuccess.stringValue()).thenReturn("""
+                {
+                  "enabled": true,
+                  "settings": {
+                    "theme": "dark",
+                    "maxRetries": 3
+                  }
+                }""");
+            setupSuccessfulEvaluation("json-config", mockSuccess);
+
+            ProviderEvaluation<Value> result = provider.getObjectEvaluation(
+                "json-config", new Value(), emptyContext()
+            );
+
+            assertThat(result.getValue().isStructure()).isTrue();
+            Structure structure = result.getValue().asStructure();
+            assertThat(structure.getValue("enabled").asBoolean()).isTrue();
+            assertThat(structure.getValue("settings").isStructure()).isTrue();
+            Structure settings = structure.getValue("settings").asStructure();
+            assertThat(settings.getValue("theme").asString()).isEqualTo("dark");
+            assertThat(settings.getValue("maxRetries").asInteger()).isEqualTo(3);
+        }
+
+        @Test
         void evaluation_nullValue_reasonIsDefault() {
             FlagConfig config = testFlagConfig("string-flag", "string-flag", FlagValueType.STRING, null);
             setupFlagConfig("string-flag", config);

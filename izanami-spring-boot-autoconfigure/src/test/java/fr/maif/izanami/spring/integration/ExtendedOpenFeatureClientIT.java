@@ -2,6 +2,8 @@ package fr.maif.izanami.spring.integration;
 
 import dev.openfeature.sdk.FlagEvaluationDetails;
 import dev.openfeature.sdk.FlagValueType;
+import dev.openfeature.sdk.Structure;
+import dev.openfeature.sdk.Value;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
 import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
 import fr.maif.izanami.spring.openfeature.api.ExtendedOpenFeatureClient;
@@ -125,6 +127,39 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
 
                 assertThat(flagConfig.key()).isEqualTo(DISCOUNT_RATE_ID);
                 assertThat(details.getValue()).isEqualTo(0.15);
+                assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI");
+            });
+    }
+
+    @Test
+    void evaluatesObjectFlagFromServer() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + JSON_CONFIG_ID,
+                "openfeature.flags[0].name=json-config",
+                "openfeature.flags[0].description=Configuration stored as JSON",
+                "openfeature.flags[0].valueType=object",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue={}"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                FlagConfigService configService = context.getBean(FlagConfigService.class);
+                FlagConfig flagConfig = configService.getFlagConfigByName("json-config").orElseThrow();
+
+                ExtendedOpenFeatureClient client = context.getBean(ExtendedOpenFeatureClient.class);
+                FlagEvaluationDetails<Value> details = client.getObjectDetails(flagConfig.key());
+
+                assertThat(flagConfig.key()).isEqualTo(JSON_CONFIG_ID);
+                assertThat(details.getValue().isStructure()).isTrue();
+                Structure structure = details.getValue().asStructure();
+                assertThat(structure.getValue("enabled").asBoolean()).isTrue();
+                assertThat(structure.getValue("settings").isStructure()).isTrue();
+                Structure settings = structure.getValue("settings").asStructure();
+                assertThat(settings.getValue("theme").asString()).isEqualTo("dark");
+                assertThat(settings.getValue("maxRetries").asInteger()).isEqualTo(3);
                 assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                     .isEqualTo("IZANAMI");
             });
