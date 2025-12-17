@@ -70,6 +70,9 @@ public final class FlagConfigServiceImpl implements FlagConfigService {
         this.configsByName = Map.copyOf(byName);
         this.configsById = Map.copyOf(byId);
         this.nameToId = Map.copyOf(nameToIdMap);
+
+        log.info("Loaded {} flag configurations ({} by name, {} by key)",
+            flagsProperties.flags().size(), configsByName.size(), configsById.size());
     }
 
     @Override
@@ -97,6 +100,13 @@ public final class FlagConfigServiceImpl implements FlagConfigService {
      * Validates configuration rules and coerces the default value to the correct type.
      */
     private FlagConfig transformAndValidate(RawFlagConfig raw) {
+        log.debug("Transforming flag config: key={}, name={}", raw.getKey(), raw.getName());
+
+        if (log.isTraceEnabled()) {
+            log.trace("Raw flag config: key={}, name={}, valueType={}, errorStrategy={}, defaultValue={}",
+                raw.getKey(), raw.getName(), raw.valueType(), raw.errorStrategy(), raw.getDefaultValue());
+        }
+
         // Validate: key and name must not be null
         if (raw.getKey() == null || raw.getKey().isBlank()) {
             throw new IllegalArgumentException(

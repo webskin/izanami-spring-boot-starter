@@ -212,6 +212,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
      * @throws FlagNotFoundException if the flag key is not found in configuration
      */
     public FeatureRequestBuilder forFlagKey(String flagKey) {
+        log.debug("Building feature request for flag key: {}", flagKey);
         FlagConfig flagConfig = flagConfigService
             .getFlagConfigByKey(flagKey)
             .orElseThrow(() -> new FlagNotFoundException(flagKey, FlagNotFoundException.IdentifierType.KEY));
@@ -234,6 +235,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
      * @throws FlagNotFoundException if the flag name is not found in configuration
      */
     public FeatureRequestBuilder forFlagName(String flagName) {
+        log.debug("Building feature request for flag name: {}", flagName);
         FlagConfig flagConfig = flagConfigService
             .getFlagConfigByName(flagName)
             .orElseThrow(() -> new FlagNotFoundException(flagName, FlagNotFoundException.IdentifierType.NAME));
@@ -289,7 +291,13 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
          * @throws IzanamiClientNotAvailableException if the Izanami client is not available
          */
         public CompletableFuture<Boolean> booleanValue() {
-            return service.evaluateBoolean(buildRequest());
+            log.debug("Evaluating flag {} as boolean", flagConfig.key());
+            return service.evaluateBoolean(buildRequest())
+                .whenComplete((result, error) -> {
+                    if (error == null) {
+                        log.debug("Evaluated flag {} as boolean = {}", flagConfig.key(), result);
+                    }
+                });
         }
 
         /**
@@ -299,7 +307,13 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
          * @throws IzanamiClientNotAvailableException if the Izanami client is not available
          */
         public CompletableFuture<String> stringValue() {
-            return service.evaluateString(buildRequest());
+            log.debug("Evaluating flag {} as string", flagConfig.key());
+            return service.evaluateString(buildRequest())
+                .whenComplete((result, error) -> {
+                    if (error == null) {
+                        log.debug("Evaluated flag {} as string = {}", flagConfig.key(), result);
+                    }
+                });
         }
 
         /**
@@ -309,7 +323,13 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
          * @throws IzanamiClientNotAvailableException if the Izanami client is not available
          */
         public CompletableFuture<BigDecimal> numberValue() {
-            return service.evaluateNumber(buildRequest());
+            log.debug("Evaluating flag {} as number", flagConfig.key());
+            return service.evaluateNumber(buildRequest())
+                .whenComplete((result, error) -> {
+                    if (error == null) {
+                        log.debug("Evaluated flag {} as number = {}", flagConfig.key(), result);
+                    }
+                });
         }
 
         /**
@@ -379,6 +399,9 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
             @Nullable String user,
             @Nullable String context
     ) {
+        if (log.isTraceEnabled()) {
+            log.trace("Querying Izanami: key={}, user={}, context={}", flagConfig.key(), user, context);
+        }
         IzanamiClient client = requireClient();
         try {
             FeatureRequest featureRequest = FeatureRequest.newFeatureRequest()

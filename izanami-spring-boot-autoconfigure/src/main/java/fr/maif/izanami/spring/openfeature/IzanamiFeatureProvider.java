@@ -103,11 +103,13 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
 
     @Override
     public void initialize(EvaluationContext evaluationContext) {
+        log.info("Izanami OpenFeature provider initialized");
         // No-op: the provider is fully configured via Spring and IzanamiService lifecycle.
     }
 
     @Override
     public void shutdown() {
+        log.info("Izanami OpenFeature provider shutting down");
         izanamiService.unwrapClient().ifPresent(client -> {
             try {
                 client.close().join();
@@ -119,32 +121,47 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
 
     @Override
     public ProviderEvaluation<Boolean> getBooleanEvaluation(String key, Boolean callerDefaultValue, EvaluationContext ctx) {
-        return new PrimitiveEvaluationExecution<>(evaluationDependencies, key, callerDefaultValue, ctx, this::extractBoolean)
+        log.debug("Evaluating boolean flag: key={}", key);
+        ProviderEvaluation<Boolean> result = new PrimitiveEvaluationExecution<>(evaluationDependencies, key, callerDefaultValue, ctx, this::extractBoolean)
             .evaluatePrimitive(FlagValueType.BOOLEAN);
+        log.debug("Evaluated boolean flag: key={}, value={}, reason={}", key, result.getValue(), result.getReason());
+        return result;
     }
 
     @Override
     public ProviderEvaluation<String> getStringEvaluation(String key, String callerDefaultValue, EvaluationContext ctx) {
-        return new PrimitiveEvaluationExecution<>(evaluationDependencies, key, callerDefaultValue, ctx, this::extractString)
+        log.debug("Evaluating string flag: key={}", key);
+        ProviderEvaluation<String> result = new PrimitiveEvaluationExecution<>(evaluationDependencies, key, callerDefaultValue, ctx, this::extractString)
             .evaluatePrimitive(FlagValueType.STRING);
+        log.debug("Evaluated string flag: key={}, value={}, reason={}", key, result.getValue(), result.getReason());
+        return result;
     }
 
     @Override
     public ProviderEvaluation<Integer> getIntegerEvaluation(String key, Integer callerDefaultValue, EvaluationContext ctx) {
-        return new PrimitiveEvaluationExecution<>(evaluationDependencies, key, callerDefaultValue, ctx, this::extractInteger)
+        log.debug("Evaluating integer flag: key={}", key);
+        ProviderEvaluation<Integer> result = new PrimitiveEvaluationExecution<>(evaluationDependencies, key, callerDefaultValue, ctx, this::extractInteger)
             .evaluatePrimitive(FlagValueType.INTEGER);
+        log.debug("Evaluated integer flag: key={}, value={}, reason={}", key, result.getValue(), result.getReason());
+        return result;
     }
 
     @Override
     public ProviderEvaluation<Double> getDoubleEvaluation(String key, Double callerDefaultValue, EvaluationContext ctx) {
-        return new PrimitiveEvaluationExecution<>(evaluationDependencies, key, callerDefaultValue, ctx, this::extractDouble)
+        log.debug("Evaluating double flag: key={}", key);
+        ProviderEvaluation<Double> result = new PrimitiveEvaluationExecution<>(evaluationDependencies, key, callerDefaultValue, ctx, this::extractDouble)
             .evaluatePrimitive(FlagValueType.DOUBLE);
+        log.debug("Evaluated double flag: key={}, value={}, reason={}", key, result.getValue(), result.getReason());
+        return result;
     }
 
     @Override
     public ProviderEvaluation<Value> getObjectEvaluation(String key, Value callerDefaultValue, EvaluationContext ctx) {
-        return new ObjectEvaluationExecution(evaluationDependencies, key, callerDefaultValue, ctx, this::extractObject)
+        log.debug("Evaluating object flag: key={}", key);
+        ProviderEvaluation<Value> result = new ObjectEvaluationExecution(evaluationDependencies, key, callerDefaultValue, ctx, this::extractObject)
             .evaluateObject();
+        log.debug("Evaluated object flag: key={}, value={}, reason={}", key, result.getValue(), result.getReason());
+        return result;
     }
 
     @FunctionalInterface
@@ -231,6 +248,9 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         private ResultWithMetadata queryIzanami(FlagConfig flagConfig, EvaluationContext evaluationContext) throws IzanamiClientNotAvailableException {
             Value contextValue = evaluationContext.getValue(IZANAMI_CONTEXT_ATTRIBUTE);
             String context = contextValue != null ? contextValue.asString() : null;
+            if (log.isTraceEnabled()) {
+                log.trace("Izanami query: key={}, user={}, context={}", flagConfig.key(), evaluationContext.getTargetingKey(), context);
+            }
             return deps.izanamiService()
                 .forFlagKey(flagConfig.key())
                 .withUser(evaluationContext.getTargetingKey())

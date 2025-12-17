@@ -17,6 +17,8 @@ import fr.maif.izanami.spring.openfeature.ValueConverter;
 import fr.maif.izanami.spring.openfeature.api.ExtendedOpenFeatureClient;
 import fr.maif.izanami.spring.openfeature.api.ExtendedOpenFeatureClientException;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Optional;
@@ -28,6 +30,8 @@ import java.util.function.Function;
  * while providing auto-computed default values for Boolean and Object types.
  */
 public final class ExtendedOpenFeatureClientImpl implements ExtendedOpenFeatureClient {
+
+    private static final Logger log = LoggerFactory.getLogger(ExtendedOpenFeatureClientImpl.class);
 
     private final Client delegate;
     private final FlagConfigService flagConfigService;
@@ -523,7 +527,11 @@ public final class ExtendedOpenFeatureClientImpl implements ExtendedOpenFeatureC
 
     private <T> T getAutoDefaultValue(String key, Class<T> type) {
         FlagConfig config = getValidatedFlagConfigByKey(key);
-        return getTypedDefaultValue(config, key, type);
+        T defaultValue = getTypedDefaultValue(config, key, type);
+        if (log.isTraceEnabled()) {
+            log.trace("Auto-computed default for key={}: value={}, type={}", key, defaultValue, type.getSimpleName());
+        }
+        return defaultValue;
     }
 
     private Value getAutoDefaultValueAsValue(String key) {
