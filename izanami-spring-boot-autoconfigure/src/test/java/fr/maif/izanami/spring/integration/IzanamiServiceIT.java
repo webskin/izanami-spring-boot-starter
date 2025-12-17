@@ -681,6 +681,7 @@ class IzanamiServiceIT extends BaseIzanamiIT {
 
                 // Raw result returns null for disabled non-boolean features
                 // (defaultValue is applied only in stringValue() fluent API, not in raw result)
+                // TODO should not be null
                 assertThat(result.result().stringValue()).isNull();
                 // Source is IZANAMI because the result is a Success(NullValue)
                 assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
@@ -707,6 +708,7 @@ class IzanamiServiceIT extends BaseIzanamiIT {
 
                 // Raw result returns null for disabled non-boolean features
                 // (defaultValue is applied only in numberValue() fluent API, not in raw result)
+                // TODO should not be null 
                 assertThat(result.result().numberValue()).isNull();
                 // Source is IZANAMI because the result is a Success(NullValue)
                 assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))

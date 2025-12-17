@@ -163,9 +163,18 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         return result;
     }
 
+    public record ExtractorResult<T>(
+        T izanamiResultValue,
+        T computedDefaultValueWhenIzanamiResultValueIsNull
+    ) {
+        T getValue() {
+            return izanamiResultValue != null ? izanamiResultValue : computedDefaultValueWhenIzanamiResultValueIsNull;
+        }
+    }
+
     @FunctionalInterface
     interface FlagValueExtractor<T> {
-        T extract(IzanamiResult.Result result, FlagConfig flagConfig);
+        ExtractorResult<T> extract(IzanamiResult.Result result, FlagConfig flagConfig);
     }
 
     public record EvaluationDependencies(
@@ -216,16 +225,42 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
 
             try {
                 if (result instanceof IzanamiResult.Success) {
-                    // result can be Success(NullValue)
-                    T value = flagValueExtractor.extract(result, flagConfig);
-                    return successProviderEvaluation(
-                        value,
-                        metadata,
-                        determineSuccessReason(value, flagConfig)
-                    );
+                    // WARNING result can be Success(NullValue)
+                    ExtractorResult<T> extractorResult = flagValueExtractor.extract(result, flagConfig);
+                    if (extractorResult.izanamiResultValue == null) {
+                        // Feature is disabled.
+                        if (extractorResult.computedDefaultValueWhenIzanamiResultValueIsNull != null) {
+                            // Default value has been configured. Use it.
+                            return successProviderEvaluation(
+                                extractorResult.computedDefaultValueWhenIzanamiResultValueIsNull,
+                                metadata,
+                                Reason.DISABLED.name()
+                            );
+                        } else {
+                            // No default value
+                            return successProviderEvaluation(
+                                null,
+                                metadata,
+                                Reason.DISABLED.name()
+                            );
+                        }
+                    } else if (Boolean.FALSE.equals(extractorResult.izanamiResultValue)) {
+                        return successProviderEvaluation(
+                            extractorResult.izanamiResultValue,
+                            metadata,
+                            Reason.DISABLED.name()
+                        );
+                    } else {
+                        return successProviderEvaluation(
+                            extractorResult.getValue(),
+                            metadata,
+                            // May be CACHED, may be from ORIGIN
+                            Reason.UNKNOWN.name()
+                        );
+                    }
                 } else {
-                    // result instanceof IzanamiResult.Error
-                    T value = flagValueExtractor.extract(result, flagConfig);
+                    // result instanceof IzanamiResult.Error -> extraction may call error strategy
+                    T value = flagValueExtractor.extract(result, flagConfig).getValue();
                     return errorStrategyProviderEvaluation(
                         value,
                         metadata,
@@ -352,57 +387,64 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         }
     }
 
-    private Boolean extractBoolean(IzanamiResult.Result result, FlagConfig flagConfig) {
-        return result.booleanValue(BooleanCastStrategy.LAX);
+    private ExtractorResult<Boolean> extractBoolean(IzanamiResult.Result result, FlagConfig flagConfig) {
+        Boolean value = result.booleanValue(BooleanCastStrategy.LAX);
+        // Boolean features: false means disabled, no need for defaultValue computation
+        return new ExtractorResult<>(value, null);
     }
 
-    private String extractString(IzanamiResult.Result result, FlagConfig flagConfig) {
+    private ExtractorResult<String> extractString(IzanamiResult.Result result, FlagConfig flagConfig) {
         String value = result.stringValue();
         // For disabled non-boolean features, Izanami returns null.
-        // Apply the defaultValue if configured and error strategy is DEFAULT_VALUE.
-        if (value == null && flagConfig.defaultValue() != null
-                && flagConfig.errorStrategy() == ErrorStrategy.DEFAULT_VALUE) {
-            return flagConfig.defaultValue().toString();
+        // Compute defaultValue if configured and error strategy is DEFAULT_VALUE.
+        String computedDefault = null;
+        if (value == null && flagConfig.defaultValue() != null) {
+            computedDefault = flagConfig.defaultValue().toString();
         }
-        return value;
+        return new ExtractorResult<>(value, computedDefault);
     }
 
-    private Integer extractInteger(IzanamiResult.Result result, FlagConfig flagConfig) {
+    private ExtractorResult<Integer> extractInteger(IzanamiResult.Result result, FlagConfig flagConfig) {
         Number value = result.numberValue();
         // For disabled non-boolean features, Izanami returns null.
-        // Apply the defaultValue if configured and error strategy is DEFAULT_VALUE.
-        if (value == null && flagConfig.defaultValue() != null
-                && flagConfig.errorStrategy() == ErrorStrategy.DEFAULT_VALUE) {
+        // Compute defaultValue if configured and error strategy is DEFAULT_VALUE.
+        Integer computedDefault = null;
+        if (value == null && flagConfig.defaultValue() != null) {
             Object defaultValue = flagConfig.defaultValue();
             if (defaultValue instanceof Number) {
-                return ((Number) defaultValue).intValue();
+                computedDefault = ((Number) defaultValue).intValue();
             }
         }
-        return value != null ? value.intValue() : null;
+        return new ExtractorResult<>(value != null ? value.intValue() : null, computedDefault);
     }
 
-    private Double extractDouble(IzanamiResult.Result result, FlagConfig flagConfig) {
+    private ExtractorResult<Double> extractDouble(IzanamiResult.Result result, FlagConfig flagConfig) {
         Number value = result.numberValue();
         // For disabled non-boolean features, Izanami returns null.
-        // Apply the defaultValue if configured and error strategy is DEFAULT_VALUE.
-        if (value == null && flagConfig.defaultValue() != null
-                && flagConfig.errorStrategy() == ErrorStrategy.DEFAULT_VALUE) {
+        // Compute defaultValue if configured and error strategy is DEFAULT_VALUE.
+        Double computedDefault = null;
+        if (value == null && flagConfig.defaultValue() != null) {
             Object defaultValue = flagConfig.defaultValue();
             if (defaultValue instanceof Number) {
-                return ((Number) defaultValue).doubleValue();
+                computedDefault = ((Number) defaultValue).doubleValue();
             }
         }
-        return value != null ? value.doubleValue() : null;
+        return new ExtractorResult<>(value != null ? value.doubleValue() : null, computedDefault);
     }
 
-    private Value extractObject(IzanamiResult.Result result, FlagConfig flagConfig) {
+    private ExtractorResult<Value> extractObject(IzanamiResult.Result result, FlagConfig flagConfig) {
         String json = result.stringValue();
-        if (json == null) {
-            return new Value();
+        String computedDefaultJson = null;
+        if (json == null && flagConfig.defaultValue() != null) {
+            Object defaultValue = flagConfig.defaultValue();
+            if (defaultValue instanceof String) {
+                computedDefaultJson = (String) defaultValue;
+            }
         }
         try {
-            Object tree = objectMapper.readValue(json, Object.class);
-            return valueConverter.objectToValue(tree);
+            return new ExtractorResult<>(
+                json != null ? valueConverter.objectToValue(objectMapper.readValue(json, Object.class)) : null,
+                computedDefaultJson != null ? valueConverter.objectToValue(objectMapper.readValue(computedDefaultJson, Object.class)) : null);
         } catch (JsonProcessingException e) {
             throw new InvalidObjectJsonException("Flag '" + flagConfig.name() + "' returned invalid JSON for valueType=object");
         }
@@ -436,23 +478,6 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
             .errorCode(errorCode)
             .errorMessage(errorMessage)
             .build();
-    }
-
-    /**
-     * Determines the appropriate OpenFeature reason for a successful Izanami evaluation.
-     *
-     * @param value      the evaluated flag value
-     * @param flagConfig the flag configuration
-     * @return the reason string: DISABLED for false booleans, DEFAULT for null values, UNKNOWN otherwise
-     */
-    private static String determineSuccessReason(Object value, FlagConfig flagConfig) {
-        if (flagConfig.valueType() == FlagValueType.BOOLEAN && Boolean.FALSE.equals(value)) {
-            return Reason.DISABLED.name();
-        }
-        if (value == null) {
-            return Reason.DEFAULT.name();
-        }
-        return Reason.UNKNOWN.name();
     }
 
     private static final class InvalidObjectJsonException extends RuntimeException {

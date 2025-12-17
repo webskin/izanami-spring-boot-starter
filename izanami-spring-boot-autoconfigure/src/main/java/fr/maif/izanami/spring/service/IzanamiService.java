@@ -358,7 +358,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
             metadata.put(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY, flagConfig.errorStrategy().name());
             try {
                 return service.evaluateFeatureResult(flagConfig, user, context).thenApply(r -> {
-                    // TODO handle Success(NullValue)
+                    // TODO handle Success(NullValue) -> disabled, non boolean, feature
                     // https://github.com/MAIF/izanami-java-client/blob/v2.3.7/src/main/java/fr/maif/features/values/NullValue.java
                     FlagValueSource valueSource = (r instanceof IzanamiResult.Success)
                         ? FlagValueSource.IZANAMI

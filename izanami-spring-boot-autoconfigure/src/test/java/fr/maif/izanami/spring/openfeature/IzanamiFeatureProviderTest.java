@@ -380,7 +380,7 @@ class IzanamiFeatureProviderTest {
         }
 
         @Test
-        void getBooleanEvaluation_false_reasonIsDisabled() {
+        void getBooleanEvaluation_false_reasonIsUnknown() {
             FlagConfig config = testFlagConfig("bool-flag", "bool-flag", FlagValueType.BOOLEAN, false);
             setupFlagConfig("bool-flag", config);
 
@@ -393,7 +393,8 @@ class IzanamiFeatureProviderTest {
             );
 
             assertThat(result.getValue()).isFalse();
-            assertThat(result.getReason()).isEqualTo(Reason.DISABLED.name());
+            // Boolean false is a valid value (not null), so reason is UNKNOWN
+            assertThat(result.getReason()).isEqualTo(Reason.UNKNOWN.name());
         }
 
         @Test
@@ -535,7 +536,7 @@ class IzanamiFeatureProviderTest {
         }
 
         @Test
-        void evaluation_nullValue_reasonIsDefault() {
+        void evaluation_nullValue_reasonIsDisabled() {
             FlagConfig config = testFlagConfig("string-flag", "string-flag", FlagValueType.STRING, null);
             setupFlagConfig("string-flag", config);
 
@@ -548,7 +549,8 @@ class IzanamiFeatureProviderTest {
             );
 
             assertThat(result.getValue()).isNull();
-            assertThat(result.getReason()).isEqualTo(Reason.DEFAULT.name());
+            // Null value from Izanami means feature is disabled
+            assertThat(result.getReason()).isEqualTo(Reason.DISABLED.name());
         }
     }
 
@@ -617,7 +619,7 @@ class IzanamiFeatureProviderTest {
     class InactiveFeatureTests {
 
         @Test
-        void getBooleanEvaluation_inactiveFeature_returnsFalseWithDisabledReason() {
+        void getBooleanEvaluation_inactiveFeature_returnsFalseWithUnknownReason() {
             FlagConfig config = testFlagConfig("inactive-bool", "inactive-bool", FlagValueType.BOOLEAN, true);
             setupFlagConfig("inactive-bool", config);
 
@@ -630,14 +632,14 @@ class IzanamiFeatureProviderTest {
             );
 
             assertThat(result.getValue()).isFalse();
-            // Boolean false has reason DISABLED
-            assertThat(result.getReason()).isEqualTo(Reason.DISABLED.name());
+            // Boolean false is a valid value (not null), so reason is UNKNOWN
+            assertThat(result.getReason()).isEqualTo(Reason.UNKNOWN.name());
             assertThat(result.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                 .isEqualTo(FlagValueSource.IZANAMI.name());
         }
 
         @Test
-        void getStringEvaluation_inactiveFeature_returnsDefaultValueWithUnknownReason() {
+        void getStringEvaluation_inactiveFeature_returnsDefaultValueWithDisabledReason() {
             FlagConfig config = testFlagConfig("inactive-string", "inactive-string", FlagValueType.STRING, "fallback-value");
             setupFlagConfig("inactive-string", config);
 
@@ -652,14 +654,14 @@ class IzanamiFeatureProviderTest {
 
             // Disabled non-boolean features return the defaultValue when configured
             assertThat(result.getValue()).isEqualTo("fallback-value");
-            // Reason is UNKNOWN since value is not null (defaultValue was applied)
-            assertThat(result.getReason()).isEqualTo(Reason.UNKNOWN.name());
+            // Reason is DISABLED because Izanami returned null (feature disabled)
+            assertThat(result.getReason()).isEqualTo(Reason.DISABLED.name());
             assertThat(result.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                 .isEqualTo(FlagValueSource.IZANAMI.name());
         }
 
         @Test
-        void getIntegerEvaluation_inactiveFeature_returnsDefaultValueWithUnknownReason() {
+        void getIntegerEvaluation_inactiveFeature_returnsDefaultValueWithDisabledReason() {
             FlagConfig config = testFlagConfig("inactive-int", "inactive-int", FlagValueType.INTEGER, 999);
             setupFlagConfig("inactive-int", config);
 
@@ -674,14 +676,14 @@ class IzanamiFeatureProviderTest {
 
             // Disabled non-boolean features return the defaultValue when configured
             assertThat(result.getValue()).isEqualTo(999);
-            // Reason is UNKNOWN since value is not null (defaultValue was applied)
-            assertThat(result.getReason()).isEqualTo(Reason.UNKNOWN.name());
+            // Reason is DISABLED because Izanami returned null (feature disabled)
+            assertThat(result.getReason()).isEqualTo(Reason.DISABLED.name());
             assertThat(result.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                 .isEqualTo(FlagValueSource.IZANAMI.name());
         }
 
         @Test
-        void getDoubleEvaluation_inactiveFeature_returnsDefaultValueWithUnknownReason() {
+        void getDoubleEvaluation_inactiveFeature_returnsDefaultValueWithDisabledReason() {
             FlagConfig config = testFlagConfig("inactive-double", "inactive-double", FlagValueType.DOUBLE, 99.9);
             setupFlagConfig("inactive-double", config);
 
@@ -696,8 +698,8 @@ class IzanamiFeatureProviderTest {
 
             // Disabled non-boolean features return the defaultValue when configured
             assertThat(result.getValue()).isEqualTo(99.9);
-            // Reason is UNKNOWN since value is not null (defaultValue was applied)
-            assertThat(result.getReason()).isEqualTo(Reason.UNKNOWN.name());
+            // Reason is DISABLED because Izanami returned null (feature disabled)
+            assertThat(result.getReason()).isEqualTo(Reason.DISABLED.name());
             assertThat(result.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                 .isEqualTo(FlagValueSource.IZANAMI.name());
         }
