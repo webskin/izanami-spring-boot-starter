@@ -28,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Run {@code ./scripts/seed-izanami.sh} to seed the test data before running these tests.
  */
 @EnabledIfEnvironmentVariable(named = "IZANAMI_INTEGRATION_TEST", matches = "true")
-class IzanamiOpenFeatureIT {
+class ExtendedOpenFeatureClientIT {
 
     // Feature IDs matching seed-izanami.sh
     private static final String TURBO_MODE_ID = "a4c0d04f-69ac-41aa-a6e4-febcee541d51";
