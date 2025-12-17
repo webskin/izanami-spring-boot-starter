@@ -54,6 +54,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
     private final IzanamiProperties properties;
     private final FlagConfigService flagConfigService;
     private final ObjectMapper objectMapper;
+    private final IzanamiClientFactory clientFactory;
 
     private final AtomicReference<IzanamiClient> clientRef = new AtomicReference<>();
     private final AtomicReference<CompletableFuture<Void>> loadedRef = new AtomicReference<>(CompletableFuture.completedFuture(null));
@@ -67,9 +68,39 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
      * @param objectMapper      Jackson ObjectMapper for JSON serialization
      */
     public IzanamiService(IzanamiProperties properties, FlagConfigService flagConfigService, ObjectMapper objectMapper) {
+        this(properties, flagConfigService, objectMapper, IzanamiClientFactory.DEFAULT);
+    }
+
+    /**
+     * Package-private constructor for testing with a custom client factory.
+     */
+    IzanamiService(IzanamiProperties properties, FlagConfigService flagConfigService,
+                   ObjectMapper objectMapper, IzanamiClientFactory clientFactory) {
         this.properties = properties;
         this.flagConfigService = flagConfigService;
         this.objectMapper = objectMapper;
+        this.clientFactory = clientFactory;
+    }
+
+    /**
+     * Factory interface for creating IzanamiClient instances.
+     * Package-private for testing purposes.
+     */
+    @FunctionalInterface
+    interface IzanamiClientFactory {
+        IzanamiClient create(
+            IzanamiConnectionInformation connectionInfo,
+            FeatureCacheConfiguration cacheConfiguration,
+            FeatureClientErrorStrategy<?> errorStrategy,
+            Set<String> preloadedFeatures
+        );
+
+        IzanamiClientFactory DEFAULT = (conn, cache, err, features) ->
+            IzanamiClient.newBuilder(conn)
+                .withCacheConfiguration(cache)
+                .withErrorStrategy(err)
+                .withPreloadedFeatures(features)
+                .build();
     }
 
     @Override
@@ -114,11 +145,12 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
             .map(FlagConfig::key)
             .collect(Collectors.toSet());
 
-        IzanamiClient client = IzanamiClient.newBuilder(connectionInformation)
-            .withCacheConfiguration(cacheConfiguration)
-            .withErrorStrategy(defaultErrorStrategy)
-            .withPreloadedFeatures(featureFlagIdsToPreload)
-            .build();
+        IzanamiClient client = clientFactory.create(
+            connectionInformation,
+            cacheConfiguration,
+            defaultErrorStrategy,
+            featureFlagIdsToPreload
+        );
 
         clientRef.set(client);
 
