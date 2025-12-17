@@ -54,7 +54,7 @@ jobs:
 
       - name: Install izanami-go-cli
         run: |
-          curl -fsSL https://github.com/webskin/izanami-go-cli/releases/download/v0.1.0/izanami-go-cli_v0.1.0_linux_x86_64.tar.gz -o iz.tar.gz
+          curl -fsSL https://github.com/webskin/izanami-go-cli/releases/download/v0.1.0/izanami-go-cli_0.1.0_linux_x86_64.tar.gz -o iz.tar.gz
           tar -xzf iz.tar.gz
           sudo mv iz /usr/local/bin/iz
           chmod +x /usr/local/bin/iz
