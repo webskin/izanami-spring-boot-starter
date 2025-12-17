@@ -394,7 +394,7 @@ class IzanamiFeatureProviderTest {
 
             assertThat(result.getValue()).isFalse();
             // Boolean false is a valid value (not null), so reason is UNKNOWN
-            assertThat(result.getReason()).isEqualTo(Reason.UNKNOWN.name());
+            assertThat(result.getReason()).isEqualTo(Reason.DISABLED.name());
         }
 
         @Test
@@ -619,7 +619,7 @@ class IzanamiFeatureProviderTest {
     class InactiveFeatureTests {
 
         @Test
-        void getBooleanEvaluation_inactiveFeature_returnsFalseWithUnknownReason() {
+        void getBooleanEvaluation_inactiveFeature_returnsFalseWithDisabledReason() {
             FlagConfig config = testFlagConfig("inactive-bool", "inactive-bool", FlagValueType.BOOLEAN, true);
             setupFlagConfig("inactive-bool", config);
 
@@ -633,7 +633,7 @@ class IzanamiFeatureProviderTest {
 
             assertThat(result.getValue()).isFalse();
             // Boolean false is a valid value (not null), so reason is UNKNOWN
-            assertThat(result.getReason()).isEqualTo(Reason.UNKNOWN.name());
+            assertThat(result.getReason()).isEqualTo(Reason.DISABLED.name());
             assertThat(result.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                 .isEqualTo(FlagValueSource.IZANAMI.name());
         }

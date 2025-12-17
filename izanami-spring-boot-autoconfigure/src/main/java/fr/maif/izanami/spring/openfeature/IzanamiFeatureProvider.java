@@ -163,6 +163,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         return result;
     }
 
+    // TODO names to rework
     public record ExtractorResult<T>(
         T izanamiResultValue,
         T computedDefaultValueWhenIzanamiResultValueIsNull
@@ -443,7 +444,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         }
         try {
             return new ExtractorResult<>(
-                json != null ? valueConverter.objectToValue(objectMapper.readValue(json, Object.class)) : null,
+                json != null ? valueConverter.objectToValue(objectMapper.readValue(json, Object.class)) : new Value(),
                 computedDefaultJson != null ? valueConverter.objectToValue(objectMapper.readValue(computedDefaultJson, Object.class)) : null);
         } catch (JsonProcessingException e) {
             throw new InvalidObjectJsonException("Flag '" + flagConfig.name() + "' returned invalid JSON for valueType=object");
