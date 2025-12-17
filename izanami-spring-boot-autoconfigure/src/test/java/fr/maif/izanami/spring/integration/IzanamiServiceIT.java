@@ -567,6 +567,153 @@ class IzanamiServiceIT extends BaseIzanamiIT {
             });
     }
 
+    // ========== Inactive (disabled) feature tests ==========
+
+    @Test
+    void evaluatesInactiveBooleanFlagAsFalse() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + INACTIVE_BOOL_ID,
+                "openfeature.flags[0].name=inactive-bool",
+                "openfeature.flags[0].description=Disabled boolean feature",
+                "openfeature.flags[0].valueType=boolean",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=true"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                IzanamiService service = context.getBean(IzanamiService.class);
+                Boolean value = service.forFlagKey(INACTIVE_BOOL_ID).booleanValue().join();
+
+                // Disabled features evaluate to false regardless of defaultValue
+                assertThat(value).isFalse();
+            });
+    }
+
+    @Test
+    void evaluatesInactiveStringFlagReturnsDefaultValue() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + INACTIVE_STRING_ID,
+                "openfeature.flags[0].name=inactive-string",
+                "openfeature.flags[0].description=Disabled string feature",
+                "openfeature.flags[0].valueType=string",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=fallback"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                IzanamiService service = context.getBean(IzanamiService.class);
+                String value = service.forFlagKey(INACTIVE_STRING_ID).stringValue().join();
+
+                // Disabled non-boolean features return the defaultValue when configured
+                assertThat(value).isEqualTo("fallback");
+            });
+    }
+
+    @Test
+    void evaluatesInactiveNumberFlagReturnsDefaultValue() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + INACTIVE_NUMBER_ID,
+                "openfeature.flags[0].name=inactive-number",
+                "openfeature.flags[0].description=Disabled number feature",
+                "openfeature.flags[0].valueType=integer",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=999"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                IzanamiService service = context.getBean(IzanamiService.class);
+                BigDecimal value = service.forFlagKey(INACTIVE_NUMBER_ID).numberValue().join();
+
+                // Disabled non-boolean features return the defaultValue when configured
+                assertThat(value).isEqualByComparingTo(new BigDecimal("999"));
+            });
+    }
+
+    // ========== Inactive (disabled) feature ResultWithMetadata tests ==========
+
+    @Test
+    void evaluatesInactiveBooleanResultWithMetadata() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + INACTIVE_BOOL_ID,
+                "openfeature.flags[0].name=inactive-bool",
+                "openfeature.flags[0].description=Disabled boolean feature",
+                "openfeature.flags[0].valueType=boolean",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=true"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                IzanamiService service = context.getBean(IzanamiService.class);
+                ResultWithMetadata result = service.forFlagKey(INACTIVE_BOOL_ID).featureResultWithMetadata().join();
+
+                // Disabled boolean features evaluate to false
+                assertThat(result.result().booleanValue(BooleanCastStrategy.LAX)).isFalse();
+                // Source is IZANAMI because the result is a Success (not an Error)
+                assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI");
+            });
+    }
+
+    @Test
+    void evaluatesInactiveStringResultWithMetadata() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + INACTIVE_STRING_ID,
+                "openfeature.flags[0].name=inactive-string",
+                "openfeature.flags[0].description=Disabled string feature",
+                "openfeature.flags[0].valueType=string",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=fallback"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                IzanamiService service = context.getBean(IzanamiService.class);
+                ResultWithMetadata result = service.forFlagKey(INACTIVE_STRING_ID).featureResultWithMetadata().join();
+
+                // Raw result returns null for disabled non-boolean features
+                // (defaultValue is applied only in stringValue() fluent API, not in raw result)
+                assertThat(result.result().stringValue()).isNull();
+                // Source is IZANAMI because the result is a Success(NullValue)
+                assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI");
+            });
+    }
+
+    @Test
+    void evaluatesInactiveNumberResultWithMetadata() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + INACTIVE_NUMBER_ID,
+                "openfeature.flags[0].name=inactive-number",
+                "openfeature.flags[0].description=Disabled number feature",
+                "openfeature.flags[0].valueType=integer",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=999"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                IzanamiService service = context.getBean(IzanamiService.class);
+                ResultWithMetadata result = service.forFlagKey(INACTIVE_NUMBER_ID).featureResultWithMetadata().join();
+
+                // Raw result returns null for disabled non-boolean features
+                // (defaultValue is applied only in numberValue() fluent API, not in raw result)
+                assertThat(result.result().numberValue()).isNull();
+                // Source is IZANAMI because the result is a Success(NullValue)
+                assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI");
+            });
+    }
+
     /**
      * Test configuration providing a callback bean for error handling tests.
      */

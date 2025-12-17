@@ -13,7 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.text.MessageFormat;
-import java.util.Optional;
 
 /**
  * OpenFeature {@link FeatureProvider} backed by Izanami.
@@ -217,6 +216,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
 
             try {
                 if (result instanceof IzanamiResult.Success) {
+                    // result can be Success(NullValue)
                     T value = flagValueExtractor.extract(result, flagConfig);
                     return successProviderEvaluation(
                         value,
@@ -308,7 +308,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
                 .addString(FlagMetadataKeys.FLAG_CONFIG_DESCRIPTION, flagConfig.description())
                 .addString(FlagMetadataKeys.FLAG_CONFIG_VALUE_TYPE, flagConfig.valueType().name())
                 .addString(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE, defaultValueString)
-                .addString(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY, flagConfig.rawErrorStrategy().name())
+                .addString(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY, flagConfig.errorStrategy().name())
                 .addString(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.APPLICATION_ERROR_STRATEGY.name())
                 .build();
         }
@@ -357,21 +357,42 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
     }
 
     private String extractString(IzanamiResult.Result result, FlagConfig flagConfig) {
-        // TODO is result.stringValue can be null ?
-        // TODO fallbackValue is not used
-        return result.stringValue();
+        String value = result.stringValue();
+        // For disabled non-boolean features, Izanami returns null.
+        // Apply the defaultValue if configured and error strategy is DEFAULT_VALUE.
+        if (value == null && flagConfig.defaultValue() != null
+                && flagConfig.errorStrategy() == ErrorStrategy.DEFAULT_VALUE) {
+            return flagConfig.defaultValue().toString();
+        }
+        return value;
     }
 
     private Integer extractInteger(IzanamiResult.Result result, FlagConfig flagConfig) {
-        // TODO is result.numberValue can be null ?
-        // TODO fallbackValue is not used
-        return Optional.ofNullable(result.numberValue()).map(Number::intValue).orElse(null);
+        Number value = result.numberValue();
+        // For disabled non-boolean features, Izanami returns null.
+        // Apply the defaultValue if configured and error strategy is DEFAULT_VALUE.
+        if (value == null && flagConfig.defaultValue() != null
+                && flagConfig.errorStrategy() == ErrorStrategy.DEFAULT_VALUE) {
+            Object defaultValue = flagConfig.defaultValue();
+            if (defaultValue instanceof Number) {
+                return ((Number) defaultValue).intValue();
+            }
+        }
+        return value != null ? value.intValue() : null;
     }
 
     private Double extractDouble(IzanamiResult.Result result, FlagConfig flagConfig) {
-        // TODO is result.numberValue can be null ?
-        // TODO fallbackValue is not used
-        return Optional.ofNullable(result.numberValue()).map(Number::doubleValue).orElse(null);
+        Number value = result.numberValue();
+        // For disabled non-boolean features, Izanami returns null.
+        // Apply the defaultValue if configured and error strategy is DEFAULT_VALUE.
+        if (value == null && flagConfig.defaultValue() != null
+                && flagConfig.errorStrategy() == ErrorStrategy.DEFAULT_VALUE) {
+            Object defaultValue = flagConfig.defaultValue();
+            if (defaultValue instanceof Number) {
+                return ((Number) defaultValue).doubleValue();
+            }
+        }
+        return value != null ? value.doubleValue() : null;
     }
 
     private Value extractObject(IzanamiResult.Result result, FlagConfig flagConfig) {

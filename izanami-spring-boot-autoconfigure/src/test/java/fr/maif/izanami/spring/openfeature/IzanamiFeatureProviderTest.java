@@ -610,6 +610,100 @@ class IzanamiFeatureProviderTest {
     }
 
     // =====================================================================
+    // Inactive Feature Tests
+    // =====================================================================
+
+    @Nested
+    class InactiveFeatureTests {
+
+        @Test
+        void getBooleanEvaluation_inactiveFeature_returnsFalseWithDisabledReason() {
+            FlagConfig config = testFlagConfig("inactive-bool", "inactive-bool", FlagValueType.BOOLEAN, true);
+            setupFlagConfig("inactive-bool", config);
+
+            IzanamiResult.Success mockSuccess = mock(IzanamiResult.Success.class);
+            when(mockSuccess.booleanValue(BooleanCastStrategy.LAX)).thenReturn(false);
+            setupSuccessfulEvaluation("inactive-bool", mockSuccess);
+
+            ProviderEvaluation<Boolean> result = provider.getBooleanEvaluation(
+                "inactive-bool", true, emptyContext()
+            );
+
+            assertThat(result.getValue()).isFalse();
+            // Boolean false has reason DISABLED
+            assertThat(result.getReason()).isEqualTo(Reason.DISABLED.name());
+            assertThat(result.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                .isEqualTo(FlagValueSource.IZANAMI.name());
+        }
+
+        @Test
+        void getStringEvaluation_inactiveFeature_returnsDefaultValueWithUnknownReason() {
+            FlagConfig config = testFlagConfig("inactive-string", "inactive-string", FlagValueType.STRING, "fallback-value");
+            setupFlagConfig("inactive-string", config);
+
+            // For inactive string features, Izanami returns null
+            IzanamiResult.Success mockSuccess = mock(IzanamiResult.Success.class);
+            when(mockSuccess.stringValue()).thenReturn(null);
+            setupSuccessfulEvaluation("inactive-string", mockSuccess);
+
+            ProviderEvaluation<String> result = provider.getStringEvaluation(
+                "inactive-string", "caller-default", emptyContext()
+            );
+
+            // Disabled non-boolean features return the defaultValue when configured
+            assertThat(result.getValue()).isEqualTo("fallback-value");
+            // Reason is UNKNOWN since value is not null (defaultValue was applied)
+            assertThat(result.getReason()).isEqualTo(Reason.UNKNOWN.name());
+            assertThat(result.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                .isEqualTo(FlagValueSource.IZANAMI.name());
+        }
+
+        @Test
+        void getIntegerEvaluation_inactiveFeature_returnsDefaultValueWithUnknownReason() {
+            FlagConfig config = testFlagConfig("inactive-int", "inactive-int", FlagValueType.INTEGER, 999);
+            setupFlagConfig("inactive-int", config);
+
+            // For inactive integer features, Izanami returns null
+            IzanamiResult.Success mockSuccess = mock(IzanamiResult.Success.class);
+            when(mockSuccess.numberValue()).thenReturn(null);
+            setupSuccessfulEvaluation("inactive-int", mockSuccess);
+
+            ProviderEvaluation<Integer> result = provider.getIntegerEvaluation(
+                "inactive-int", 0, emptyContext()
+            );
+
+            // Disabled non-boolean features return the defaultValue when configured
+            assertThat(result.getValue()).isEqualTo(999);
+            // Reason is UNKNOWN since value is not null (defaultValue was applied)
+            assertThat(result.getReason()).isEqualTo(Reason.UNKNOWN.name());
+            assertThat(result.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                .isEqualTo(FlagValueSource.IZANAMI.name());
+        }
+
+        @Test
+        void getDoubleEvaluation_inactiveFeature_returnsDefaultValueWithUnknownReason() {
+            FlagConfig config = testFlagConfig("inactive-double", "inactive-double", FlagValueType.DOUBLE, 99.9);
+            setupFlagConfig("inactive-double", config);
+
+            // For inactive double features, Izanami returns null
+            IzanamiResult.Success mockSuccess = mock(IzanamiResult.Success.class);
+            when(mockSuccess.numberValue()).thenReturn(null);
+            setupSuccessfulEvaluation("inactive-double", mockSuccess);
+
+            ProviderEvaluation<Double> result = provider.getDoubleEvaluation(
+                "inactive-double", 0.0, emptyContext()
+            );
+
+            // Disabled non-boolean features return the defaultValue when configured
+            assertThat(result.getValue()).isEqualTo(99.9);
+            // Reason is UNKNOWN since value is not null (defaultValue was applied)
+            assertThat(result.getReason()).isEqualTo(Reason.UNKNOWN.name());
+            assertThat(result.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                .isEqualTo(FlagValueSource.IZANAMI.name());
+        }
+    }
+
+    // =====================================================================
     // Application Error Strategy Tests
     // =====================================================================
 

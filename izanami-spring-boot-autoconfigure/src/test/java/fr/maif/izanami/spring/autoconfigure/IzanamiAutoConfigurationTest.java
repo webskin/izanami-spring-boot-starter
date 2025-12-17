@@ -85,7 +85,7 @@ class IzanamiAutoConfigurationTest {
                 assertThat(configService.getAllFlagConfigs()).hasSize(1);
                 assertThat(configService.getFlagConfigByName("new-dashboard")).isPresent();
                 assertThat(configService.getFlagConfigByName("new-dashboard").get().valueType()).isEqualTo(FlagValueType.OBJECT);
-                assertThat(configService.getFlagConfigByName("new-dashboard").get().errorStrategy()).isInstanceOf(FeatureClientErrorStrategy.DefaultValueStrategy.class);
+                assertThat(configService.getFlagConfigByName("new-dashboard").get().clientErrorStrategy()).isInstanceOf(FeatureClientErrorStrategy.DefaultValueStrategy.class);
             });
     }
 

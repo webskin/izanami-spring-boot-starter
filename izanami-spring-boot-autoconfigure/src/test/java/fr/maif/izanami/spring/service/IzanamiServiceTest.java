@@ -509,6 +509,67 @@ class IzanamiServiceTest {
     }
 
     // =====================================================================
+    // Inactive Feature Tests
+    // =====================================================================
+
+    @Nested
+    class InactiveFeatureTests {
+
+        private IzanamiService service;
+
+        @BeforeEach
+        void setUp() {
+            service = createServiceWithMockFactory(validProperties());
+            service.afterPropertiesSet();
+        }
+
+        @Test
+        void booleanValue_inactiveFeature_returnsFalse() {
+            FlagConfig config = testFlagConfig("uuid-inactive-bool", "inactive-bool", FlagValueType.BOOLEAN, ErrorStrategy.DEFAULT_VALUE, true);
+            when(flagConfigService.getFlagConfigByKey("uuid-inactive-bool")).thenReturn(Optional.of(config));
+            // Izanami client returns false for disabled boolean features
+            when(mockClient.booleanValue(any(SingleFeatureRequest.class)))
+                .thenReturn(CompletableFuture.completedFuture(false));
+
+            Boolean result = service.forFlagKey("uuid-inactive-bool").booleanValue().join();
+
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        void stringValue_inactiveFeature_returnsDefaultValue() {
+            FlagConfig config = testFlagConfig("uuid-inactive-string", "inactive-string", FlagValueType.STRING, ErrorStrategy.DEFAULT_VALUE, "fallback-value");
+            when(flagConfigService.getFlagConfigByKey("uuid-inactive-string")).thenReturn(Optional.of(config));
+            // Izanami client returns null for disabled string features
+            when(mockClient.stringValue(any(SingleFeatureRequest.class)))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+            String result = service.forFlagKey("uuid-inactive-string").stringValue().join();
+
+            // Disabled non-boolean features return the defaultValue when configured
+            assertThat(result).isEqualTo("fallback-value");
+        }
+
+        @Test
+        void numberValue_inactiveFeature_returnsDefaultValue() {
+            FlagConfig config = testFlagConfig("uuid-inactive-number", "inactive-number", FlagValueType.INTEGER, ErrorStrategy.DEFAULT_VALUE, new BigDecimal("999"));
+            when(flagConfigService.getFlagConfigByKey("uuid-inactive-number")).thenReturn(Optional.of(config));
+            // Izanami client returns null for disabled number features
+            when(mockClient.numberValue(any(SingleFeatureRequest.class)))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+            BigDecimal result = service.forFlagKey("uuid-inactive-number").numberValue().join();
+
+            // Disabled non-boolean features return the defaultValue when configured
+            assertThat(result).isEqualByComparingTo(new BigDecimal("999"));
+        }
+
+        // Note: featureResultWithMetadata tests for inactive features are covered by integration tests
+        // (IzanamiServiceIT) since mocking featureValues() is complex due to the FeatureResponse wrapper.
+        // The key behavior tested here (defaultValue application) is covered by stringValue/numberValue tests.
+    }
+
+    // =====================================================================
     // Error Strategy Tests
     // =====================================================================
 

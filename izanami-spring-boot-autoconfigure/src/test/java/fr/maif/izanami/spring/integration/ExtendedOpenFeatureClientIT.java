@@ -2,6 +2,7 @@ package fr.maif.izanami.spring.integration;
 
 import dev.openfeature.sdk.FlagEvaluationDetails;
 import dev.openfeature.sdk.FlagValueType;
+import dev.openfeature.sdk.Reason;
 import dev.openfeature.sdk.Structure;
 import dev.openfeature.sdk.Value;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
@@ -477,6 +478,111 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
                 assertThat(details.getValue()).isEqualTo("caller-default");
                 assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                     .isEqualTo("IZANAMI_ERROR_STRATEGY");
+            });
+    }
+
+    // ========== Inactive (disabled) feature tests ==========
+
+    @Test
+    void evaluatesInactiveBooleanFlagAsFalse() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + INACTIVE_BOOL_ID,
+                "openfeature.flags[0].name=inactive-bool",
+                "openfeature.flags[0].description=Disabled boolean feature",
+                "openfeature.flags[0].valueType=boolean",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=true"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                ExtendedOpenFeatureClient client = context.getBean(ExtendedOpenFeatureClient.class);
+                FlagEvaluationDetails<Boolean> details = client.getBooleanDetails(INACTIVE_BOOL_ID);
+
+                // Disabled features evaluate to false regardless of defaultValue
+                assertThat(details.getValue()).isFalse();
+                assertThat(details.getReason()).isEqualTo(Reason.DISABLED.name());
+                assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI");
+            });
+    }
+
+    @Test
+    void evaluatesInactiveStringFlagReturnsDefaultValue() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + INACTIVE_STRING_ID,
+                "openfeature.flags[0].name=inactive-string",
+                "openfeature.flags[0].description=Disabled string feature",
+                "openfeature.flags[0].valueType=string",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=fallback"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                ExtendedOpenFeatureClient client = context.getBean(ExtendedOpenFeatureClient.class);
+                FlagEvaluationDetails<String> details = client.getStringDetails(INACTIVE_STRING_ID);
+
+                // Disabled non-boolean features return the defaultValue when configured
+                assertThat(details.getValue()).isEqualTo("fallback");
+                // Reason is UNKNOWN since value is not null (defaultValue is applied)
+                assertThat(details.getReason()).isEqualTo(Reason.UNKNOWN.name());
+                assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI");
+            });
+    }
+
+    @Test
+    void evaluatesInactiveIntegerFlagReturnsDefaultValue() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + INACTIVE_NUMBER_ID,
+                "openfeature.flags[0].name=inactive-number",
+                "openfeature.flags[0].description=Disabled number feature",
+                "openfeature.flags[0].valueType=integer",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=999"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                ExtendedOpenFeatureClient client = context.getBean(ExtendedOpenFeatureClient.class);
+                FlagEvaluationDetails<Integer> details = client.getIntegerDetails(INACTIVE_NUMBER_ID);
+
+                // Disabled non-boolean features return the defaultValue when configured
+                assertThat(details.getValue()).isEqualTo(999);
+                // Reason is UNKNOWN since value is not null (defaultValue is applied)
+                assertThat(details.getReason()).isEqualTo(Reason.UNKNOWN.name());
+                assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI");
+            });
+    }
+
+    @Test
+    void evaluatesInactiveDoubleFlagReturnsDefaultValue() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + INACTIVE_NUMBER_ID,
+                "openfeature.flags[0].name=inactive-number",
+                "openfeature.flags[0].description=Disabled number feature",
+                "openfeature.flags[0].valueType=double",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=99.9"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                ExtendedOpenFeatureClient client = context.getBean(ExtendedOpenFeatureClient.class);
+                FlagEvaluationDetails<Double> details = client.getDoubleDetails(INACTIVE_NUMBER_ID);
+
+                // Disabled non-boolean features return the defaultValue when configured
+                assertThat(details.getValue()).isEqualTo(99.9);
+                // Reason is UNKNOWN since value is not null (defaultValue is applied)
+                assertThat(details.getReason()).isEqualTo(Reason.UNKNOWN.name());
+                assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI");
             });
     }
 

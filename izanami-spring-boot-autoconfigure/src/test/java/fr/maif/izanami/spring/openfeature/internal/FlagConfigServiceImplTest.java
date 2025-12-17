@@ -85,7 +85,7 @@ class FlagConfigServiceImplTest {
         assertThat(config.name()).isEqualTo("my-feature");
         assertThat(config.description()).isEqualTo("My feature description");
         assertThat(config.valueType()).isEqualTo(FlagValueType.BOOLEAN);
-        assertThat(config.rawErrorStrategy()).isEqualTo(ErrorStrategy.DEFAULT_VALUE);
+        assertThat(config.errorStrategy()).isEqualTo(ErrorStrategy.DEFAULT_VALUE);
         assertThat(config.defaultValue()).isEqualTo(true);
     }
 
@@ -267,7 +267,7 @@ class FlagConfigServiceImplTest {
         FlagConfigServiceImpl service = createService(raw);
 
         FlagConfig config = service.getFlagConfigByName("my-flag").orElseThrow();
-        assertThat(config.rawErrorStrategy()).isEqualTo(ErrorStrategy.DEFAULT_VALUE);
+        assertThat(config.errorStrategy()).isEqualTo(ErrorStrategy.DEFAULT_VALUE);
     }
 
     @Test
@@ -279,7 +279,7 @@ class FlagConfigServiceImplTest {
         FlagConfigServiceImpl service = createService(raw);
 
         FlagConfig config = service.getFlagConfigByName("my-flag").orElseThrow();
-        assertThat(config.rawErrorStrategy()).isEqualTo(ErrorStrategy.CALLBACK);
+        assertThat(config.errorStrategy()).isEqualTo(ErrorStrategy.CALLBACK);
     }
 
     @Test
@@ -290,7 +290,7 @@ class FlagConfigServiceImplTest {
         FlagConfigServiceImpl service = createService(raw);
 
         FlagConfig config = service.getFlagConfigByName("my-flag").orElseThrow();
-        assertThat(config.rawErrorStrategy()).isEqualTo(ErrorStrategy.FAIL);
+        assertThat(config.errorStrategy()).isEqualTo(ErrorStrategy.FAIL);
     }
 
     @Test
@@ -301,7 +301,7 @@ class FlagConfigServiceImplTest {
         FlagConfigServiceImpl service = createService(raw);
 
         FlagConfig config = service.getFlagConfigByName("my-flag").orElseThrow();
-        assertThat(config.rawErrorStrategy()).isEqualTo(ErrorStrategy.NULL_VALUE);
+        assertThat(config.errorStrategy()).isEqualTo(ErrorStrategy.NULL_VALUE);
     }
 
     @Test
@@ -312,7 +312,7 @@ class FlagConfigServiceImplTest {
         FlagConfigServiceImpl service = createService(raw);
 
         FlagConfig config = service.getFlagConfigByName("my-flag").orElseThrow();
-        assertThat(config.rawErrorStrategy()).isEqualTo(ErrorStrategy.DEFAULT_VALUE);
+        assertThat(config.errorStrategy()).isEqualTo(ErrorStrategy.DEFAULT_VALUE);
     }
 
     // ========== 4. Default Value Coercion Tests ==========

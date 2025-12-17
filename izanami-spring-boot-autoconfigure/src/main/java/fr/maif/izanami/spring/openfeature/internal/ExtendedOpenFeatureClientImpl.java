@@ -485,9 +485,9 @@ public final class ExtendedOpenFeatureClientImpl implements ExtendedOpenFeatureC
                     + "Please add it to openfeature.flags configuration or use a method with explicit defaultValue."
             ));
 
-        if (!(config.errorStrategy() instanceof FeatureClientErrorStrategy.DefaultValueStrategy)) {
+        if (!(config.clientErrorStrategy() instanceof FeatureClientErrorStrategy.DefaultValueStrategy)) {
             throw new ExtendedOpenFeatureClientException(
-                "Flag '" + identifier + "' has errorStrategy=" + config.errorStrategy().getClass().getSimpleName()
+                "Flag '" + identifier + "' has errorStrategy=" + config.clientErrorStrategy().getClass().getSimpleName()
                     + " but a method requiring auto-computed defaultValue was called. "
                     + "Either configure the flag with errorStrategy=DEFAULT_VALUE or use a method with explicit defaultValue."
             );

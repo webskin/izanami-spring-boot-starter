@@ -308,7 +308,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
          */
         public CompletableFuture<String> stringValue() {
             log.debug("Evaluating flag {} as string", flagConfig.key());
-            return service.evaluateString(buildRequest())
+            return service.evaluateString(buildRequest(), flagConfig)
                 .whenComplete((result, error) -> {
                     if (error == null) {
                         log.debug("Evaluated flag {} as string = {}", flagConfig.key(), result);
@@ -324,7 +324,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
          */
         public CompletableFuture<BigDecimal> numberValue() {
             log.debug("Evaluating flag {} as number", flagConfig.key());
-            return service.evaluateNumber(buildRequest())
+            return service.evaluateNumber(buildRequest(), flagConfig)
                 .whenComplete((result, error) -> {
                     if (error == null) {
                         log.debug("Evaluated flag {} as number = {}", flagConfig.key(), result);
@@ -355,9 +355,11 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
             metadata.put(FlagMetadataKeys.FLAG_CONFIG_DESCRIPTION, flagConfig.description());
             metadata.put(FlagMetadataKeys.FLAG_CONFIG_VALUE_TYPE, flagConfig.valueType().name());
             metadata.put(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE, stringifyDefaultValue(service.objectMapper, flagConfig));
-            metadata.put(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY, flagConfig.rawErrorStrategy().name());
+            metadata.put(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY, flagConfig.errorStrategy().name());
             try {
                 return service.evaluateFeatureResult(flagConfig, user, context).thenApply(r -> {
+                    // TODO handle Success(NullValue)
+                    // https://github.com/MAIF/izanami-java-client/blob/v2.3.7/src/main/java/fr/maif/features/values/NullValue.java
                     FlagValueSource valueSource = (r instanceof IzanamiResult.Success)
                         ? FlagValueSource.IZANAMI
                         : FlagValueSource.IZANAMI_ERROR_STRATEGY;
@@ -365,12 +367,12 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
                     return new ResultWithMetadata(r, unmodifiableMap(metadata));
                 });
             } catch (Exception e) {
-                if (flagConfig.rawErrorStrategy() == ErrorStrategy.FAIL) {
+                if (flagConfig.errorStrategy() == ErrorStrategy.FAIL) {
                     return CompletableFuture.failedFuture(e);
                 }
                 metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
                 return CompletableFuture.completedFuture(new ResultWithMetadata(
-                    new IzanamiResult.Error(flagConfig.errorStrategy(), new IzanamiError(e.getMessage())),
+                    new IzanamiResult.Error(flagConfig.clientErrorStrategy(), new IzanamiError(e.getMessage())),
                     unmodifiableMap(metadata)
                 ));
             }
@@ -378,7 +380,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
 
         private SingleFeatureRequest buildRequest() {
             SingleFeatureRequest request = SingleFeatureRequest.newSingleFeatureRequest(flagConfig.key())
-                .withErrorStrategy(flagConfig.errorStrategy())
+                .withErrorStrategy(flagConfig.clientErrorStrategy())
                 .withBooleanCastStrategy(BooleanCastStrategy.LAX);
             if (user != null) {
                 request = request.withUser(user);
@@ -406,7 +408,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
         try {
             FeatureRequest featureRequest = FeatureRequest.newFeatureRequest()
                 .withFeature(flagConfig.key())
-                .withErrorStrategy(flagConfig.errorStrategy())
+                .withErrorStrategy(flagConfig.clientErrorStrategy())
                 .withBooleanCastStrategy(BooleanCastStrategy.LAX);
             if (user != null) {
                 featureRequest = featureRequest.withUser(user);
@@ -438,12 +440,41 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
         return requireClient().booleanValue(request);
     }
 
-    private CompletableFuture<String> evaluateString(SingleFeatureRequest request) {
-        return requireClient().stringValue(request);
+    private CompletableFuture<String> evaluateString(SingleFeatureRequest request, FlagConfig flagConfig) {
+        return requireClient().stringValue(request)
+            .thenApply(value -> {
+                // For disabled non-boolean features, Izanami returns null.
+                // Apply the defaultValue if configured and error strategy is DEFAULT_VALUE.
+                // https://github.com/MAIF/izanami-java-client/blob/v2.3.7/src/main/java/fr/maif/requests/FetchFeatureService.java#L99-L100
+                // https://github.com/MAIF/izanami-java-client/blob/v2.3.7/src/main/java/fr/maif/features/values/NullValue.java
+                // new Success(new NullValue()) is returned for disabled features.
+                if (value == null && flagConfig.defaultValue() != null
+                        && flagConfig.errorStrategy() == ErrorStrategy.DEFAULT_VALUE) {
+                    return flagConfig.defaultValue().toString();
+                }
+                return value;
+            });
     }
 
-    private CompletableFuture<BigDecimal> evaluateNumber(SingleFeatureRequest request) {
-        return requireClient().numberValue(request);
+    private CompletableFuture<BigDecimal> evaluateNumber(SingleFeatureRequest request, FlagConfig flagConfig) {
+        return requireClient().numberValue(request)
+            .thenApply(value -> {
+                // For disabled non-boolean features, Izanami returns null.
+                // Apply the defaultValue if configured and error strategy is DEFAULT_VALUE.
+                // https://github.com/MAIF/izanami-java-client/blob/v2.3.7/src/main/java/fr/maif/requests/FetchFeatureService.java#L99-L100
+                // https://github.com/MAIF/izanami-java-client/blob/v2.3.7/src/main/java/fr/maif/features/values/NullValue.java
+                // new Success(new NullValue()) is returned for disabled features.
+                if (value == null && flagConfig.defaultValue() != null
+                        && flagConfig.errorStrategy() == ErrorStrategy.DEFAULT_VALUE) {
+                    Object defaultValue = flagConfig.defaultValue();
+                    if (defaultValue instanceof BigDecimal) {
+                        return (BigDecimal) defaultValue;
+                    } else if (defaultValue instanceof Number) {
+                        return new BigDecimal(defaultValue.toString());
+                    }
+                }
+                return value;
+            });
     }
 
     public static String stringifyDefaultValue(ObjectMapper objectMapper, FlagConfig config) {

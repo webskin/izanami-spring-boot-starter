@@ -18,19 +18,25 @@ IZANAMI_SEED_OUTPUT="${IZANAMI_SEED_OUTPUT:-export}" # export|github-env
 #
 # This script creates the following features in Izanami:
 #
-# | ID                                   | Name            | Type    | Value                 |
-# |--------------------------------------|-----------------|---------|----------------------|
-# | a4c0d04f-69ac-41aa-a6e4-febcee541d51 | turbo-mode      | boolean | true (enabled)       |
-# | b5d1e15f-7abd-42bb-b7f5-0cdef6652e62 | secret-codename | string  | Operation Thunderbolt |
-# | c6e2f26f-8bce-43cc-c8f6-1def07763f73 | max-power-level | number  | 9001                 |
-# | d7f3037f-9cdf-44dd-d9f7-2ef008874084 | discount-rate   | number  | 0.15                 |
-# | e8f4148f-0def-55ee-eaf8-3f0109985195 | json-config     | string  | {"enabled":true,...} |
+# | ID                                   | Name            | Type    | Value                  | Enabled |
+# |--------------------------------------|-----------------|---------|------------------------|---------|
+# | a4c0d04f-69ac-41aa-a6e4-febcee541d51 | turbo-mode      | boolean | true (enabled)         | true    |
+# | b5d1e15f-7abd-42bb-b7f5-0cdef6652e62 | secret-codename | string  | Operation Thunderbolt  | true    |
+# | c6e2f26f-8bce-43cc-c8f6-1def07763f73 | max-power-level | number  | 9001                   | true    |
+# | d7f3037f-9cdf-44dd-d9f7-2ef008874084 | discount-rate   | number  | 0.15                   | true    |
+# | e8f4148f-0def-55ee-eaf8-3f0109985195 | json-config     | string  | {"enabled":true,...}   | true    |
+# | f9a5259f-1ef0-66ff-fbf9-4f020aa96206 | inactive-bool   | boolean | (none)                 | false   |
+# | 0ab6360f-2f01-7700-0c0a-5f131bba7317 | inactive-string | string  | hidden value           | false   |
+# | 1bc7471f-3012-8811-1d1b-6f242ccb8428 | inactive-number | number  | 42                     | false   |
 #
 IZANAMI_TURBO_MODE_ID="${IZANAMI_TURBO_MODE_ID:-a4c0d04f-69ac-41aa-a6e4-febcee541d51}"
 IZANAMI_SECRET_CODENAME_ID="${IZANAMI_SECRET_CODENAME_ID:-b5d1e15f-7abd-42bb-b7f5-0cdef6652e62}"
 IZANAMI_MAX_POWER_LEVEL_ID="${IZANAMI_MAX_POWER_LEVEL_ID:-c6e2f26f-8bce-43cc-c8f6-1def07763f73}"
 IZANAMI_DISCOUNT_RATE_ID="${IZANAMI_DISCOUNT_RATE_ID:-d7f3037f-9cdf-44dd-d9f7-2ef008874084}"
 IZANAMI_JSON_CONFIG_ID="${IZANAMI_JSON_CONFIG_ID:-e8f4148f-0def-55ee-eaf8-3f0109985195}"
+IZANAMI_INACTIVE_BOOL_ID="${IZANAMI_INACTIVE_BOOL_ID:-f9a5259f-1ef0-66ff-fbf9-4f020aa96206}"
+IZANAMI_INACTIVE_STRING_ID="${IZANAMI_INACTIVE_STRING_ID:-0ab6360f-2f01-7700-0c0a-5f131bba7317}"
+IZANAMI_INACTIVE_NUMBER_ID="${IZANAMI_INACTIVE_NUMBER_ID:-1bc7471f-3012-8811-1d1b-6f242ccb8428}"
 
 # Locate iz CLI
 find_iz_cmd() {
@@ -137,6 +143,7 @@ create_feature() {
   local description="$3"
   local result_type="$4"
   local value="${5:-}"
+  local enabled="${6:-true}"
 
   # Delete existing feature (ignore error)
   ${IZ_CMD} admin features delete "${id}" \
@@ -152,14 +159,16 @@ create_feature() {
       --arg desc "${description}" \
       --arg rt "${result_type}" \
       --arg val "${value}" \
-      '{id: $id, name: $name, description: $desc, enabled: true, resultType: $rt, value: $val}')
+      --argjson en "${enabled}" \
+      '{id: $id, name: $name, description: $desc, enabled: $en, resultType: $rt, value: $val}')
   else
     json=$(jq -n \
       --arg id "${id}" \
       --arg name "${name}" \
       --arg desc "${description}" \
       --arg rt "${result_type}" \
-      '{id: $id, name: $name, description: $desc, enabled: true, resultType: $rt}')
+      --argjson en "${enabled}" \
+      '{id: $id, name: $name, description: $desc, enabled: $en, resultType: $rt}')
   fi
 
   ${IZ_CMD} admin features create "${name}" \
@@ -212,6 +221,33 @@ create_feature \
     "maxRetries": 3
   }
 }'
+
+# Create inactive boolean feature
+create_feature \
+  "${IZANAMI_INACTIVE_BOOL_ID}" \
+  "inactive-bool" \
+  "Disabled boolean feature for testing" \
+  "boolean" \
+  "" \
+  "false"
+
+# Create inactive string feature
+create_feature \
+  "${IZANAMI_INACTIVE_STRING_ID}" \
+  "inactive-string" \
+  "Disabled string feature for testing" \
+  "string" \
+  "hidden value" \
+  "false"
+
+# Create inactive number feature
+create_feature \
+  "${IZANAMI_INACTIVE_NUMBER_ID}" \
+  "inactive-number" \
+  "Disabled number feature for testing" \
+  "number" \
+  "42" \
+  "false"
 
 echo "Seed complete." >&2
 

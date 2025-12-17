@@ -32,6 +32,11 @@ abstract class BaseIzanamiIT {
     protected static final String DISCOUNT_RATE_ID = "d7f3037f-9cdf-44dd-d9f7-2ef008874084";
     protected static final String JSON_CONFIG_ID = "e8f4148f-0def-55ee-eaf8-3f0109985195";
 
+    // Inactive (disabled) feature IDs matching seed-izanami.sh
+    protected static final String INACTIVE_BOOL_ID = "f9a5259f-1ef0-66ff-fbf9-4f020aa96206";
+    protected static final String INACTIVE_STRING_ID = "0ab6360f-2f01-7700-0c0a-5f131bba7317";
+    protected static final String INACTIVE_NUMBER_ID = "1bc7471f-3012-8811-1d1b-6f242ccb8428";
+
     protected static final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
         .withConfiguration(AutoConfigurations.of(IzanamiAutoConfiguration.class, OpenFeatureAutoConfiguration.class));
 
