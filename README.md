@@ -178,29 +178,68 @@ EvaluationContext fullCtx = new ImmutableContext("user-123", attributes);
 Boolean premium = client.getBooleanValueByName("turbo-mode", fullCtx);
 ```
 
-### Advanced Usage with ResultWithMetadata (IzanamiService)
+### Advanced Usage with ValueDetails (IzanamiService)
+
+Use `*ValueDetails()` methods to get both the typed value and evaluation metadata:
 
 ```java
 import fr.maif.izanami.spring.service.IzanamiService;
-import fr.maif.izanami.spring.service.ResultWithMetadata;
+import fr.maif.izanami.spring.service.ResultValueWithDetails;
 import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
-import fr.maif.features.results.IzanamiResult;
-import fr.maif.features.values.BooleanCastStrategy;
 
-ResultWithMetadata result = izanamiService.forFlagName("turbo-mode")
+// Boolean with details
+ResultValueWithDetails<Boolean> boolResult = izanamiService.forFlagName("turbo-mode")
     .withUser("user-123")
-    .featureResultWithMetadata()
+    .booleanValueDetails()
     .join();
 
-// Access the raw Izanami result
-IzanamiResult.Result izanamiResult = result.result();
-boolean value = izanamiResult.booleanValue(BooleanCastStrategy.LAX);
+Boolean enabled = boolResult.value();
+Map<String, String> metadata = boolResult.metadata();
 
-// Access metadata
-Map<String, String> metadata = result.metadata();
-String valueSource = metadata.get(FlagMetadataKeys.FLAG_VALUE_SOURCE);
-// "IZANAMI" for successful evaluation
-// "IZANAMI_ERROR_STRATEGY" for error strategy fallback
+// String with details
+ResultValueWithDetails<String> stringResult = izanamiService.forFlagName("secret-codename")
+    .withUser("user-123")
+    .stringValueDetails()
+    .join();
+
+// Number with details
+ResultValueWithDetails<BigDecimal> numberResult = izanamiService.forFlagName("discount-rate")
+    .withUser("user-123")
+    .numberValueDetails()
+    .join();
+```
+
+**Metadata keys:**
+
+| Key | Description |
+|-----|-------------|
+| `FLAG_VALUE_SOURCE` | Where the value originated |
+| `FLAG_EVALUATION_REASON` | Why this value was returned |
+
+**`FLAG_VALUE_SOURCE` values:**
+
+| Value | Meaning |
+|-------|---------|
+| `IZANAMI` | Value from Izanami server |
+| `APPLICATION_ERROR_STRATEGY` | Disabled feature, using configured `defaultValue` |
+| `IZANAMI_ERROR_STRATEGY` | Server error, using Izanami client error strategy |
+
+**`FLAG_EVALUATION_REASON` values:**
+
+| Value | Meaning |
+|-------|---------|
+| `UNKNOWN` | Feature is active, value from Izanami |
+| `DISABLED` | Feature is disabled (boolean=false, or non-boolean using default) |
+| `ERROR` | Server error occurred |
+
+```java
+// Example: checking evaluation details
+String source = metadata.get(FlagMetadataKeys.FLAG_VALUE_SOURCE);
+String reason = metadata.get(FlagMetadataKeys.FLAG_EVALUATION_REASON);
+
+if ("DISABLED".equals(reason)) {
+    // Feature is disabled - value is false (boolean) or defaultValue (string/number)
+}
 ```
 
 ### Advanced Usage with FlagEvaluationDetails (ExtendedOpenFeatureClient)

@@ -37,5 +37,10 @@ public final class FlagMetadataKeys {
      * Metadata key: {@link FlagValueSource} for the returned value.
      */
     public static final String FLAG_VALUE_SOURCE = "FLAG_VALUE_SOURCE";
+
+    /**
+     * Metadata key: evaluation reason (e.g., "DISABLED", "UNKNOWN", "ERROR").
+     */
+    public static final String FLAG_EVALUATION_REASON = "FLAG_EVALUATION_REASON";
 }
 

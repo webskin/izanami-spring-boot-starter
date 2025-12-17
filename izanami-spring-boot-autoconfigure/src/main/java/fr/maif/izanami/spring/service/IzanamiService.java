@@ -2,7 +2,10 @@ package fr.maif.izanami.spring.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.openfeature.sdk.ErrorCode;
 import dev.openfeature.sdk.FlagValueType;
+import dev.openfeature.sdk.ImmutableMetadata;
+import dev.openfeature.sdk.Reason;
 import fr.maif.FeatureCacheConfiguration;
 import fr.maif.FeatureClientErrorStrategy;
 import fr.maif.IzanamiClient;
@@ -10,10 +13,7 @@ import fr.maif.errors.IzanamiError;
 import fr.maif.features.results.IzanamiResult;
 import fr.maif.features.values.BooleanCastStrategy;
 import fr.maif.izanami.spring.autoconfigure.IzanamiProperties;
-import fr.maif.izanami.spring.openfeature.ErrorStrategy;
-import fr.maif.izanami.spring.openfeature.FlagConfig;
-import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
-import fr.maif.izanami.spring.openfeature.FlagValueSource;
+import fr.maif.izanami.spring.openfeature.*;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
 import fr.maif.requests.FeatureRequest;
 import fr.maif.requests.IzanamiConnectionInformation;
@@ -25,6 +25,7 @@ import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 
 import java.math.BigDecimal;
+import java.text.MessageFormat;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -376,6 +377,121 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
                     unmodifiableMap(metadata)
                 ));
             }
+        }
+
+        /**
+         * Evaluate the feature flag as a boolean and return detailed result with metadata.
+         *
+         * @return a future containing the boolean value with evaluation metadata
+         * @throws IzanamiClientNotAvailableException if the Izanami client is not available
+         */
+        public CompletableFuture<ResultValueWithDetails<Boolean>> booleanValueDetails() {
+            log.debug("Evaluating flag {} as boolean with details", flagConfig.key());
+            return featureResultWithMetadata().thenApply(resultWithMetadata -> {
+                Map<String, String> metadata = new LinkedHashMap<>(resultWithMetadata.metadata());
+                IzanamiResult.Result result = resultWithMetadata.result();
+                Boolean value = result.booleanValue(BooleanCastStrategy.LAX);
+
+                String reason;
+                if (result instanceof IzanamiResult.Success) {
+                    metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.IZANAMI.name());
+                    // Boolean features: false means disabled
+                    reason = Boolean.FALSE.equals(value) ? "DISABLED" : "UNKNOWN";
+                } else {
+                    reason = "ERROR";
+                    metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.IZANAMI_ERROR_STRATEGY.name());
+                }
+
+                metadata.put(FlagMetadataKeys.FLAG_EVALUATION_REASON, reason);
+
+                log.debug("Evaluated flag {} as boolean = {} with details, reason={}", flagConfig.key(), value, reason);
+                return new ResultValueWithDetails<>(value, unmodifiableMap(metadata));
+            });
+        }
+
+        /**
+         * Evaluate the feature flag as a string and return detailed result with metadata.
+         *
+         * @return a future containing the string value with evaluation metadata
+         * @throws IzanamiClientNotAvailableException if the Izanami client is not available
+         */
+        public CompletableFuture<ResultValueWithDetails<String>> stringValueDetails() {
+            log.debug("Evaluating flag {} as string with details", flagConfig.key());
+            return featureResultWithMetadata().thenApply(resultWithMetadata -> {
+                Map<String, String> metadata = new LinkedHashMap<>(resultWithMetadata.metadata());
+                IzanamiResult.Result result = resultWithMetadata.result();
+                String rawValue = result.stringValue();
+
+                String reason;
+                String value = rawValue;
+                if (result instanceof IzanamiResult.Success) {
+                    if (rawValue == null) {
+                        metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
+                        // Feature is disabled. Apply the defaultValue if configured.
+                        reason = "DISABLED";
+                        if (flagConfig.defaultValue() != null) {
+                            value = flagConfig.defaultValue().toString();
+                        }
+                    } else {
+                        metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.IZANAMI.name());
+                        reason = "UNKNOWN";
+                    }
+                } else {
+                    metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.IZANAMI_ERROR_STRATEGY.name());
+                    reason = "ERROR";
+                }
+
+                metadata.put(FlagMetadataKeys.FLAG_EVALUATION_REASON, reason);
+
+                log.debug("Evaluated flag {} as string = {} with details, reason={}", flagConfig.key(), value, reason);
+                return new ResultValueWithDetails<>(value, unmodifiableMap(metadata));
+            });
+        }
+
+        /**
+         * Evaluate the feature flag as a number and return detailed result with metadata.
+         *
+         * @return a future containing the number value as BigDecimal with evaluation metadata
+         * @throws IzanamiClientNotAvailableException if the Izanami client is not available
+         */
+        public CompletableFuture<ResultValueWithDetails<BigDecimal>> numberValueDetails() {
+            log.debug("Evaluating flag {} as number with details", flagConfig.key());
+            return featureResultWithMetadata().thenApply(resultWithMetadata -> {
+                Map<String, String> metadata = new LinkedHashMap<>(resultWithMetadata.metadata());
+                IzanamiResult.Result result = resultWithMetadata.result();
+                BigDecimal rawValue = result.numberValue();
+
+                String reason;
+                BigDecimal value = rawValue;
+                if (result instanceof IzanamiResult.Success) {
+                    if (rawValue == null) {
+                        metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
+                        // Feature is disabled. Apply the defaultValue if configured.
+                        reason = "DISABLED";
+                        if (flagConfig.defaultValue() != null) {
+                            Object defaultValue = flagConfig.defaultValue();
+                            if (defaultValue instanceof BigDecimal) {
+                                value = (BigDecimal) defaultValue;
+                            } else if (defaultValue instanceof Number) {
+                                value = new BigDecimal(defaultValue.toString());
+                            }
+                        }
+                    } else {
+                        metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.IZANAMI.name());
+                        reason = "UNKNOWN";
+
+                    }
+                } else {
+                    metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.IZANAMI_ERROR_STRATEGY.name());
+                    reason = "ERROR";
+                }
+
+
+                metadata.put(FlagMetadataKeys.FLAG_EVALUATION_REASON, reason);
+
+                log.debug("Evaluated flag {} as number = {} with details, reason={}", flagConfig.key(), value, reason);
+                return new ResultValueWithDetails<>(value, unmodifiableMap(metadata));
+            });
         }
 
         private SingleFeatureRequest buildRequest() {

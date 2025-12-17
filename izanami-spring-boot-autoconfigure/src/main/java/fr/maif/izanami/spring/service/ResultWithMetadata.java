@@ -15,3 +15,11 @@ public record ResultWithMetadata(
     IzanamiResult.Result result,
     Map<String, String> metadata
 ) {}
+
+/*
+TODO
+public record ResultValueWithMetadata<T>(
+    T value,
+    Map<String, String> metadata
+) {}
+ */
