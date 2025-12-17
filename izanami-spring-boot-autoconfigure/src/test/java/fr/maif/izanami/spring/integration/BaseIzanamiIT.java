@@ -30,6 +30,7 @@ abstract class BaseIzanamiIT {
     protected static final String SECRET_CODENAME_ID = "b5d1e15f-7abd-42bb-b7f5-0cdef6652e62";
     protected static final String MAX_POWER_LEVEL_ID = "c6e2f26f-8bce-43cc-c8f6-1def07763f73";
     protected static final String DISCOUNT_RATE_ID = "d7f3037f-9cdf-44dd-d9f7-2ef008874084";
+    protected static final String JSON_CONFIG_ID = "e8f4148f-0def-55ee-eaf8-3f0109985195";
 
     protected static final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
         .withConfiguration(AutoConfigurations.of(IzanamiAutoConfiguration.class, OpenFeatureAutoConfiguration.class));

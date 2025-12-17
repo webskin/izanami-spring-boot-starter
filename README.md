@@ -84,6 +84,12 @@ openfeature:
       errorStrategy: "DEFAULT_VALUE"
       valueType: "double"
       defaultValue: 0.0
+    - key: "e8f4148f-0def-55ee-eaf8-3f0109985195"
+      name: "json-config"
+      description: "Configuration stored as JSON string"
+      errorStrategy: "DEFAULT_VALUE"
+      valueType: "string"
+      defaultValue: "{}"
 ```
 
 ## Usage
@@ -324,6 +330,7 @@ It also creates the features used by integration tests:
 - `secret-codename` (string, value="Operation Thunderbolt")
 - `max-power-level` (integer, value=9001)
 - `discount-rate` (double, value=0.15)
+- `json-config` (string, value=`{"enabled":true,"settings":{"theme":"dark","maxRetries":3}}`)
 
 Run:
 

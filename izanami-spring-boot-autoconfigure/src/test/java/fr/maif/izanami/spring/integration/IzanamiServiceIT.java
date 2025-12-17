@@ -69,6 +69,34 @@ class IzanamiServiceIT extends BaseIzanamiIT {
     }
 
     @Test
+    void evaluatesJsonStringFlagFromServer() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + JSON_CONFIG_ID,
+                "openfeature.flags[0].name=json-config",
+                "openfeature.flags[0].description=Configuration stored as JSON string",
+                "openfeature.flags[0].valueType=string",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue={}"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                IzanamiService service = context.getBean(IzanamiService.class);
+                String value = service.forFlagKey(JSON_CONFIG_ID).featureResult().get().stringValue();
+
+                assertThat(value).isEqualTo("""
+                    {
+                      "enabled": true,
+                      "settings": {
+                        "theme": "dark",
+                        "maxRetries": 3
+                      }
+                    }""");
+            });
+    }
+
+    @Test
     void evaluatesIntegerFlagFromServer() {
         contextRunner
             .withPropertyValues(withFlagConfig(

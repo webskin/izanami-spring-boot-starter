@@ -24,11 +24,13 @@ IZANAMI_SEED_OUTPUT="${IZANAMI_SEED_OUTPUT:-export}" # export|github-env
 # | b5d1e15f-7abd-42bb-b7f5-0cdef6652e62 | secret-codename | string  | Operation Thunderbolt |
 # | c6e2f26f-8bce-43cc-c8f6-1def07763f73 | max-power-level | number  | 9001                 |
 # | d7f3037f-9cdf-44dd-d9f7-2ef008874084 | discount-rate   | number  | 0.15                 |
+# | e8f4148f-0def-55ee-eaf8-3f0109985195 | json-config     | string  | {"enabled":true,...} |
 #
 IZANAMI_TURBO_MODE_ID="${IZANAMI_TURBO_MODE_ID:-a4c0d04f-69ac-41aa-a6e4-febcee541d51}"
 IZANAMI_SECRET_CODENAME_ID="${IZANAMI_SECRET_CODENAME_ID:-b5d1e15f-7abd-42bb-b7f5-0cdef6652e62}"
 IZANAMI_MAX_POWER_LEVEL_ID="${IZANAMI_MAX_POWER_LEVEL_ID:-c6e2f26f-8bce-43cc-c8f6-1def07763f73}"
 IZANAMI_DISCOUNT_RATE_ID="${IZANAMI_DISCOUNT_RATE_ID:-d7f3037f-9cdf-44dd-d9f7-2ef008874084}"
+IZANAMI_JSON_CONFIG_ID="${IZANAMI_JSON_CONFIG_ID:-e8f4148f-0def-55ee-eaf8-3f0109985195}"
 
 # Locate iz CLI
 find_iz_cmd() {
@@ -196,6 +198,20 @@ create_feature \
   "Current discount rate as a decimal" \
   "number" \
   "0.15"
+
+# Create string feature with JSON value: json-config
+create_feature \
+  "${IZANAMI_JSON_CONFIG_ID}" \
+  "json-config" \
+  "Configuration stored as JSON string" \
+  "string" \
+  '{
+  "enabled": true,
+  "settings": {
+    "theme": "dark",
+    "maxRetries": 3
+  }
+}'
 
 echo "Seed complete." >&2
 
