@@ -1,6 +1,6 @@
 # izanami-spring-boot-starter
 
-Spring Boot starter providing a resilient Izanami-backed OpenFeature `FeatureProvider`.
+Spring Boot starter for Izanami feature flags, providing `IzanamiService` (fluent async API) and `ExtendedOpenFeatureClient` (OpenFeature-compliant client).
 
 ## Modules
 
@@ -21,6 +21,8 @@ Spring Boot starter providing a resilient Izanami-backed OpenFeature `FeaturePro
 
 **Autoconfigure (advanced / if you want full control over dependencies)**
 
+Use this module when you need to exclude transitive dependencies or provide your own versions of the Izanami Java client or OpenFeature SDK.
+
 ```xml
 <dependency>
   <groupId>fr.maif</groupId>
@@ -32,6 +34,8 @@ Spring Boot starter providing a resilient Izanami-backed OpenFeature `FeaturePro
 ## Configuration
 
 ### Izanami
+
+Recommended configuration with SSE-based real-time updates:
 
 ```yaml
 izanami:
@@ -57,39 +61,64 @@ izanami:
 
 ### OpenFeature flags
 
+When `defaultValue` is provided, the error strategy defaults to `DEFAULT_VALUE` automatically:
+
 ```yaml
 openfeature:
   flags:
     - key: "a4c0d04f-69ac-41aa-a6e4-febcee541d51"
       name: "turbo-mode"
       description: "Enable turbo mode for maximum performance"
-      errorStrategy: "DEFAULT_VALUE"
       valueType: "boolean"
       defaultValue: false
     - key: "b5d1e15f-7abd-42bb-b7f5-0cdef6652e62"
       name: "secret-codename"
       description: "The secret codename for this release"
-      errorStrategy: "DEFAULT_VALUE"
       valueType: "string"
       defaultValue: "classified"
     - key: "c6e2f26f-8bce-43cc-c8f6-1def07763f73"
       name: "max-power-level"
       description: "Maximum power level allowed"
-      errorStrategy: "DEFAULT_VALUE"
       valueType: "integer"
       defaultValue: 100
     - key: "d7f3037f-9cdf-44dd-d9f7-2ef008874084"
       name: "discount-rate"
       description: "Current discount rate as a decimal"
-      errorStrategy: "DEFAULT_VALUE"
       valueType: "double"
       defaultValue: 0.0
     - key: "e8f4148f-0def-55ee-eaf8-3f0109985195"
       name: "json-config"
       description: "Configuration stored as JSON string"
-      errorStrategy: "DEFAULT_VALUE"
       valueType: "string"
       defaultValue: "{}"
+```
+
+### Alternative Error Strategies
+
+> **Warning**: `FAIL`, `NULL_VALUE`, and `CALLBACK` strategies are only fully supported via `IzanamiService`.
+> When using `ExtendedOpenFeatureClient`, these strategies fall back to the caller-provided default value.
+
+```yaml
+openfeature:
+  flags:
+    # FAIL strategy - throws exception on error (IzanamiService only)
+    - key: "..."
+      name: "critical-flag"
+      valueType: "boolean"
+      errorStrategy: "FAIL"
+
+    # NULL_VALUE strategy - returns null on error (IzanamiService only)
+    - key: "..."
+      name: "optional-flag"
+      valueType: "string"
+      errorStrategy: "NULL_VALUE"
+
+    # CALLBACK strategy - invokes custom bean on error
+    - key: "..."
+      name: "fallback-flag"
+      valueType: "string"
+      errorStrategy: "CALLBACK"
+      callbackBean: "myErrorCallback"
 ```
 
 ## Usage
@@ -123,17 +152,30 @@ BigDecimal rate = izanamiService.forFlagName("discount-rate")
 
 ### Simple Usage with ExtendedOpenFeatureClient
 
+In OpenFeature, the **targeting key** identifies the entity (user) being evaluated. Additional context is passed via the `context` attribute in `EvaluationContext`.
+
 ```java
 import fr.maif.izanami.spring.openfeature.api.ExtendedOpenFeatureClient;
-import org.springframework.beans.factory.annotation.Autowired;
+import dev.openfeature.sdk.EvaluationContext;
+import dev.openfeature.sdk.ImmutableContext;
+import dev.openfeature.sdk.Value;
 
 @Autowired ExtendedOpenFeatureClient client;
 
-// By key (UUID)
+// Simple evaluation (no targeting)
 Boolean enabled = client.getBooleanValue("a4c0d04f-69ac-41aa-a6e4-febcee541d51");
 
 // By name
 String codename = client.getStringValueByName("secret-codename");
+
+// With user targeting (targeting key = user identifier)
+EvaluationContext userCtx = new ImmutableContext("user-123");
+Boolean userEnabled = client.getBooleanValueByName("turbo-mode", userCtx);
+
+// With user and context targeting
+Map<String, Value> attributes = Map.of("context", new Value("premium-tier"));
+EvaluationContext fullCtx = new ImmutableContext("user-123", attributes);
+Boolean premium = client.getBooleanValueByName("turbo-mode", fullCtx);
 ```
 
 ### Advanced Usage with ResultWithMetadata (IzanamiService)
@@ -165,10 +207,17 @@ String valueSource = metadata.get(FlagMetadataKeys.FLAG_VALUE_SOURCE);
 
 ```java
 import dev.openfeature.sdk.FlagEvaluationDetails;
+import dev.openfeature.sdk.EvaluationContext;
+import dev.openfeature.sdk.ImmutableContext;
 import dev.openfeature.sdk.ErrorCode;
+import dev.openfeature.sdk.Value;
 import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
 
-FlagEvaluationDetails<Boolean> details = client.getBooleanDetails("turbo-mode");
+// With user and context targeting
+Map<String, Value> attributes = Map.of("context", new Value("production"));
+EvaluationContext ctx = new ImmutableContext("user-123", attributes);
+
+FlagEvaluationDetails<Boolean> details = client.getBooleanDetails("turbo-mode", ctx);
 
 Boolean value = details.getValue();
 String reason = details.getReason();        // e.g., "DISABLED" for false, "UNKNOWN" for true
@@ -178,7 +227,7 @@ String valueSource = details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_V
 
 ## Important: Error Strategy Limitations
 
-When using OpenFeature clients (`Client` or `ExtendedOpenFeatureClient`), only the `DEFAULT_VALUE` error strategy is fully supported.
+When using OpenFeature clients (`dev.openfeature.sdk.Client` or `fr.maif.izanami.spring.openfeature.api.ExtendedOpenFeatureClient`), only the `DEFAULT_VALUE` error strategy is fully supported.
 
 **The following error strategies have limited support through OpenFeature:**
 
@@ -302,6 +351,8 @@ mvn -B -ntp verify
 
 ### Integration tests (real Izanami on `http://localhost:9999`)
 
+**Prerequisite**: The [iz CLI](https://github.com/MAIF/izanami-go-cli) is required to seed test data. Install it or build from source at `../izanami-go-cli`.
+
 Integration tests are opt-in:
 
 - Maven profile: `-Pintegration-tests`
@@ -344,7 +395,3 @@ GitHub Actions workflow: `.github/workflows/ci.yml`
 
 - Runs unit tests on JDK 17.
 - Starts Izanami via Compose, seeds flags, runs integration tests.
-- Runs SonarCloud analysis when the following secrets are present:
-  - `SONAR_TOKEN`
-  - `SONAR_ORGANIZATION`
-  - `SONAR_PROJECT_KEY`
