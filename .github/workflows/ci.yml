@@ -58,7 +58,7 @@ jobs:
           tar -xzf iz.tar.gz
           sudo mv iz /usr/local/bin/iz
           chmod +x /usr/local/bin/iz
-          iz --version
+          iz version
 
       - name: Seed flags
         run: IZANAMI_SEED_OUTPUT=github-env ./scripts/seed-izanami.sh >> "$GITHUB_ENV"
