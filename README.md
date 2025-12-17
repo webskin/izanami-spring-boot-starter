@@ -88,36 +88,117 @@ openfeature:
 
 ## Usage
 
-### Inject the OpenFeature client
+### Simple Usage with IzanamiService (Fluent API)
 
 ```java
-import dev.openfeature.sdk.Client;
-import org.springframework.stereotype.Service;
+import fr.maif.izanami.spring.service.IzanamiService;
+import org.springframework.beans.factory.annotation.Autowired;
 
-@Service
-public class FeatureService {
-  private final Client client;
+@Autowired IzanamiService izanamiService;
 
-  public FeatureService(Client client) {
-    this.client = client;
-  }
+// Simple evaluation (no user/context)
+Boolean enabled = izanamiService.forFlagName("turbo-mode")
+    .booleanValue()
+    .join();
 
-  public boolean isTurboModeEnabled() {
-    return Boolean.TRUE.equals(client.getBooleanValue("turbo-mode", false));
-  }
+// With user targeting
+String codename = izanamiService.forFlagKey("b5d1e15f-7abd-42bb-b7f5-0cdef6652e62")
+    .withUser("user-123")
+    .stringValue()
+    .join();
 
-  public String getSecretCodename() {
-    return client.getStringValue("secret-codename", "classified");
-  }
+// With user and context
+BigDecimal rate = izanamiService.forFlagName("discount-rate")
+    .withUser("user-123")
+    .withContext("premium-tier")
+    .numberValue()
+    .join();
+```
 
-  public int getMaxPowerLevel() {
-    return client.getIntegerValue("max-power-level", 100);
-  }
+### Simple Usage with ExtendedOpenFeatureClient
 
-  public double getDiscountRate() {
-    return client.getDoubleValue("discount-rate", 0.0);
-  }
-}
+```java
+import fr.maif.izanami.spring.openfeature.api.ExtendedOpenFeatureClient;
+import org.springframework.beans.factory.annotation.Autowired;
+
+@Autowired ExtendedOpenFeatureClient client;
+
+// By key (UUID)
+Boolean enabled = client.getBooleanValue("a4c0d04f-69ac-41aa-a6e4-febcee541d51");
+
+// By name
+String codename = client.getStringValueByName("secret-codename");
+```
+
+### Advanced Usage with ResultWithMetadata (IzanamiService)
+
+```java
+import fr.maif.izanami.spring.service.IzanamiService;
+import fr.maif.izanami.spring.service.ResultWithMetadata;
+import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
+import fr.maif.features.results.IzanamiResult;
+import fr.maif.features.values.BooleanCastStrategy;
+
+ResultWithMetadata result = izanamiService.forFlagName("turbo-mode")
+    .withUser("user-123")
+    .featureResultWithMetadata()
+    .join();
+
+// Access the raw Izanami result
+IzanamiResult.Result izanamiResult = result.result();
+boolean value = izanamiResult.booleanValue(BooleanCastStrategy.LAX);
+
+// Access metadata
+Map<String, String> metadata = result.metadata();
+String valueSource = metadata.get(FlagMetadataKeys.FLAG_VALUE_SOURCE);
+// "IZANAMI" for successful evaluation
+// "IZANAMI_ERROR_STRATEGY" for error strategy fallback
+```
+
+### Advanced Usage with FlagEvaluationDetails (ExtendedOpenFeatureClient)
+
+```java
+import dev.openfeature.sdk.FlagEvaluationDetails;
+import dev.openfeature.sdk.ErrorCode;
+import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
+
+FlagEvaluationDetails<Boolean> details = client.getBooleanDetails("turbo-mode");
+
+Boolean value = details.getValue();
+String reason = details.getReason();        // e.g., "DISABLED" for false, "UNKNOWN" for true
+ErrorCode errorCode = details.getErrorCode(); // null on success
+String valueSource = details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE);
+```
+
+## Important: Error Strategy Limitations
+
+When using OpenFeature clients (`Client` or `ExtendedOpenFeatureClient`), only the `DEFAULT_VALUE` error strategy is fully supported.
+
+**The following error strategies have limited support through OpenFeature:**
+
+| Strategy | Expected Behavior | Actual Behavior (OpenFeature) |
+|----------|-------------------|-------------------------------|
+| `FAIL` | Throws exception | Returns caller-provided default value |
+| `NULL_VALUE` | Returns null | Returns caller-provided default value |
+| `CALLBACK` | Invokes callback bean | Returns caller-provided default value |
+
+For full support of `FAIL`, `NULL_VALUE`, and `CALLBACK` error strategies, use `IzanamiService` directly:
+
+```java
+// FAIL strategy - throws CompletionException on error
+izanamiService.forFlagName("my-flag")
+    .stringValue()
+    .join();
+
+// NULL_VALUE strategy - returns null on error
+String value = izanamiService.forFlagName("my-flag")
+    .stringValue()
+    .join();
+
+// CALLBACK strategy - invokes callback bean and returns its value on error
+String value = izanamiService.forFlagName("my-flag")
+    .stringValue()
+    .join();
 ```
 
 ### Optional explicit opt-in
