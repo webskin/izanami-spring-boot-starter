@@ -393,5 +393,52 @@ mvn -B -ntp -Pintegration-tests verify
 
 GitHub Actions workflow: `.github/workflows/ci.yml`
 
-- Runs unit tests on JDK 17.
+- Runs unit tests on JDK 21 (bytecode targets Java 17).
 - Starts Izanami via Compose, seeds flags, runs integration tests.
+
+## Releasing
+
+Releases are automated via GitHub Actions (`.github/workflows/release.yml`).
+
+### Release Process
+
+1. **Tag and push** (version derived automatically from tag):
+
+   ```bash
+   git tag v1.0.0
+   git push origin v1.0.0
+   ```
+
+2. **Workflow automatically**:
+   - Sets version from tag via `-Drevision=1.0.0`
+   - Builds, tests, and publishes to Maven Central
+   - Generates SBOM (CycloneDX)
+   - Creates build provenance attestation
+   - Creates GitHub Release with JARs, checksums, and SBOM
+
+### Required GitHub Secrets
+
+Configure these in **Settings → Secrets and variables → Actions**:
+
+| Secret | Description |
+|--------|-------------|
+| `CENTRAL_USERNAME` | Maven Central token username (from central.sonatype.com) |
+| `CENTRAL_TOKEN` | Maven Central token password |
+| `GPG_PRIVATE_KEY` | Armored GPG private key (`gpg --armor --export-secret-keys <KEY_ID>`) |
+| `GPG_PASSPHRASE` | GPG key passphrase |
+
+### Verify Attestation
+
+Users can verify artifact provenance:
+
+```bash
+gh attestation verify izanami-spring-boot-starter-1.0.0.jar --owner webskin
+```
+
+### CI-Friendly Versioning
+
+This project uses Maven CI-friendly versions (`${revision}` property):
+
+- Default version in `pom.xml`: `0.1.0-SNAPSHOT`
+- Override at build time: `mvn -Drevision=1.0.0 package`
+- Release workflow automatically sets version from git tag
