@@ -173,6 +173,120 @@ class IzanamiOpenFeatureIT {
             });
     }
 
+    // ========== ByName integration tests ==========
+
+    @Test
+    void evaluatesBooleanFlagByName() {
+        contextRunner
+            .withPropertyValues(
+                "izanami.base-url=" + envOrDefault("IZANAMI_BASE_URL", "http://localhost:9999"),
+                "izanami.api-path=" + envOrDefault("IZANAMI_API_PATH", "/api"),
+                "izanami.client-id=" + env("IZANAMI_CLIENT_ID"),
+                "izanami.client-secret=" + env("IZANAMI_CLIENT_SECRET"),
+                "izanami.cache.sse.enabled=false",
+                "openfeature.flags[0].key=" + TURBO_MODE_ID,
+                "openfeature.flags[0].name=turbo-mode",
+                "openfeature.flags[0].description=Enable turbo mode",
+                "openfeature.flags[0].valueType=boolean",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=false"
+            )
+            .run(context -> {
+                context.getBean(IzanamiService.class).whenLoaded().join();
+
+                ExtendedOpenFeatureClient client = context.getBean(ExtendedOpenFeatureClient.class);
+                FlagEvaluationDetails<Boolean> details = client.getBooleanDetailsByName("turbo-mode");
+
+                assertThat(details.getValue()).isTrue();
+                assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI");
+            });
+    }
+
+    @Test
+    void evaluatesStringFlagByName() {
+        contextRunner
+            .withPropertyValues(
+                "izanami.base-url=" + envOrDefault("IZANAMI_BASE_URL", "http://localhost:9999"),
+                "izanami.api-path=" + envOrDefault("IZANAMI_API_PATH", "/api"),
+                "izanami.client-id=" + env("IZANAMI_CLIENT_ID"),
+                "izanami.client-secret=" + env("IZANAMI_CLIENT_SECRET"),
+                "izanami.cache.sse.enabled=false",
+                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
+                "openfeature.flags[0].name=secret-codename",
+                "openfeature.flags[0].description=The secret codename",
+                "openfeature.flags[0].valueType=string",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=classified"
+            )
+            .run(context -> {
+                context.getBean(IzanamiService.class).whenLoaded().join();
+
+                ExtendedOpenFeatureClient client = context.getBean(ExtendedOpenFeatureClient.class);
+                FlagEvaluationDetails<String> details = client.getStringDetailsByName("secret-codename");
+
+                assertThat(details.getValue()).isEqualTo("Operation Thunderbolt");
+                assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI");
+            });
+    }
+
+    @Test
+    void evaluatesIntegerFlagByName() {
+        contextRunner
+            .withPropertyValues(
+                "izanami.base-url=" + envOrDefault("IZANAMI_BASE_URL", "http://localhost:9999"),
+                "izanami.api-path=" + envOrDefault("IZANAMI_API_PATH", "/api"),
+                "izanami.client-id=" + env("IZANAMI_CLIENT_ID"),
+                "izanami.client-secret=" + env("IZANAMI_CLIENT_SECRET"),
+                "izanami.cache.sse.enabled=false",
+                "openfeature.flags[0].key=" + MAX_POWER_LEVEL_ID,
+                "openfeature.flags[0].name=max-power-level",
+                "openfeature.flags[0].description=Maximum power level",
+                "openfeature.flags[0].valueType=integer",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=100"
+            )
+            .run(context -> {
+                context.getBean(IzanamiService.class).whenLoaded().join();
+
+                ExtendedOpenFeatureClient client = context.getBean(ExtendedOpenFeatureClient.class);
+                FlagEvaluationDetails<Integer> details = client.getIntegerDetailsByName("max-power-level");
+
+                assertThat(details.getValue()).isEqualTo(9001);
+                assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI");
+            });
+    }
+
+    @Test
+    void evaluatesDoubleFlagByName() {
+        contextRunner
+            .withPropertyValues(
+                "izanami.base-url=" + envOrDefault("IZANAMI_BASE_URL", "http://localhost:9999"),
+                "izanami.api-path=" + envOrDefault("IZANAMI_API_PATH", "/api"),
+                "izanami.client-id=" + env("IZANAMI_CLIENT_ID"),
+                "izanami.client-secret=" + env("IZANAMI_CLIENT_SECRET"),
+                "izanami.cache.sse.enabled=false",
+                "openfeature.flags[0].key=" + DISCOUNT_RATE_ID,
+                "openfeature.flags[0].name=discount-rate",
+                "openfeature.flags[0].description=Current discount rate",
+                "openfeature.flags[0].valueType=double",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=0.0"
+            )
+            .run(context -> {
+                context.getBean(IzanamiService.class).whenLoaded().join();
+
+                ExtendedOpenFeatureClient client = context.getBean(ExtendedOpenFeatureClient.class);
+                FlagEvaluationDetails<Double> details = client.getDoubleDetailsByName("discount-rate");
+
+                assertThat(details.getValue()).isEqualTo(0.15);
+                assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI");
+            });
+    }
+
     private static String env(String name) {
         String value = System.getenv(name);
         return value == null ? "" : value;

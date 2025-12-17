@@ -19,7 +19,9 @@ import fr.maif.izanami.spring.openfeature.api.ExtendedOpenFeatureClientException
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * Implementation of {@link ExtendedOpenFeatureClient} that delegates to an underlying {@link Client}
@@ -469,16 +471,19 @@ public final class ExtendedOpenFeatureClientImpl implements ExtendedOpenFeatureC
 
     // ========== Private helper methods ==========
 
-    private FlagConfig getValidatedFlagConfig(String key) {
-        FlagConfig config = flagConfigService.getFlagConfigByKey(key)
+    private FlagConfig getValidatedFlagConfig(
+            String identifier,
+            Function<String, Optional<FlagConfig>> lookup,
+            String identifierType) {
+        FlagConfig config = lookup.apply(identifier)
             .orElseThrow(() -> new ExtendedOpenFeatureClientException(
-                "Flag '" + key + "' is not configured. "
+                "Flag with " + identifierType + " '" + identifier + "' is not configured. "
                     + "Please add it to openfeature.flags configuration or use a method with explicit defaultValue."
             ));
 
         if (!(config.errorStrategy() instanceof FeatureClientErrorStrategy.DefaultValueStrategy)) {
             throw new ExtendedOpenFeatureClientException(
-                "Flag '" + key + "' has errorStrategy=" + config.errorStrategy().getClass().getSimpleName()
+                "Flag '" + identifier + "' has errorStrategy=" + config.errorStrategy().getClass().getSimpleName()
                     + " but a method requiring auto-computed defaultValue was called. "
                     + "Either configure the flag with errorStrategy=DEFAULT_VALUE or use a method with explicit defaultValue."
             );
@@ -487,13 +492,20 @@ public final class ExtendedOpenFeatureClientImpl implements ExtendedOpenFeatureC
         return config;
     }
 
-    private <T> T getAutoDefaultValue(String key, Class<T> type) {
-        FlagConfig config = getValidatedFlagConfig(key);
+    private FlagConfig getValidatedFlagConfigByKey(String key) {
+        return getValidatedFlagConfig(key, flagConfigService::getFlagConfigByKey, "key");
+    }
+
+    private FlagConfig getValidatedFlagConfigByName(String name) {
+        return getValidatedFlagConfig(name, flagConfigService::getFlagConfigByName, "name");
+    }
+
+    private <T> T getTypedDefaultValue(FlagConfig config, String identifier, Class<T> type) {
         Object defaultValue = config.defaultValue();
 
         if (defaultValue == null) {
             throw new ExtendedOpenFeatureClientException(
-                "Flag '" + key + "' has no defaultValue configured. "
+                "Flag '" + identifier + "' has no defaultValue configured. "
                     + "OpenFeature requires a non-null defaultValue. "
                     + "Please configure a defaultValue or use a method with explicit defaultValue."
             );
@@ -501,7 +513,7 @@ public final class ExtendedOpenFeatureClientImpl implements ExtendedOpenFeatureC
 
         if (!type.isInstance(defaultValue)) {
             throw new ExtendedOpenFeatureClientException(
-                "Flag '" + key + "' has defaultValue of type " + defaultValue.getClass().getSimpleName()
+                "Flag '" + identifier + "' has defaultValue of type " + defaultValue.getClass().getSimpleName()
                     + " but expected " + type.getSimpleName() + ". Check your flag configuration."
             );
         }
@@ -509,8 +521,233 @@ public final class ExtendedOpenFeatureClientImpl implements ExtendedOpenFeatureC
         return type.cast(defaultValue);
     }
 
+    private <T> T getAutoDefaultValue(String key, Class<T> type) {
+        FlagConfig config = getValidatedFlagConfigByKey(key);
+        return getTypedDefaultValue(config, key, type);
+    }
+
     private Value getAutoDefaultValueAsValue(String key) {
-        FlagConfig config = getValidatedFlagConfig(key);
+        FlagConfig config = getValidatedFlagConfigByKey(key);
         return valueConverter.objectToValue(config.defaultValue());
+    }
+
+    // ========== ByName Boolean evaluation methods ==========
+
+    @Override
+    public Boolean getBooleanValueByName(String name) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        Boolean defaultValue = getTypedDefaultValue(config, name, Boolean.class);
+        return delegate.getBooleanValue(config.key(), defaultValue);
+    }
+
+    @Override
+    public Boolean getBooleanValueByName(String name, EvaluationContext ctx) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        Boolean defaultValue = getTypedDefaultValue(config, name, Boolean.class);
+        return delegate.getBooleanValue(config.key(), defaultValue, ctx);
+    }
+
+    @Override
+    public Boolean getBooleanValueByName(String name, EvaluationContext ctx, FlagEvaluationOptions options) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        Boolean defaultValue = getTypedDefaultValue(config, name, Boolean.class);
+        return delegate.getBooleanValue(config.key(), defaultValue, ctx, options);
+    }
+
+    @Override
+    public FlagEvaluationDetails<Boolean> getBooleanDetailsByName(String name) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        Boolean defaultValue = getTypedDefaultValue(config, name, Boolean.class);
+        return delegate.getBooleanDetails(config.key(), defaultValue);
+    }
+
+    @Override
+    public FlagEvaluationDetails<Boolean> getBooleanDetailsByName(String name, EvaluationContext ctx) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        Boolean defaultValue = getTypedDefaultValue(config, name, Boolean.class);
+        return delegate.getBooleanDetails(config.key(), defaultValue, ctx);
+    }
+
+    @Override
+    public FlagEvaluationDetails<Boolean> getBooleanDetailsByName(String name, EvaluationContext ctx, FlagEvaluationOptions options) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        Boolean defaultValue = getTypedDefaultValue(config, name, Boolean.class);
+        return delegate.getBooleanDetails(config.key(), defaultValue, ctx, options);
+    }
+
+    // ========== ByName String evaluation methods ==========
+
+    @Override
+    public String getStringValueByName(String name) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        String defaultValue = getTypedDefaultValue(config, name, String.class);
+        return delegate.getStringValue(config.key(), defaultValue);
+    }
+
+    @Override
+    public String getStringValueByName(String name, EvaluationContext ctx) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        String defaultValue = getTypedDefaultValue(config, name, String.class);
+        return delegate.getStringValue(config.key(), defaultValue, ctx);
+    }
+
+    @Override
+    public String getStringValueByName(String name, EvaluationContext ctx, FlagEvaluationOptions options) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        String defaultValue = getTypedDefaultValue(config, name, String.class);
+        return delegate.getStringValue(config.key(), defaultValue, ctx, options);
+    }
+
+    @Override
+    public FlagEvaluationDetails<String> getStringDetailsByName(String name) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        String defaultValue = getTypedDefaultValue(config, name, String.class);
+        return delegate.getStringDetails(config.key(), defaultValue);
+    }
+
+    @Override
+    public FlagEvaluationDetails<String> getStringDetailsByName(String name, EvaluationContext ctx) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        String defaultValue = getTypedDefaultValue(config, name, String.class);
+        return delegate.getStringDetails(config.key(), defaultValue, ctx);
+    }
+
+    @Override
+    public FlagEvaluationDetails<String> getStringDetailsByName(String name, EvaluationContext ctx, FlagEvaluationOptions options) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        String defaultValue = getTypedDefaultValue(config, name, String.class);
+        return delegate.getStringDetails(config.key(), defaultValue, ctx, options);
+    }
+
+    // ========== ByName Integer evaluation methods ==========
+
+    @Override
+    public Integer getIntegerValueByName(String name) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        Integer defaultValue = getTypedDefaultValue(config, name, Integer.class);
+        return delegate.getIntegerValue(config.key(), defaultValue);
+    }
+
+    @Override
+    public Integer getIntegerValueByName(String name, EvaluationContext ctx) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        Integer defaultValue = getTypedDefaultValue(config, name, Integer.class);
+        return delegate.getIntegerValue(config.key(), defaultValue, ctx);
+    }
+
+    @Override
+    public Integer getIntegerValueByName(String name, EvaluationContext ctx, FlagEvaluationOptions options) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        Integer defaultValue = getTypedDefaultValue(config, name, Integer.class);
+        return delegate.getIntegerValue(config.key(), defaultValue, ctx, options);
+    }
+
+    @Override
+    public FlagEvaluationDetails<Integer> getIntegerDetailsByName(String name) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        Integer defaultValue = getTypedDefaultValue(config, name, Integer.class);
+        return delegate.getIntegerDetails(config.key(), defaultValue);
+    }
+
+    @Override
+    public FlagEvaluationDetails<Integer> getIntegerDetailsByName(String name, EvaluationContext ctx) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        Integer defaultValue = getTypedDefaultValue(config, name, Integer.class);
+        return delegate.getIntegerDetails(config.key(), defaultValue, ctx);
+    }
+
+    @Override
+    public FlagEvaluationDetails<Integer> getIntegerDetailsByName(String name, EvaluationContext ctx, FlagEvaluationOptions options) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        Integer defaultValue = getTypedDefaultValue(config, name, Integer.class);
+        return delegate.getIntegerDetails(config.key(), defaultValue, ctx, options);
+    }
+
+    // ========== ByName Double evaluation methods ==========
+
+    @Override
+    public Double getDoubleValueByName(String name) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        Double defaultValue = getTypedDefaultValue(config, name, Double.class);
+        return delegate.getDoubleValue(config.key(), defaultValue);
+    }
+
+    @Override
+    public Double getDoubleValueByName(String name, EvaluationContext ctx) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        Double defaultValue = getTypedDefaultValue(config, name, Double.class);
+        return delegate.getDoubleValue(config.key(), defaultValue, ctx);
+    }
+
+    @Override
+    public Double getDoubleValueByName(String name, EvaluationContext ctx, FlagEvaluationOptions options) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        Double defaultValue = getTypedDefaultValue(config, name, Double.class);
+        return delegate.getDoubleValue(config.key(), defaultValue, ctx, options);
+    }
+
+    @Override
+    public FlagEvaluationDetails<Double> getDoubleDetailsByName(String name) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        Double defaultValue = getTypedDefaultValue(config, name, Double.class);
+        return delegate.getDoubleDetails(config.key(), defaultValue);
+    }
+
+    @Override
+    public FlagEvaluationDetails<Double> getDoubleDetailsByName(String name, EvaluationContext ctx) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        Double defaultValue = getTypedDefaultValue(config, name, Double.class);
+        return delegate.getDoubleDetails(config.key(), defaultValue, ctx);
+    }
+
+    @Override
+    public FlagEvaluationDetails<Double> getDoubleDetailsByName(String name, EvaluationContext ctx, FlagEvaluationOptions options) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        Double defaultValue = getTypedDefaultValue(config, name, Double.class);
+        return delegate.getDoubleDetails(config.key(), defaultValue, ctx, options);
+    }
+
+    // ========== ByName Object (Value) evaluation methods ==========
+
+    @Override
+    public Value getObjectValueByName(String name) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        Value defaultValue = valueConverter.objectToValue(config.defaultValue());
+        return delegate.getObjectValue(config.key(), defaultValue);
+    }
+
+    @Override
+    public Value getObjectValueByName(String name, EvaluationContext ctx) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        Value defaultValue = valueConverter.objectToValue(config.defaultValue());
+        return delegate.getObjectValue(config.key(), defaultValue, ctx);
+    }
+
+    @Override
+    public Value getObjectValueByName(String name, EvaluationContext ctx, FlagEvaluationOptions options) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        Value defaultValue = valueConverter.objectToValue(config.defaultValue());
+        return delegate.getObjectValue(config.key(), defaultValue, ctx, options);
+    }
+
+    @Override
+    public FlagEvaluationDetails<Value> getObjectDetailsByName(String name) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        Value defaultValue = valueConverter.objectToValue(config.defaultValue());
+        return delegate.getObjectDetails(config.key(), defaultValue);
+    }
+
+    @Override
+    public FlagEvaluationDetails<Value> getObjectDetailsByName(String name, EvaluationContext ctx) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        Value defaultValue = valueConverter.objectToValue(config.defaultValue());
+        return delegate.getObjectDetails(config.key(), defaultValue, ctx);
+    }
+
+    @Override
+    public FlagEvaluationDetails<Value> getObjectDetailsByName(String name, EvaluationContext ctx, FlagEvaluationOptions options) {
+        FlagConfig config = getValidatedFlagConfigByName(name);
+        Value defaultValue = valueConverter.objectToValue(config.defaultValue());
+        return delegate.getObjectDetails(config.key(), defaultValue, ctx, options);
     }
 }
