@@ -1,12 +1,18 @@
 package fr.maif.izanami.spring.integration;
 
 import dev.openfeature.sdk.FlagEvaluationDetails;
+import dev.openfeature.sdk.FlagValueType;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
 import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
 import fr.maif.izanami.spring.openfeature.api.ExtendedOpenFeatureClient;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
+import fr.maif.izanami.spring.openfeature.api.IzanamiErrorCallback;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -354,5 +360,104 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
                     .isEqualTo("APPLICATION_ERROR_STRATEGY");
                 assertThat(details.getErrorCode()).isEqualTo(dev.openfeature.sdk.ErrorCode.TYPE_MISMATCH);
             });
+    }
+
+    // ========== Error strategy tests (FAIL, NULL_VALUE, CALLBACK) ==========
+    // Note: Through the OpenFeature layer, these error strategies behave differently than direct IzanamiService calls.
+    // When using IzanamiService.forFlagKey().stringValue() directly:
+    //   - FAIL throws CompletionException
+    //   - NULL_VALUE returns null
+    //   - CALLBACK returns the callback value
+    //
+    // Through OpenFeature (featureResultWithMetadata() path), exceptions are caught and the caller-default
+    // is returned because the extraction from IzanamiResult.Error fails. The FLAG_VALUE_SOURCE shows
+    // IZANAMI_ERROR_STRATEGY because the error originated from the Izanami client, but the value falls back
+    // to the OpenFeature caller-default since extraction cannot proceed.
+    //
+    // For proper error strategy handling with these specific strategies, use IzanamiService directly
+    // (see IzanamiServiceIT for those tests). The DEFAULT_VALUE strategy works through OpenFeature
+    // because it provides an extractable fallback value.
+
+    @Test
+    void returnsCallerDefaultWhenServerUnavailableWithFailStrategy() {
+        contextRunner
+            .withPropertyValues(withUnavailableServerAndFlagConfig(
+                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
+                "openfeature.flags[0].name=secret-codename",
+                "openfeature.flags[0].description=The secret codename",
+                "openfeature.flags[0].valueType=string",
+                "openfeature.flags[0].errorStrategy=FAIL"
+            ))
+            .run(context -> {
+                ExtendedOpenFeatureClient client = context.getBean(ExtendedOpenFeatureClient.class);
+                FlagEvaluationDetails<String> details = client.getStringDetails(SECRET_CODENAME_ID, "caller-default");
+
+                // IMPORTANT ! FAIL strategy through OpenFeature returns caller-default
+                assertThat(details.getValue()).isEqualTo("caller-default");
+                assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI_ERROR_STRATEGY");
+                assertThat(details.getErrorCode()).isEqualTo(dev.openfeature.sdk.ErrorCode.GENERAL);
+            });
+    }
+
+    @Test
+    void returnsCallerDefaultWhenServerUnavailableWithNullValueStrategy() {
+        contextRunner
+            .withPropertyValues(withUnavailableServerAndFlagConfig(
+                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
+                "openfeature.flags[0].name=secret-codename",
+                "openfeature.flags[0].description=The secret codename",
+                "openfeature.flags[0].valueType=string",
+                "openfeature.flags[0].errorStrategy=NULL_VALUE"
+            ))
+            .run(context -> {
+                ExtendedOpenFeatureClient client = context.getBean(ExtendedOpenFeatureClient.class);
+                FlagEvaluationDetails<String> details = client.getStringDetails(SECRET_CODENAME_ID, "caller-default");
+
+                // IMPORTANT ! NULL_VALUE strategy through OpenFeature returns caller-default
+                assertThat(details.getValue()).isEqualTo("caller-default");
+                assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI_ERROR_STRATEGY");
+            });
+    }
+
+    @Test
+    void returnsCallerDefaultWhenServerUnavailableWithCallbackStrategy() {
+        contextRunner
+            .withUserConfiguration(TestCallbackConfiguration.class)
+            .withPropertyValues(withUnavailableServerAndFlagConfig(
+                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
+                "openfeature.flags[0].name=secret-codename",
+                "openfeature.flags[0].description=The secret codename",
+                "openfeature.flags[0].valueType=string",
+                "openfeature.flags[0].errorStrategy=CALLBACK",
+                "openfeature.flags[0].callbackBean=testErrorCallback"
+            ))
+            .run(context -> {
+                ExtendedOpenFeatureClient client = context.getBean(ExtendedOpenFeatureClient.class);
+                FlagEvaluationDetails<String> details = client.getStringDetails(SECRET_CODENAME_ID, "caller-default");
+
+                // IMPORTANT ! CALLBACK strategy through OpenFeature returns caller-default
+                // (callback cannot be invoked through the featureValues() path)
+                assertThat(details.getValue()).isEqualTo("caller-default");
+                assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI_ERROR_STRATEGY");
+            });
+    }
+
+    /**
+     * Test configuration providing a callback bean for error handling tests.
+     */
+    @Configuration
+    static class TestCallbackConfiguration {
+        @Bean("testErrorCallback")
+        IzanamiErrorCallback testErrorCallback() {
+            return (error, flagKey, configuredType, requestedType) -> {
+                if (requestedType == FlagValueType.STRING) {
+                    return CompletableFuture.completedFuture("callback-fallback-value");
+                }
+                return CompletableFuture.completedFuture(null);
+            };
+        }
     }
 }
