@@ -72,9 +72,16 @@ wait_for_izanami() {
 
 wait_for_izanami
 
+# Ensure profile exists (to avoid interactive prompt on first run)
+IZANAMI_PROFILE="${IZANAMI_PROFILE:-izsbit}"
+if ! ${IZ_CMD} profiles list 2>/dev/null | grep -q "^${IZANAMI_PROFILE}\$"; then
+  echo "Creating iz CLI profile '${IZANAMI_PROFILE}' ..." >&2
+  ${IZ_CMD} profiles add "${IZANAMI_PROFILE}" --url "${IZANAMI_BASE_URL}" >&2
+fi
+
 # Login as admin
 echo "Logging in as admin '${IZANAMI_ADMIN_USERNAME}' ..." >&2
-${IZ_CMD} login "${IZANAMI_BASE_URL}" "${IZANAMI_ADMIN_USERNAME}" --password "${IZANAMI_ADMIN_PASSWORD}" >&2
+${IZ_CMD} login "${IZANAMI_BASE_URL}" "${IZANAMI_ADMIN_USERNAME}" --password "${IZANAMI_ADMIN_PASSWORD}" --profile "${IZANAMI_PROFILE}" >&2
 
 # Ensure tenant exists
 echo "Ensuring tenant '${IZANAMI_TENANT}' ..." >&2
