@@ -8,7 +8,7 @@ Steps:
 5. Report test results
 
 Execute the following commands:
-1. `docker compose -f docker-compose.izanami.yml up -d` (or podman equivalent)
+1. `docker compose -f docker-compose.izanami.yml up -d` (or podman compose)
 2. `./scripts/seed-izanami.sh` - capture and use the exported env vars
 3. Run: `IZANAMI_INTEGRATION_TEST=true mvn verify -Pintegration-tests` with the env vars from step 2
 4. `docker compose -f docker-compose.izanami.yml down -v`

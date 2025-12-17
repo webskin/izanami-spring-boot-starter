@@ -55,31 +55,35 @@ izanami:
   enabled: false
 ```
 
-### OpenFeature flags (including `object`)
+### OpenFeature flags
 
 ```yaml
 openfeature:
   flags:
-    - id: "a4c0d04f-69ac-41aa-a6e4-febcee541d51"
-      name: "performance-mode"
-      description: "Enable performance optimizations"
+    - key: "a4c0d04f-69ac-41aa-a6e4-febcee541d51"
+      name: "turbo-mode"
+      description: "Enable turbo mode for maximum performance"
       errorStrategy: "DEFAULT_VALUE"
       valueType: "boolean"
       defaultValue: false
-    - id: "00812ba5-aebc-49e8-959a-4b96a5cebbff"
-      name: "json-content"
-      description: "Example object flag (JSON)"
+    - key: "b5d1e15f-7abd-42bb-b7f5-0cdef6652e62"
+      name: "secret-codename"
+      description: "The secret codename for this release"
       errorStrategy: "DEFAULT_VALUE"
-      valueType: "object"
-      defaultValue:
-        name: "fallback"
-        flags:
-          - id: "f1"
-            active: true
-          - id: "f2"
-            active: false
-        meta:
-          version: 1
+      valueType: "string"
+      defaultValue: "classified"
+    - key: "c6e2f26f-8bce-43cc-c8f6-1def07763f73"
+      name: "max-power-level"
+      description: "Maximum power level allowed"
+      errorStrategy: "DEFAULT_VALUE"
+      valueType: "integer"
+      defaultValue: 100
+    - key: "d7f3037f-9cdf-44dd-d9f7-2ef008874084"
+      name: "discount-rate"
+      description: "Current discount rate as a decimal"
+      errorStrategy: "DEFAULT_VALUE"
+      valueType: "double"
+      defaultValue: 0.0
 ```
 
 ## Usage
@@ -88,7 +92,6 @@ openfeature:
 
 ```java
 import dev.openfeature.sdk.Client;
-import dev.openfeature.sdk.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -99,12 +102,20 @@ public class FeatureService {
     this.client = client;
   }
 
-  public boolean performanceMode() {
-    return Boolean.TRUE.equals(client.getBooleanValue("performance-mode", false));
+  public boolean isTurboModeEnabled() {
+    return Boolean.TRUE.equals(client.getBooleanValue("turbo-mode", false));
   }
 
-  public Value jsonContent() {
-    return client.getObjectValue("json-content", new Value());
+  public String getSecretCodename() {
+    return client.getStringValue("secret-codename", "classified");
+  }
+
+  public int getMaxPowerLevel() {
+    return client.getIntegerValue("max-power-level", 100);
+  }
+
+  public double getDiscountRate() {
+    return client.getDoubleValue("discount-rate", 0.0);
   }
 }
 ```
@@ -124,6 +135,66 @@ public class IzanamiConfig {}
 ```
 
 `izanami.enabled=false` still disables everything.
+
+## Actuator Health Indicator
+
+When Spring Boot Actuator is on the classpath, an `IzanamiHealthIndicator` is automatically registered.
+
+It reports:
+- `UP` - Izanami client is connected and flags are preloaded
+- `DOWN` - Flag preloading is still in progress
+- `OUT_OF_SERVICE` - Preloading completed but failed to connect
+
+Check health status:
+
+```bash
+curl http://localhost:8080/actuator/health
+```
+
+### Kubernetes Readiness Probe
+
+To block traffic until flags are preloaded, include the Izanami health indicator in the readiness group:
+
+```yaml
+management:
+  endpoint:
+    health:
+      group:
+        readiness:
+          include: readinessState,izanami
+```
+
+### Waiting for Flags at Startup
+
+If you need flags immediately at application startup (e.g., in `@PostConstruct` or `ApplicationRunner`), wait for preloading to complete:
+
+```java
+import fr.maif.izanami.spring.service.IzanamiService;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.stereotype.Component;
+
+@Component
+public class MyStartupRunner implements ApplicationRunner {
+
+    private final IzanamiService izanamiService;
+    private final Client featureClient;
+
+    public MyStartupRunner(IzanamiService izanamiService, Client featureClient) {
+        this.izanamiService = izanamiService;
+        this.featureClient = featureClient;
+    }
+
+    @Override
+    public void run(ApplicationArguments args) {
+        izanamiService.whenLoaded().join(); // Wait for preload
+        boolean enabled = featureClient.getBooleanValue("turbo-mode", false);
+        // ... use the flag value
+    }
+}
+```
+
+For typical HTTP request handling, this is usually unnecessary since flags are preloaded by the time traffic arrives.
 
 ## Testing
 
@@ -166,10 +237,12 @@ This script uses the admin credentials from `docker-compose.izanami.yml` by defa
 - `IZANAMI_ADMIN_USERNAME=RESERVED_ADMIN_USER`
 - `IZANAMI_ADMIN_PASSWORD=password`
 
-It also creates the two features used by integration tests:
+It also creates the features used by integration tests:
 
-- `performance-mode` (boolean, enabled)
-- `json-content` (string containing JSON, parsed as an OpenFeature object)
+- `turbo-mode` (boolean, enabled=true)
+- `secret-codename` (string, value="Operation Thunderbolt")
+- `max-power-level` (integer, value=9001)
+- `discount-rate` (double, value=0.15)
 
 Run:
 

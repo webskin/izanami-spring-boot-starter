@@ -1,3 +1,4 @@
 fr.maif.izanami.spring.autoconfigure.IzanamiAutoConfiguration
 fr.maif.izanami.spring.autoconfigure.OpenFeatureAutoConfiguration
+fr.maif.izanami.spring.autoconfigure.IzanamiActuatorAutoConfiguration
 
