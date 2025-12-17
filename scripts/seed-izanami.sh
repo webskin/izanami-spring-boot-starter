@@ -15,6 +15,16 @@ IZANAMI_KEY_NAME="${IZANAMI_KEY_NAME:-starter-it-key}"
 IZANAMI_SEED_OUTPUT="${IZANAMI_SEED_OUTPUT:-export}" # export|github-env
 
 # Feature IDs used by integration tests
+#
+# This script creates the following features in Izanami:
+#
+# | ID                                   | Name            | Type    | Value                 |
+# |--------------------------------------|-----------------|---------|----------------------|
+# | a4c0d04f-69ac-41aa-a6e4-febcee541d51 | turbo-mode      | boolean | true (enabled)       |
+# | b5d1e15f-7abd-42bb-b7f5-0cdef6652e62 | secret-codename | string  | Operation Thunderbolt |
+# | c6e2f26f-8bce-43cc-c8f6-1def07763f73 | max-power-level | number  | 9001                 |
+# | d7f3037f-9cdf-44dd-d9f7-2ef008874084 | discount-rate   | number  | 0.15                 |
+#
 IZANAMI_TURBO_MODE_ID="${IZANAMI_TURBO_MODE_ID:-a4c0d04f-69ac-41aa-a6e4-febcee541d51}"
 IZANAMI_SECRET_CODENAME_ID="${IZANAMI_SECRET_CODENAME_ID:-b5d1e15f-7abd-42bb-b7f5-0cdef6652e62}"
 IZANAMI_MAX_POWER_LEVEL_ID="${IZANAMI_MAX_POWER_LEVEL_ID:-c6e2f26f-8bce-43cc-c8f6-1def07763f73}"
