@@ -509,6 +509,102 @@ class IzanamiServiceTest {
     }
 
     // =====================================================================
+    // Error Strategy Tests
+    // =====================================================================
+
+    @Nested
+    class ErrorStrategyTests {
+
+        @Test
+        void stringValue_withFailStrategy_throwsOnError() {
+            FlagConfig failConfig = new FlagConfig(
+                "uuid-fail",
+                "fail-flag",
+                "Test flag description",
+                FlagValueType.STRING,
+                ErrorStrategy.FAIL,
+                FeatureClientErrorStrategy.failStrategy(),
+                "default-value",
+                null
+            );
+            when(flagConfigService.getFlagConfigByKey("uuid-fail")).thenReturn(Optional.of(failConfig));
+
+            // Mock client to throw an exception (simulating server error)
+            when(mockFactory.create(any(), any(), any(), any())).thenReturn(mockClient);
+            when(mockClient.stringValue(any(SingleFeatureRequest.class)))
+                .thenReturn(CompletableFuture.failedFuture(new RuntimeException("Server error")));
+
+            IzanamiService service = new IzanamiService(validProperties(), flagConfigService, objectMapper, mockFactory);
+            service.afterPropertiesSet();
+
+            CompletableFuture<String> future = service.forFlagKey("uuid-fail").stringValue();
+
+            assertThat(future).isCompletedExceptionally();
+        }
+
+        @Test
+        void stringValue_withNullValueStrategy_returnsNullOnError() {
+            FlagConfig nullConfig = new FlagConfig(
+                "uuid-null",
+                "null-flag",
+                "Test flag description",
+                FlagValueType.STRING,
+                ErrorStrategy.NULL_VALUE,
+                FeatureClientErrorStrategy.nullValueStrategy(),
+                "default-value",
+                null
+            );
+            when(flagConfigService.getFlagConfigByKey("uuid-null")).thenReturn(Optional.of(nullConfig));
+
+            when(mockFactory.create(any(), any(), any(), any())).thenReturn(mockClient);
+            // The null value strategy returns null when there's an error
+            when(mockClient.stringValue(any(SingleFeatureRequest.class)))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+            IzanamiService service = new IzanamiService(validProperties(), flagConfigService, objectMapper, mockFactory);
+            service.afterPropertiesSet();
+
+            String result = service.forFlagKey("uuid-null").stringValue().join();
+
+            assertThat(result).isNull();
+        }
+
+        @Test
+        void stringValue_withCallbackStrategy_returnsCallbackValue() {
+            // Create a callback strategy with three type-specific callbacks
+            FeatureClientErrorStrategy<?> callbackStrategy = FeatureClientErrorStrategy.callbackStrategy(
+                error -> CompletableFuture.completedFuture(false),  // boolean callback
+                error -> CompletableFuture.completedFuture("callback-fallback-value"),  // string callback
+                error -> CompletableFuture.completedFuture(BigDecimal.ZERO)  // number callback
+            );
+
+            FlagConfig callbackConfig = new FlagConfig(
+                "uuid-callback",
+                "callback-flag",
+                "Test flag description",
+                FlagValueType.STRING,
+                ErrorStrategy.CALLBACK,
+                callbackStrategy,
+                "default-value",
+                "testCallbackBean"
+            );
+            when(flagConfigService.getFlagConfigByKey("uuid-callback")).thenReturn(Optional.of(callbackConfig));
+
+            when(mockFactory.create(any(), any(), any(), any())).thenReturn(mockClient);
+            // Simulate the callback strategy returning the fallback value
+            when(mockClient.stringValue(any(SingleFeatureRequest.class)))
+                .thenReturn(CompletableFuture.completedFuture("callback-fallback-value"));
+
+            IzanamiService service = new IzanamiService(validProperties(), flagConfigService, objectMapper, mockFactory);
+            service.afterPropertiesSet();
+
+            String result = service.forFlagKey("uuid-callback").stringValue().join();
+
+            assertThat(result).isEqualTo("callback-fallback-value");
+        }
+    }
+
+    // =====================================================================
     // featureResultWithMetadata Tests
     // =====================================================================
     // Note: Tests that require mocking featureValues() are covered by integration tests
