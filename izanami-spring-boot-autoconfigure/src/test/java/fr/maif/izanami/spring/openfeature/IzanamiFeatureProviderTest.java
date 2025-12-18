@@ -22,7 +22,6 @@ import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 class IzanamiFeatureProviderTest {
@@ -55,12 +54,64 @@ class IzanamiFeatureProviderTest {
     // Test Helpers
     // =====================================================================
 
-    private static FlagConfig testFlagConfig(String key, String name, FlagValueType valueType, Object defaultValue) {
+    private static FlagConfig testDefaultValueFlagConfig(String key, String name, FlagValueType valueType, FeatureClientErrorStrategy featureClientErrorStrategy, Object defaultValue) {
         return new FlagConfig(
             key, name, "Test flag description", valueType,
             ErrorStrategy.DEFAULT_VALUE,
-            FeatureClientErrorStrategy.defaultValueStrategy(false, "", BigDecimal.ZERO),
+            featureClientErrorStrategy,
             defaultValue, null
+        );
+    }
+
+    private static FlagConfig testDefaultBooleanFlagConfig(String key, String name, boolean defaultValue) {
+        return new FlagConfig(
+            key,
+            name,
+            "Test flag description",
+            FlagValueType.BOOLEAN,
+            ErrorStrategy.DEFAULT_VALUE,
+            FeatureClientErrorStrategy.defaultValueStrategy(defaultValue, "", BigDecimal.ZERO),
+            defaultValue,
+            null
+        );
+    }
+
+    private static FlagConfig testDefaultStringFlagConfig(String key, String name, String defaultValue) {
+        return new FlagConfig(
+            key,
+            name,
+            "Test flag description",
+            FlagValueType.STRING,
+            ErrorStrategy.DEFAULT_VALUE,
+            FeatureClientErrorStrategy.defaultValueStrategy(false, defaultValue, BigDecimal.ZERO),
+            defaultValue,
+            null
+        );
+    }
+
+    private static FlagConfig testDefaultIntegerFlagConfig(String key, String name, BigDecimal defaultValue) {
+        return new FlagConfig(
+            key,
+            name,
+            "Test flag description",
+            FlagValueType.INTEGER,
+            ErrorStrategy.DEFAULT_VALUE,
+            FeatureClientErrorStrategy.defaultValueStrategy(false, "", defaultValue),
+            defaultValue,
+            null
+        );
+    }
+
+    private static FlagConfig testDefaultDoubleFlagConfig(String key, String name, BigDecimal defaultValue) {
+        return new FlagConfig(
+            key,
+            name,
+            "Test flag description",
+            FlagValueType.DOUBLE,
+            ErrorStrategy.DEFAULT_VALUE,
+            FeatureClientErrorStrategy.defaultValueStrategy(false, "", defaultValue),
+            defaultValue,
+            null
         );
     }
 
@@ -289,7 +340,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void getBooleanEvaluation_flagIsString_returnsTypeMismatch() {
-            FlagConfig config = testFlagConfig("string-flag", "string-flag", FlagValueType.STRING, "default");
+            FlagConfig config = testDefaultStringFlagConfig("string-flag", "string-flag", "default");
             setupFlagConfig("string-flag", config);
 
             ProviderEvaluation<Boolean> result = provider.getBooleanEvaluation(
@@ -303,7 +354,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void getStringEvaluation_flagIsBoolean_returnsTypeMismatch() {
-            FlagConfig config = testFlagConfig("bool-flag", "bool-flag", FlagValueType.BOOLEAN, false);
+            FlagConfig config = testDefaultBooleanFlagConfig("bool-flag", "bool-flag", false);
             setupFlagConfig("bool-flag", config);
 
             ProviderEvaluation<String> result = provider.getStringEvaluation(
@@ -316,7 +367,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void getIntegerEvaluation_flagIsBoolean_returnsTypeMismatch() {
-            FlagConfig config = testFlagConfig("bool-flag", "bool-flag", FlagValueType.BOOLEAN, false);
+            FlagConfig config = testDefaultBooleanFlagConfig("bool-flag", "bool-flag", false);
             setupFlagConfig("bool-flag", config);
 
             ProviderEvaluation<Integer> result = provider.getIntegerEvaluation(
@@ -329,7 +380,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void getDoubleEvaluation_flagIsString_returnsTypeMismatch() {
-            FlagConfig config = testFlagConfig("string-flag", "string-flag", FlagValueType.STRING, "default");
+            FlagConfig config = testDefaultStringFlagConfig("string-flag", "string-flag", "default");
             setupFlagConfig("string-flag", config);
 
             ProviderEvaluation<Double> result = provider.getDoubleEvaluation(
@@ -342,7 +393,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void getObjectEvaluation_flagIsBoolean_returnsTypeMismatch() {
-            FlagConfig config = testFlagConfig("bool-flag", "bool-flag", FlagValueType.BOOLEAN, false);
+            FlagConfig config = testDefaultBooleanFlagConfig("bool-flag", "bool-flag", false);
             setupFlagConfig("bool-flag", config);
             Value callerDefault = new Value("default");
 
@@ -364,7 +415,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void getBooleanEvaluation_success_returnsValueFromIzanami() {
-            FlagConfig config = testFlagConfig("bool-flag", "bool-flag", FlagValueType.BOOLEAN, false);
+            FlagConfig config = testDefaultBooleanFlagConfig("bool-flag", "bool-flag", false);
             setupFlagConfig("bool-flag", config);
 
             IzanamiResult.Success mockSuccess = mock(IzanamiResult.Success.class);
@@ -381,7 +432,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void getBooleanEvaluation_false_reasonIsUnknown() {
-            FlagConfig config = testFlagConfig("bool-flag", "bool-flag", FlagValueType.BOOLEAN, false);
+            FlagConfig config = testDefaultBooleanFlagConfig("bool-flag", "bool-flag", false);
             setupFlagConfig("bool-flag", config);
 
             IzanamiResult.Success mockSuccess = mock(IzanamiResult.Success.class);
@@ -399,7 +450,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void getBooleanEvaluation_true_reasonIsUnknown() {
-            FlagConfig config = testFlagConfig("bool-flag", "bool-flag", FlagValueType.BOOLEAN, false);
+            FlagConfig config = testDefaultBooleanFlagConfig("bool-flag", "bool-flag", false);
             setupFlagConfig("bool-flag", config);
 
             IzanamiResult.Success mockSuccess = mock(IzanamiResult.Success.class);
@@ -416,7 +467,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void getStringEvaluation_success_returnsValueFromIzanami() {
-            FlagConfig config = testFlagConfig("string-flag", "string-flag", FlagValueType.STRING, "default");
+            FlagConfig config = testDefaultStringFlagConfig("string-flag", "string-flag", "default");
             setupFlagConfig("string-flag", config);
 
             IzanamiResult.Success mockSuccess = mock(IzanamiResult.Success.class);
@@ -432,7 +483,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void getIntegerEvaluation_success_returnsValueFromIzanami() {
-            FlagConfig config = testFlagConfig("int-flag", "int-flag", FlagValueType.INTEGER, 0);
+            FlagConfig config = testDefaultIntegerFlagConfig("int-flag", "int-flag", BigDecimal.ZERO);
             setupFlagConfig("int-flag", config);
 
             IzanamiResult.Success mockSuccess = mock(IzanamiResult.Success.class);
@@ -448,7 +499,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void getDoubleEvaluation_success_returnsValueFromIzanami() {
-            FlagConfig config = testFlagConfig("double-flag", "double-flag", FlagValueType.DOUBLE, 0.0);
+            FlagConfig config = testDefaultDoubleFlagConfig("double-flag", "double-flag", BigDecimal.ZERO);
             setupFlagConfig("double-flag", config);
 
             IzanamiResult.Success mockSuccess = mock(IzanamiResult.Success.class);
@@ -464,7 +515,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void getObjectEvaluation_success_parsesJsonAndReturnsValue() {
-            FlagConfig config = testFlagConfig("object-flag", "object-flag", FlagValueType.OBJECT, null);
+            FlagConfig config = testDefaultValueFlagConfig("object-flag", "object-flag", FlagValueType.OBJECT, FeatureClientErrorStrategy.defaultValueStrategy(false, null, BigDecimal.ZERO), null);
             setupFlagConfig("object-flag", config);
 
             IzanamiResult.Success mockSuccess = mock(IzanamiResult.Success.class);
@@ -508,7 +559,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void getObjectEvaluation_withNestedJsonObject_returnsNestedValue() {
-            FlagConfig config = testFlagConfig("json-config", "json-config", FlagValueType.OBJECT, Map.of());
+            FlagConfig config = testDefaultValueFlagConfig("json-config", "json-config", FlagValueType.OBJECT, FeatureClientErrorStrategy.defaultValueStrategy(false, null, BigDecimal.ZERO), Map.of());
             setupFlagConfig("json-config", config);
 
             IzanamiResult.Success mockSuccess = mock(IzanamiResult.Success.class);
@@ -537,7 +588,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void evaluation_nullValue_reasonIsDisabled() {
-            FlagConfig config = testFlagConfig("string-flag", "string-flag", FlagValueType.STRING, null);
+            FlagConfig config = testDefaultStringFlagConfig("string-flag", "string-flag", null);
             setupFlagConfig("string-flag", config);
 
             IzanamiResult.Success mockSuccess = mock(IzanamiResult.Success.class);
@@ -563,7 +614,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void getBooleanEvaluation_izanamiError_returnsFallbackValue() {
-            FlagConfig config = testFlagConfig("bool-flag", "bool-flag", FlagValueType.BOOLEAN, false);
+            FlagConfig config = testDefaultBooleanFlagConfig("bool-flag", "bool-flag", false);
             setupFlagConfig("bool-flag", config);
 
             IzanamiResult.Error mockError = mock(IzanamiResult.Error.class);
@@ -579,7 +630,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void getBooleanEvaluation_izanamiError_reasonIsError() {
-            FlagConfig config = testFlagConfig("bool-flag", "bool-flag", FlagValueType.BOOLEAN, false);
+            FlagConfig config = testDefaultBooleanFlagConfig("bool-flag", "bool-flag", false);
             setupFlagConfig("bool-flag", config);
 
             IzanamiResult.Error mockError = mock(IzanamiResult.Error.class);
@@ -595,7 +646,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void getBooleanEvaluation_izanamiError_flagValueSourceIsIzanamiErrorStrategy() {
-            FlagConfig config = testFlagConfig("bool-flag", "bool-flag", FlagValueType.BOOLEAN, false);
+            FlagConfig config = testDefaultBooleanFlagConfig("bool-flag", "bool-flag", false);
             setupFlagConfig("bool-flag", config);
 
             IzanamiResult.Error mockError = mock(IzanamiResult.Error.class);
@@ -620,7 +671,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void getBooleanEvaluation_inactiveFeature_returnsFalseWithDisabledReason() {
-            FlagConfig config = testFlagConfig("inactive-bool", "inactive-bool", FlagValueType.BOOLEAN, true);
+            FlagConfig config = testDefaultBooleanFlagConfig("inactive-bool", "inactive-bool", true);
             setupFlagConfig("inactive-bool", config);
 
             IzanamiResult.Success mockSuccess = mock(IzanamiResult.Success.class);
@@ -640,7 +691,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void getStringEvaluation_inactiveFeature_returnsDefaultValueWithDisabledReason() {
-            FlagConfig config = testFlagConfig("inactive-string", "inactive-string", FlagValueType.STRING, "fallback-value");
+            FlagConfig config = testDefaultStringFlagConfig("inactive-string", "inactive-string", "fallback-value");
             setupFlagConfig("inactive-string", config);
 
             // For inactive string features, Izanami returns null
@@ -662,7 +713,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void getIntegerEvaluation_inactiveFeature_returnsDefaultValueWithDisabledReason() {
-            FlagConfig config = testFlagConfig("inactive-int", "inactive-int", FlagValueType.INTEGER, 999);
+            FlagConfig config = testDefaultIntegerFlagConfig("inactive-int", "inactive-int", new BigDecimal("999"));
             setupFlagConfig("inactive-int", config);
 
             // For inactive integer features, Izanami returns null
@@ -684,7 +735,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void getDoubleEvaluation_inactiveFeature_returnsDefaultValueWithDisabledReason() {
-            FlagConfig config = testFlagConfig("inactive-double", "inactive-double", FlagValueType.DOUBLE, 99.9);
+            FlagConfig config = testDefaultDoubleFlagConfig("inactive-double", "inactive-double", new BigDecimal("99.9"));
             setupFlagConfig("inactive-double", config);
 
             // For inactive double features, Izanami returns null
@@ -714,7 +765,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void getBooleanEvaluation_clientNotAvailable_returnsCallerDefault() {
-            FlagConfig config = testFlagConfig("bool-flag", "bool-flag", FlagValueType.BOOLEAN, false);
+            FlagConfig config = testDefaultBooleanFlagConfig("bool-flag", "bool-flag", false);
             setupFlagConfig("bool-flag", config);
 
             when(izanamiService.forFlagKey("bool-flag")).thenReturn(mockBuilder);
@@ -731,7 +782,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void getBooleanEvaluation_clientNotAvailable_flagValueSourceIsApplicationErrorStrategy() {
-            FlagConfig config = testFlagConfig("bool-flag", "bool-flag", FlagValueType.BOOLEAN, false);
+            FlagConfig config = testDefaultBooleanFlagConfig("bool-flag", "bool-flag", false);
             setupFlagConfig("bool-flag", config);
 
             when(izanamiService.forFlagKey("bool-flag")).thenReturn(mockBuilder);
@@ -756,7 +807,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void getObjectEvaluation_invalidJson_returnsCallerDefault() {
-            FlagConfig config = testFlagConfig("object-flag", "object-flag", FlagValueType.OBJECT, null);
+            FlagConfig config = testDefaultValueFlagConfig("object-flag", "object-flag", FlagValueType.OBJECT, FeatureClientErrorStrategy.defaultValueStrategy(false, null, BigDecimal.ZERO), null);
             setupFlagConfig("object-flag", config);
 
             IzanamiResult.Success mockSuccess = mock(IzanamiResult.Success.class);
@@ -774,7 +825,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void getObjectEvaluation_nullJson_returnsEmptyValue() {
-            FlagConfig config = testFlagConfig("object-flag", "object-flag", FlagValueType.OBJECT, null);
+            FlagConfig config = testDefaultValueFlagConfig("object-flag", "object-flag", FlagValueType.OBJECT, FeatureClientErrorStrategy.defaultValueStrategy(false, null, BigDecimal.ZERO), null);
             setupFlagConfig("object-flag", config);
 
             IzanamiResult.Success mockSuccess = mock(IzanamiResult.Success.class);
@@ -799,7 +850,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void evaluation_passesTargetingKeyToIzanami() {
-            FlagConfig config = testFlagConfig("bool-flag", "bool-flag", FlagValueType.BOOLEAN, false);
+            FlagConfig config = testDefaultBooleanFlagConfig("bool-flag", "bool-flag", false);
             setupFlagConfig("bool-flag", config);
 
             IzanamiResult.Success mockSuccess = mock(IzanamiResult.Success.class);
@@ -814,7 +865,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void evaluation_passesContextAttributeToIzanami() {
-            FlagConfig config = testFlagConfig("bool-flag", "bool-flag", FlagValueType.BOOLEAN, false);
+            FlagConfig config = testDefaultBooleanFlagConfig("bool-flag", "bool-flag", false);
             setupFlagConfig("bool-flag", config);
 
             IzanamiResult.Success mockSuccess = mock(IzanamiResult.Success.class);
@@ -829,7 +880,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void evaluation_nullContext_passesNullToIzanami() {
-            FlagConfig config = testFlagConfig("bool-flag", "bool-flag", FlagValueType.BOOLEAN, false);
+            FlagConfig config = testDefaultBooleanFlagConfig("bool-flag", "bool-flag", false);
             setupFlagConfig("bool-flag", config);
 
             IzanamiResult.Success mockSuccess = mock(IzanamiResult.Success.class);
@@ -851,7 +902,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void evaluation_success_populatesAllMetadata() {
-            FlagConfig config = testFlagConfig("bool-flag", "bool-flag", FlagValueType.BOOLEAN, false);
+            FlagConfig config = testDefaultBooleanFlagConfig("bool-flag", "bool-flag", false);
             setupFlagConfig("bool-flag", config);
 
             IzanamiResult.Success mockSuccess = mock(IzanamiResult.Success.class);
@@ -873,7 +924,7 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void evaluation_success_flagValueSourceIsIzanami() {
-            FlagConfig config = testFlagConfig("bool-flag", "bool-flag", FlagValueType.BOOLEAN, false);
+            FlagConfig config = testDefaultBooleanFlagConfig("bool-flag", "bool-flag", false);
             setupFlagConfig("bool-flag", config);
 
             IzanamiResult.Success mockSuccess = mock(IzanamiResult.Success.class);

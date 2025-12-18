@@ -90,15 +90,53 @@ class IzanamiServiceTest {
         );
     }
 
-    private static FlagConfig testFlagConfig(String key, String name, FlagValueType valueType,
-                                              ErrorStrategy errorStrategy, Object defaultValue) {
+    private static FlagConfig testDefaultBooleanFlagConfig(String key, String name, boolean defaultValue) {
         return new FlagConfig(
             key,
             name,
             "Test flag description",
-            valueType,
-            errorStrategy,
-            FeatureClientErrorStrategy.defaultValueStrategy(false, "", BigDecimal.ZERO),
+            FlagValueType.BOOLEAN,
+            ErrorStrategy.DEFAULT_VALUE,
+            FeatureClientErrorStrategy.defaultValueStrategy(defaultValue, "", BigDecimal.ZERO),
+            defaultValue,
+            null
+        );
+    }
+
+    private static FlagConfig testDefaultStringFlagConfig(String key, String name, String defaultValue) {
+        return new FlagConfig(
+            key,
+            name,
+            "Test flag description",
+            FlagValueType.STRING,
+            ErrorStrategy.DEFAULT_VALUE,
+            FeatureClientErrorStrategy.defaultValueStrategy(false, defaultValue, BigDecimal.ZERO),
+            defaultValue,
+            null
+        );
+    }
+
+    private static FlagConfig testDefaultIntegerFlagConfig(String key, String name, BigDecimal defaultValue) {
+        return new FlagConfig(
+            key,
+            name,
+            "Test flag description",
+            FlagValueType.INTEGER,
+            ErrorStrategy.DEFAULT_VALUE,
+            FeatureClientErrorStrategy.defaultValueStrategy(false, "", defaultValue),
+            defaultValue,
+            null
+        );
+    }
+
+    private static FlagConfig testDefaultDoubleFlagConfig(String key, String name, BigDecimal defaultValue) {
+        return new FlagConfig(
+            key,
+            name,
+            "Test flag description",
+            FlagValueType.DOUBLE,
+            ErrorStrategy.DEFAULT_VALUE,
+            FeatureClientErrorStrategy.defaultValueStrategy(false, "", defaultValue),
             defaultValue,
             null
         );
@@ -197,8 +235,8 @@ class IzanamiServiceTest {
 
         @Test
         void afterPropertiesSet_preloadsConfiguredFlags() {
-            FlagConfig flag1 = testFlagConfig("uuid-1", "flag-1", FlagValueType.BOOLEAN, ErrorStrategy.DEFAULT_VALUE, false);
-            FlagConfig flag2 = testFlagConfig("uuid-2", "flag-2", FlagValueType.STRING, ErrorStrategy.DEFAULT_VALUE, "default");
+            FlagConfig flag1 = testDefaultBooleanFlagConfig("uuid-1", "flag-1", false);
+            FlagConfig flag2 = testDefaultStringFlagConfig("uuid-2", "flag-2", "default");
             when(flagConfigService.getAllFlagConfigs()).thenReturn(List.of(flag1, flag2));
 
             @SuppressWarnings("unchecked")
@@ -339,7 +377,7 @@ class IzanamiServiceTest {
 
         @Test
         void forFlagKey_whenFlagExists_returnsBuilder() {
-            FlagConfig config = testFlagConfig("uuid-123", "my-flag", FlagValueType.BOOLEAN, ErrorStrategy.DEFAULT_VALUE, false);
+            FlagConfig config = testDefaultBooleanFlagConfig("uuid-123", "my-flag", false);
             when(flagConfigService.getFlagConfigByKey("uuid-123")).thenReturn(Optional.of(config));
 
             IzanamiService service = createServiceWithMockFactory(validProperties());
@@ -368,7 +406,7 @@ class IzanamiServiceTest {
 
         @Test
         void forFlagName_whenFlagExists_returnsBuilder() {
-            FlagConfig config = testFlagConfig("uuid-123", "my-flag", FlagValueType.BOOLEAN, ErrorStrategy.DEFAULT_VALUE, false);
+            FlagConfig config = testDefaultBooleanFlagConfig("uuid-123", "my-flag", false);
             when(flagConfigService.getFlagConfigByName("my-flag")).thenReturn(Optional.of(config));
 
             IzanamiService service = createServiceWithMockFactory(validProperties());
@@ -408,7 +446,7 @@ class IzanamiServiceTest {
 
         @BeforeEach
         void setUp() {
-            config = testFlagConfig("uuid-123", "my-flag", FlagValueType.BOOLEAN, ErrorStrategy.DEFAULT_VALUE, false);
+            config = testDefaultBooleanFlagConfig("uuid-123", "my-flag", false);
             when(flagConfigService.getFlagConfigByKey("uuid-123")).thenReturn(Optional.of(config));
 
             service = createServiceWithMockFactory(validProperties());
@@ -428,7 +466,7 @@ class IzanamiServiceTest {
 
         @Test
         void stringValue_delegatesToClient() {
-            FlagConfig stringConfig = testFlagConfig("uuid-string", "string-flag", FlagValueType.STRING, ErrorStrategy.DEFAULT_VALUE, "default");
+            FlagConfig stringConfig = testDefaultStringFlagConfig("uuid-string", "string-flag", "default");
             when(flagConfigService.getFlagConfigByKey("uuid-string")).thenReturn(Optional.of(stringConfig));
             when(mockClient.stringValue(any(SingleFeatureRequest.class)))
                 .thenReturn(CompletableFuture.completedFuture("test-value"));
@@ -441,7 +479,7 @@ class IzanamiServiceTest {
 
         @Test
         void numberValue_delegatesToClient() {
-            FlagConfig numberConfig = testFlagConfig("uuid-number", "number-flag", FlagValueType.DOUBLE, ErrorStrategy.DEFAULT_VALUE, BigDecimal.ZERO);
+            FlagConfig numberConfig = testDefaultIntegerFlagConfig("uuid-number", "number-flag", BigDecimal.ZERO);
             when(flagConfigService.getFlagConfigByKey("uuid-number")).thenReturn(Optional.of(numberConfig));
             when(mockClient.numberValue(any(SingleFeatureRequest.class)))
                 .thenReturn(CompletableFuture.completedFuture(new BigDecimal("42.5")));
@@ -525,7 +563,7 @@ class IzanamiServiceTest {
 
         @Test
         void booleanValue_inactiveFeature_returnsFalse() {
-            FlagConfig config = testFlagConfig("uuid-inactive-bool", "inactive-bool", FlagValueType.BOOLEAN, ErrorStrategy.DEFAULT_VALUE, true);
+            FlagConfig config = testDefaultBooleanFlagConfig("uuid-inactive-bool", "inactive-bool", true);
             when(flagConfigService.getFlagConfigByKey("uuid-inactive-bool")).thenReturn(Optional.of(config));
             // Izanami client returns false for disabled boolean features
             when(mockClient.booleanValue(any(SingleFeatureRequest.class)))
@@ -538,7 +576,7 @@ class IzanamiServiceTest {
 
         @Test
         void stringValue_inactiveFeature_returnsDefaultValue() {
-            FlagConfig config = testFlagConfig("uuid-inactive-string", "inactive-string", FlagValueType.STRING, ErrorStrategy.DEFAULT_VALUE, "fallback-value");
+            FlagConfig config = testDefaultStringFlagConfig("uuid-inactive-string", "inactive-string", "fallback-value");
             when(flagConfigService.getFlagConfigByKey("uuid-inactive-string")).thenReturn(Optional.of(config));
             // Izanami client returns null for disabled string features
             when(mockClient.stringValue(any(SingleFeatureRequest.class)))
@@ -552,7 +590,7 @@ class IzanamiServiceTest {
 
         @Test
         void numberValue_inactiveFeature_returnsDefaultValue() {
-            FlagConfig config = testFlagConfig("uuid-inactive-number", "inactive-number", FlagValueType.INTEGER, ErrorStrategy.DEFAULT_VALUE, new BigDecimal("999"));
+            FlagConfig config = testDefaultIntegerFlagConfig("uuid-inactive-number", "inactive-number", new BigDecimal("999"));
             when(flagConfigService.getFlagConfigByKey("uuid-inactive-number")).thenReturn(Optional.of(config));
             // Izanami client returns null for disabled number features
             when(mockClient.numberValue(any(SingleFeatureRequest.class)))
@@ -702,7 +740,7 @@ class IzanamiServiceTest {
 
         @Test
         void featureResultWithMetadata_whenClientNull_andDefaultStrategy_returnsApplicationErrorStrategy() {
-            FlagConfig config = testFlagConfig("uuid-123", "my-flag", FlagValueType.BOOLEAN, ErrorStrategy.DEFAULT_VALUE, false);
+            FlagConfig config = testDefaultBooleanFlagConfig("uuid-123", "my-flag", false);
             when(flagConfigService.getFlagConfigByKey("uuid-123")).thenReturn(Optional.of(config));
 
             IzanamiService inactiveService = new IzanamiService(
@@ -721,7 +759,7 @@ class IzanamiServiceTest {
 
         @Test
         void featureResultWithMetadata_whenClientNull_includesMetadataKeys() {
-            FlagConfig config = testFlagConfig("uuid-123", "my-flag", FlagValueType.BOOLEAN, ErrorStrategy.DEFAULT_VALUE, false);
+            FlagConfig config = testDefaultBooleanFlagConfig("uuid-123", "my-flag", false);
             when(flagConfigService.getFlagConfigByKey("uuid-123")).thenReturn(Optional.of(config));
 
             IzanamiService inactiveService = new IzanamiService(
@@ -777,6 +815,211 @@ class IzanamiServiceTest {
     }
 
     // =====================================================================
+    // ValueDetails Tests
+    // =====================================================================
+
+    @Nested
+    class ValueDetailsTests {
+
+        @Test
+        void booleanValueDetails_whenClientNull_andFailStrategy_returnsFailedFuture() {
+            FlagConfig failConfig = new FlagConfig(
+                "uuid-fail",
+                "fail-flag",
+                "Test flag description",
+                FlagValueType.BOOLEAN,
+                ErrorStrategy.FAIL,
+                FeatureClientErrorStrategy.failStrategy(),
+                false,
+                null
+            );
+            when(flagConfigService.getFlagConfigByKey("uuid-fail")).thenReturn(Optional.of(failConfig));
+
+            IzanamiService inactiveService = new IzanamiService(
+                blankUrlProperties(), flagConfigService, objectMapper, mockFactory
+            );
+            inactiveService.afterPropertiesSet();
+
+            CompletableFuture<ResultValueWithDetails<Boolean>> future = inactiveService.forFlagKey("uuid-fail")
+                .booleanValueDetails();
+
+            assertThat(future).isCompletedExceptionally();
+        }
+
+        @Test
+        void stringValueDetails_whenClientNull_andFailStrategy_returnsFailedFuture() {
+            FlagConfig failConfig = new FlagConfig(
+                "uuid-fail",
+                "fail-flag",
+                "Test flag description",
+                FlagValueType.STRING,
+                ErrorStrategy.FAIL,
+                FeatureClientErrorStrategy.failStrategy(),
+                "default",
+                null
+            );
+            when(flagConfigService.getFlagConfigByKey("uuid-fail")).thenReturn(Optional.of(failConfig));
+
+            IzanamiService inactiveService = new IzanamiService(
+                blankUrlProperties(), flagConfigService, objectMapper, mockFactory
+            );
+            inactiveService.afterPropertiesSet();
+
+            CompletableFuture<ResultValueWithDetails<String>> future = inactiveService.forFlagKey("uuid-fail")
+                .stringValueDetails();
+
+            assertThat(future).isCompletedExceptionally();
+        }
+
+        @Test
+        void numberValueDetails_whenClientNull_andFailStrategy_returnsFailedFuture() {
+            FlagConfig failConfig = new FlagConfig(
+                "uuid-fail",
+                "fail-flag",
+                "Test flag description",
+                FlagValueType.INTEGER,
+                ErrorStrategy.FAIL,
+                FeatureClientErrorStrategy.failStrategy(),
+                BigDecimal.ZERO,
+                null
+            );
+            when(flagConfigService.getFlagConfigByKey("uuid-fail")).thenReturn(Optional.of(failConfig));
+
+            IzanamiService inactiveService = new IzanamiService(
+                blankUrlProperties(), flagConfigService, objectMapper, mockFactory
+            );
+            inactiveService.afterPropertiesSet();
+
+            CompletableFuture<ResultValueWithDetails<BigDecimal>> future = inactiveService.forFlagKey("uuid-fail")
+                .numberValueDetails();
+
+            assertThat(future).isCompletedExceptionally();
+        }
+
+        @Test
+        void booleanValueDetails_whenClientNull_andDefaultStrategy_returnsErrorWithAppErrorStrategy() {
+            FlagConfig config = testDefaultBooleanFlagConfig("uuid-123", "my-flag", true);
+            when(flagConfigService.getFlagConfigByKey("uuid-123")).thenReturn(Optional.of(config));
+
+            IzanamiService inactiveService = new IzanamiService(
+                blankUrlProperties(), flagConfigService, objectMapper, mockFactory
+            );
+            inactiveService.afterPropertiesSet();
+
+            ResultValueWithDetails<Boolean> result = inactiveService.forFlagKey("uuid-123")
+                .booleanValueDetails()
+                .join();
+
+            assertThat(result.value()).isTrue();
+            assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                .isEqualTo(FlagValueSource.IZANAMI_ERROR_STRATEGY.name());
+            assertThat(result.metadata().get(FlagMetadataKeys.FLAG_EVALUATION_REASON))
+                .isEqualTo("ERROR");
+        }
+
+        @Test
+        void stringValueDetails_whenClientNull_andDefaultStrategy_returnsErrorWithAppErrorStrategy() {
+            FlagConfig config = testDefaultStringFlagConfig("uuid-string", "string-flag", "fallback");
+            when(flagConfigService.getFlagConfigByKey("uuid-string")).thenReturn(Optional.of(config));
+
+            IzanamiService inactiveService = new IzanamiService(
+                blankUrlProperties(), flagConfigService, objectMapper, mockFactory
+            );
+            inactiveService.afterPropertiesSet();
+
+            ResultValueWithDetails<String> result = inactiveService.forFlagKey("uuid-string")
+                .stringValueDetails()
+                .join();
+
+            assertThat(result.value()).isEqualTo("fallback");
+            assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                .isEqualTo(FlagValueSource.IZANAMI_ERROR_STRATEGY.name());
+            assertThat(result.metadata().get(FlagMetadataKeys.FLAG_EVALUATION_REASON))
+                .isEqualTo("ERROR");
+        }
+
+        @Test
+        void numberValueDetails_whenClientNull_andDefaultStrategy_returnsErrorWithAppErrorStrategy() {
+            FlagConfig config = testDefaultIntegerFlagConfig("uuid-number", "number-flag", new BigDecimal("999"));
+            when(flagConfigService.getFlagConfigByKey("uuid-number")).thenReturn(Optional.of(config));
+
+            IzanamiService inactiveService = new IzanamiService(
+                blankUrlProperties(), flagConfigService, objectMapper, mockFactory
+            );
+            inactiveService.afterPropertiesSet();
+
+            ResultValueWithDetails<BigDecimal> result = inactiveService.forFlagKey("uuid-number")
+                .numberValueDetails()
+                .join();
+
+            assertThat(result.value()).isEqualByComparingTo(new BigDecimal("999"));
+            assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                .isEqualTo(FlagValueSource.IZANAMI_ERROR_STRATEGY.name());
+            assertThat(result.metadata().get(FlagMetadataKeys.FLAG_EVALUATION_REASON))
+                .isEqualTo("ERROR");
+        }
+
+        @Test
+        void booleanValueDetails_whenClientNull_includesAllMetadataKeys() {
+            FlagConfig config = testDefaultBooleanFlagConfig("uuid-123", "my-flag", false);
+            when(flagConfigService.getFlagConfigByKey("uuid-123")).thenReturn(Optional.of(config));
+
+            IzanamiService inactiveService = new IzanamiService(
+                blankUrlProperties(), flagConfigService, objectMapper, mockFactory
+            );
+            inactiveService.afterPropertiesSet();
+
+            ResultValueWithDetails<Boolean> result = inactiveService.forFlagKey("uuid-123")
+                .booleanValueDetails()
+                .join();
+
+            Map<String, String> metadata = result.metadata();
+            assertThat(metadata).containsKey(FlagMetadataKeys.FLAG_CONFIG_KEY);
+            assertThat(metadata).containsKey(FlagMetadataKeys.FLAG_CONFIG_NAME);
+            assertThat(metadata).containsKey(FlagMetadataKeys.FLAG_CONFIG_DESCRIPTION);
+            assertThat(metadata).containsKey(FlagMetadataKeys.FLAG_CONFIG_VALUE_TYPE);
+            assertThat(metadata).containsKey(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE);
+            assertThat(metadata).containsKey(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY);
+            assertThat(metadata).containsKey(FlagMetadataKeys.FLAG_VALUE_SOURCE);
+            assertThat(metadata).containsKey(FlagMetadataKeys.FLAG_EVALUATION_REASON);
+        }
+
+        @Test
+        void booleanValueDetails_whenClientNull_populatesMetadataValues() {
+            FlagConfig detailedConfig = new FlagConfig(
+                "uuid-detailed",
+                "detailed-flag",
+                "A detailed description",
+                FlagValueType.BOOLEAN,
+                ErrorStrategy.DEFAULT_VALUE,
+                FeatureClientErrorStrategy.defaultValueStrategy(false, "fallback", BigDecimal.ZERO),
+                true,
+                null
+            );
+            when(flagConfigService.getFlagConfigByKey("uuid-detailed")).thenReturn(Optional.of(detailedConfig));
+
+            IzanamiService inactiveService = new IzanamiService(
+                blankUrlProperties(), flagConfigService, objectMapper, mockFactory
+            );
+            inactiveService.afterPropertiesSet();
+
+            ResultValueWithDetails<Boolean> result = inactiveService.forFlagKey("uuid-detailed")
+                .booleanValueDetails()
+                .join();
+
+            Map<String, String> metadata = result.metadata();
+            assertThat(metadata.get(FlagMetadataKeys.FLAG_CONFIG_KEY)).isEqualTo("uuid-detailed");
+            assertThat(metadata.get(FlagMetadataKeys.FLAG_CONFIG_NAME)).isEqualTo("detailed-flag");
+            assertThat(metadata.get(FlagMetadataKeys.FLAG_CONFIG_DESCRIPTION)).isEqualTo("A detailed description");
+            assertThat(metadata.get(FlagMetadataKeys.FLAG_CONFIG_VALUE_TYPE)).isEqualTo("BOOLEAN");
+            assertThat(metadata.get(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE)).isEqualTo("true");
+            assertThat(metadata.get(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY)).isEqualTo("DEFAULT_VALUE");
+            assertThat(metadata.get(FlagMetadataKeys.FLAG_VALUE_SOURCE)).isEqualTo("IZANAMI_ERROR_STRATEGY");
+            assertThat(metadata.get(FlagMetadataKeys.FLAG_EVALUATION_REASON)).isEqualTo("ERROR");
+        }
+    }
+
+    // =====================================================================
     // stringifyDefaultValue Tests
     // =====================================================================
 
@@ -785,7 +1028,7 @@ class IzanamiServiceTest {
 
         @Test
         void stringifyDefaultValue_withNull_returnsNull() {
-            FlagConfig config = testFlagConfig("key", "name", FlagValueType.STRING, ErrorStrategy.DEFAULT_VALUE, null);
+            FlagConfig config = testDefaultStringFlagConfig("key", "name", null);
 
             String result = IzanamiService.stringifyDefaultValue(objectMapper, config);
 
@@ -794,7 +1037,7 @@ class IzanamiServiceTest {
 
         @Test
         void stringifyDefaultValue_withBoolean_returnsString() {
-            FlagConfig config = testFlagConfig("key", "name", FlagValueType.BOOLEAN, ErrorStrategy.DEFAULT_VALUE, true);
+            FlagConfig config = testDefaultBooleanFlagConfig("key", "name", true);
 
             String result = IzanamiService.stringifyDefaultValue(objectMapper, config);
 
@@ -803,7 +1046,7 @@ class IzanamiServiceTest {
 
         @Test
         void stringifyDefaultValue_withNumber_returnsString() {
-            FlagConfig config = testFlagConfig("key", "name", FlagValueType.DOUBLE, ErrorStrategy.DEFAULT_VALUE, new BigDecimal("123.45"));
+            FlagConfig config = testDefaultDoubleFlagConfig("key", "name", new BigDecimal("123.45"));
 
             String result = IzanamiService.stringifyDefaultValue(objectMapper, config);
 
@@ -812,7 +1055,7 @@ class IzanamiServiceTest {
 
         @Test
         void stringifyDefaultValue_withString_returnsString() {
-            FlagConfig config = testFlagConfig("key", "name", FlagValueType.STRING, ErrorStrategy.DEFAULT_VALUE, "hello");
+            FlagConfig config = testDefaultStringFlagConfig("key", "name", "hello");
 
             String result = IzanamiService.stringifyDefaultValue(objectMapper, config);
 
