@@ -316,6 +316,40 @@ String value = izanamiService.forFlagName("my-flag")
     .join();
 ```
 
+## OpenFeature Notice
+
+### Blocking Calls
+
+OpenFeature API methods are **synchronous/blocking**. If you need non-blocking async evaluation, use `IzanamiService` which returns `CompletableFuture<T>`:
+
+```java
+// OpenFeature - blocking
+boolean enabled = client.getBooleanValue("my-flag", false);
+
+// IzanamiService - non-blocking async
+izanamiService.forFlagName("my-flag")
+    .booleanValue()
+    .thenAccept(enabled -> { /* handle async */ });
+```
+
+### No Batch Evaluation
+
+OpenFeature evaluates flags one at a time. For batch evaluation of multiple flags in a single request, use `IzanamiClient` directly via `unwrapClient()`:
+
+```java
+import fr.maif.IzanamiClient;
+import fr.maif.requests.FeatureRequest;
+
+izanamiService.unwrapClient().ifPresent(client -> {
+    // Evaluate multiple flags in a single request
+    client.featureValues(FeatureRequest.newFeatureRequest()
+            .withFeatures("flag-1", "flag-2", "flag-3"))
+        .thenAccept(results -> {
+            // Process all results
+        });
+});
+```
+
 ### Optional explicit opt-in
 
 Auto-configuration is enabled by default when the starter is present.
