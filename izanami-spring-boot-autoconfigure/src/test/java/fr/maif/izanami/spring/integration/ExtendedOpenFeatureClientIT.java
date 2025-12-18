@@ -3,6 +3,7 @@ package fr.maif.izanami.spring.integration;
 import dev.openfeature.sdk.*;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
 import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
+import fr.maif.izanami.spring.openfeature.FlagValueSource;
 import fr.maif.izanami.spring.openfeature.api.ExtendedOpenFeatureClient;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
 import fr.maif.izanami.spring.openfeature.api.IzanamiErrorCallback;
@@ -401,7 +402,7 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
     //   - NULL_VALUE returns null
     //   - CALLBACK returns the callback value
     //
-    // Through OpenFeature (featureResultWithMetadata() path), exceptions are caught and the caller-default
+    // Through OpenFeature, exceptions are caught and the caller-default
     // is returned because the extraction from IzanamiResult.Error fails. The FLAG_VALUE_SOURCE shows
     // IZANAMI_ERROR_STRATEGY because the error originated from the Izanami client, but the value falls back
     // to the OpenFeature caller-default since extraction cannot proceed.
@@ -427,7 +428,7 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
                 // IMPORTANT ! FAIL strategy through OpenFeature returns caller-default
                 assertThat(details.getValue()).isEqualTo("caller-default");
                 assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
-                    .isEqualTo("IZANAMI_ERROR_STRATEGY");
+                    .isEqualTo(FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
                 assertThat(details.getErrorCode()).isEqualTo(dev.openfeature.sdk.ErrorCode.GENERAL);
             });
     }
@@ -525,7 +526,7 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
                 assertThat(details.getValue()).isEqualTo("fallback");
                 assertThat(details.getReason()).isEqualTo(Reason.DISABLED.name());
                 assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
-                    .isEqualTo("IZANAMI");
+                    .isEqualTo(FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
             });
     }
 
@@ -550,7 +551,7 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
                 assertThat(details.getValue()).isEqualTo(999);
                 assertThat(details.getReason()).isEqualTo(Reason.DISABLED.name());
                 assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
-                    .isEqualTo("IZANAMI");
+                    .isEqualTo(FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
             });
     }
 
@@ -575,7 +576,7 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
                 assertThat(details.getValue()).isEqualTo(99.9);
                 assertThat(details.getReason()).isEqualTo(Reason.DISABLED.name());
                 assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
-                    .isEqualTo("IZANAMI");
+                    .isEqualTo(FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
             });
     }
 

@@ -9,7 +9,7 @@ import fr.maif.features.values.BooleanCastStrategy;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
 import fr.maif.izanami.spring.service.IzanamiClientNotAvailableException;
 import fr.maif.izanami.spring.service.IzanamiService;
-import fr.maif.izanami.spring.service.ResultWithMetadata;
+import fr.maif.izanami.spring.service.ResultValueWithDetails;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -21,6 +21,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -123,7 +124,11 @@ class IzanamiFeatureProviderTest {
         when(flagConfigService.getFlagConfigByKey(key)).thenReturn(Optional.empty());
     }
 
-    private ResultWithMetadata successResult(IzanamiResult.Success mockSuccess) {
+    private <T> ResultValueWithDetails<T> successResult(T value) {
+        return successResult(value, "ORIGIN_OR_CACHE");
+    }
+
+    private <T> ResultValueWithDetails<T> successResult(T value, String reason) {
         Map<String, String> metadata = new HashMap<>();
         metadata.put(FlagMetadataKeys.FLAG_CONFIG_KEY, "test-key");
         metadata.put(FlagMetadataKeys.FLAG_CONFIG_NAME, "test-name");
@@ -132,10 +137,24 @@ class IzanamiFeatureProviderTest {
         metadata.put(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE, "false");
         metadata.put(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY, "DEFAULT_VALUE");
         metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.IZANAMI.name());
-        return new ResultWithMetadata(mockSuccess, metadata);
+        metadata.put(FlagMetadataKeys.FLAG_EVALUATION_REASON, reason);
+        return new ResultValueWithDetails<>(value, metadata);
     }
 
-    private ResultWithMetadata errorResult(IzanamiResult.Error mockError) {
+    private <T> ResultValueWithDetails<T> disabledResult(T value) {
+        Map<String, String> metadata = new HashMap<>();
+        metadata.put(FlagMetadataKeys.FLAG_CONFIG_KEY, "test-key");
+        metadata.put(FlagMetadataKeys.FLAG_CONFIG_NAME, "test-name");
+        metadata.put(FlagMetadataKeys.FLAG_CONFIG_DESCRIPTION, "test description");
+        metadata.put(FlagMetadataKeys.FLAG_CONFIG_VALUE_TYPE, "STRING");
+        metadata.put(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE, "default");
+        metadata.put(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY, "DEFAULT_VALUE");
+        metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
+        metadata.put(FlagMetadataKeys.FLAG_EVALUATION_REASON, "DISABLED");
+        return new ResultValueWithDetails<>(value, metadata);
+    }
+
+    private <T> ResultValueWithDetails<T> errorResult(T fallbackValue) {
         Map<String, String> metadata = new HashMap<>();
         metadata.put(FlagMetadataKeys.FLAG_CONFIG_KEY, "test-key");
         metadata.put(FlagMetadataKeys.FLAG_CONFIG_NAME, "test-name");
@@ -144,19 +163,65 @@ class IzanamiFeatureProviderTest {
         metadata.put(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE, "false");
         metadata.put(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY, "DEFAULT_VALUE");
         metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.IZANAMI_ERROR_STRATEGY.name());
-        return new ResultWithMetadata(mockError, metadata);
+        metadata.put(FlagMetadataKeys.FLAG_EVALUATION_REASON, "ERROR");
+        return new ResultValueWithDetails<>(fallbackValue, metadata);
     }
 
+    // Setup methods for disabled features with configured default values
+    private void setupStringDisabledEvaluation(String flagKey, String defaultValue) {
+        when(izanamiService.forFlagKey(flagKey)).thenReturn(mockBuilder);
+        when(mockBuilder.stringValueDetails())
+            .thenReturn(CompletableFuture.completedFuture(disabledResult(defaultValue)));
+    }
+
+    private void setupNumberDisabledEvaluation(String flagKey, BigDecimal defaultValue) {
+        when(izanamiService.forFlagKey(flagKey)).thenReturn(mockBuilder);
+        when(mockBuilder.numberValueDetails())
+            .thenReturn(CompletableFuture.completedFuture(disabledResult(defaultValue)));
+    }
+
+    // Legacy helper for backwards compatibility - now mocks booleanValueDetails
     private void setupSuccessfulEvaluation(String flagKey, IzanamiResult.Success mockSuccess) {
         when(izanamiService.forFlagKey(flagKey)).thenReturn(mockBuilder);
-        when(mockBuilder.featureResultWithMetadata())
-            .thenReturn(CompletableFuture.completedFuture(successResult(mockSuccess)));
+        // Extract values from the mock and setup the appropriate *ValueDetails method
+        Boolean boolValue = mockSuccess.booleanValue(BooleanCastStrategy.LAX);
+        String stringValue = mockSuccess.stringValue();
+        BigDecimal numberValue = mockSuccess.numberValue();
+
+        // Setup all possible *ValueDetails methods based on what's available
+        if (boolValue != null) {
+            String reason = Boolean.FALSE.equals(boolValue) ? "DISABLED" : "ORIGIN_OR_CACHE";
+            when(mockBuilder.booleanValueDetails())
+                .thenReturn(CompletableFuture.completedFuture(successResult(boolValue, reason)));
+        }
+        if (stringValue != null) {
+            when(mockBuilder.stringValueDetails())
+                .thenReturn(CompletableFuture.completedFuture(successResult(stringValue)));
+        } else {
+            when(mockBuilder.stringValueDetails())
+                .thenReturn(CompletableFuture.completedFuture(disabledResult(null)));
+        }
+        if (numberValue != null) {
+            when(mockBuilder.numberValueDetails())
+                .thenReturn(CompletableFuture.completedFuture(successResult(numberValue)));
+        } else {
+            when(mockBuilder.numberValueDetails())
+                .thenReturn(CompletableFuture.completedFuture(disabledResult(null)));
+        }
     }
 
     private void setupErrorEvaluation(String flagKey, IzanamiResult.Error mockError) {
         when(izanamiService.forFlagKey(flagKey)).thenReturn(mockBuilder);
-        when(mockBuilder.featureResultWithMetadata())
-            .thenReturn(CompletableFuture.completedFuture(errorResult(mockError)));
+        Boolean boolValue = mockError.booleanValue(BooleanCastStrategy.LAX);
+        String stringValue = mockError.stringValue();
+        BigDecimal numberValue = mockError.numberValue();
+
+        when(mockBuilder.booleanValueDetails())
+            .thenReturn(CompletableFuture.completedFuture(errorResult(boolValue)));
+        when(mockBuilder.stringValueDetails())
+            .thenReturn(CompletableFuture.completedFuture(errorResult(stringValue)));
+        when(mockBuilder.numberValueDetails())
+            .thenReturn(CompletableFuture.completedFuture(errorResult(numberValue)));
     }
 
     private EvaluationContext emptyContext() {
@@ -692,10 +757,9 @@ class IzanamiFeatureProviderTest {
             FlagConfig config = testDefaultStringFlagConfig("inactive-string", "inactive-string", "fallback-value");
             setupFlagConfig("inactive-string", config);
 
-            // For inactive string features, Izanami returns null
-            IzanamiResult.Success mockSuccess = mock(IzanamiResult.Success.class);
-            when(mockSuccess.stringValue()).thenReturn(null);
-            setupSuccessfulEvaluation("inactive-string", mockSuccess);
+            // For inactive string features, *ValueDetails() returns the configured default value
+            // with FLAG_VALUE_SOURCE=APPLICATION_ERROR_STRATEGY since the value comes from app config
+            setupStringDisabledEvaluation("inactive-string", "fallback-value");
 
             ProviderEvaluation<String> result = provider.getStringEvaluation(
                 "inactive-string", "caller-default", emptyContext()
@@ -705,8 +769,9 @@ class IzanamiFeatureProviderTest {
             assertThat(result.getValue()).isEqualTo("fallback-value");
             // Reason is DISABLED because Izanami returned null (feature disabled)
             assertThat(result.getReason()).isEqualTo(Reason.DISABLED.name());
+            // Value source is APPLICATION_ERROR_STRATEGY because the actual value comes from app config
             assertThat(result.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
-                .isEqualTo(FlagValueSource.IZANAMI.name());
+                .isEqualTo(FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
         }
 
         @Test
@@ -714,10 +779,8 @@ class IzanamiFeatureProviderTest {
             FlagConfig config = testDefaultIntegerFlagConfig("inactive-int", "inactive-int", new BigDecimal("999"));
             setupFlagConfig("inactive-int", config);
 
-            // For inactive integer features, Izanami returns null
-            IzanamiResult.Success mockSuccess = mock(IzanamiResult.Success.class);
-            when(mockSuccess.numberValue()).thenReturn(null);
-            setupSuccessfulEvaluation("inactive-int", mockSuccess);
+            // For inactive integer features, *ValueDetails() returns the configured default value
+            setupNumberDisabledEvaluation("inactive-int", new BigDecimal("999"));
 
             ProviderEvaluation<Integer> result = provider.getIntegerEvaluation(
                 "inactive-int", 0, emptyContext()
@@ -727,8 +790,9 @@ class IzanamiFeatureProviderTest {
             assertThat(result.getValue()).isEqualTo(999);
             // Reason is DISABLED because Izanami returned null (feature disabled)
             assertThat(result.getReason()).isEqualTo(Reason.DISABLED.name());
+            // Value source is APPLICATION_ERROR_STRATEGY because the actual value comes from app config
             assertThat(result.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
-                .isEqualTo(FlagValueSource.IZANAMI.name());
+                .isEqualTo(FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
         }
 
         @Test
@@ -736,10 +800,8 @@ class IzanamiFeatureProviderTest {
             FlagConfig config = testDefaultDoubleFlagConfig("inactive-double", "inactive-double", new BigDecimal("99.9"));
             setupFlagConfig("inactive-double", config);
 
-            // For inactive double features, Izanami returns null
-            IzanamiResult.Success mockSuccess = mock(IzanamiResult.Success.class);
-            when(mockSuccess.numberValue()).thenReturn(null);
-            setupSuccessfulEvaluation("inactive-double", mockSuccess);
+            // For inactive double features, *ValueDetails() returns the configured default value
+            setupNumberDisabledEvaluation("inactive-double", new BigDecimal("99.9"));
 
             ProviderEvaluation<Double> result = provider.getDoubleEvaluation(
                 "inactive-double", 0.0, emptyContext()
@@ -749,8 +811,9 @@ class IzanamiFeatureProviderTest {
             assertThat(result.getValue()).isEqualTo(99.9);
             // Reason is DISABLED because Izanami returned null (feature disabled)
             assertThat(result.getReason()).isEqualTo(Reason.DISABLED.name());
+            // Value source is APPLICATION_ERROR_STRATEGY because the actual value comes from app config
             assertThat(result.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
-                .isEqualTo(FlagValueSource.IZANAMI.name());
+                .isEqualTo(FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
         }
     }
 
