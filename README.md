@@ -121,6 +121,53 @@ openfeature:
       callbackBean: "myErrorCallback"
 ```
 
+### Custom Configuration Prefix
+
+If you need to nest the configuration under a custom prefix (e.g., `organisation.izanami` instead of `izanami`), define your own beans with `@Primary`:
+
+```java
+import fr.maif.izanami.spring.autoconfigure.IzanamiProperties;
+import fr.maif.izanami.spring.openfeature.FlagsProperties;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+
+@Configuration
+public class CustomIzanamiConfig {
+
+    @Bean
+    @Primary
+    @ConfigurationProperties(prefix = "organisation.izanami")
+    public IzanamiProperties izanamiProperties() {
+        return new IzanamiProperties();
+    }
+
+    @Bean
+    @Primary
+    @ConfigurationProperties(prefix = "organisation.openfeature")
+    public FlagsProperties flagsProperties() {
+        return new FlagsProperties();
+    }
+}
+```
+
+Then configure your YAML under the custom prefix:
+
+```yaml
+organisation:
+  izanami:
+    base-url: ${IZANAMI_BASE_URL:http://localhost:9999}
+    client-id: ${IZANAMI_CLIENT_ID:}
+    client-secret: ${IZANAMI_CLIENT_SECRET:}
+  openfeature:
+    flags:
+      - key: "a4c0d04f-69ac-41aa-a6e4-febcee541d51"
+        name: "turbo-mode"
+        valueType: "boolean"
+        defaultValue: false
+```
+
 ## Usage
 
 ### Simple Usage with IzanamiService (Fluent API)
