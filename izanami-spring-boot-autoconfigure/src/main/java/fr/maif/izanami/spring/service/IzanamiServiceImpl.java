@@ -32,8 +32,12 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static java.util.Collections.unmodifiableMap;
@@ -265,6 +269,13 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
         private String user;
         private String context;
 
+        private record ResultWithMetadata(IzanamiResult.Result result, Map<String, String> metadata) {}
+
+        /**
+         * Holds the computed value, source, and reason for a feature evaluation.
+         */
+        private record EvaluationOutcome<T>(T value, FlagValueSource source, String reason) {}
+
         private FeatureRequestBuilder(IzanamiServiceImpl service, FlagConfig flagConfig) {
             this.service = service;
             this.flagConfig = flagConfig;
@@ -360,20 +371,12 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
             metadata.put(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE, stringifyDefaultValue(service.objectMapper, flagConfig));
             metadata.put(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY, flagConfig.errorStrategy().name());
             try {
-                return service.evaluateFeatureResult(flagConfig, user, context).thenApply(r -> {
-                    // TODO handle Success(NullValue) -> disabled, non boolean, feature
-                    // https://github.com/MAIF/izanami-java-client/blob/v2.3.7/src/main/java/fr/maif/features/values/NullValue.java
-                    FlagValueSource valueSource = (r instanceof IzanamiResult.Success)
-                        ? FlagValueSource.IZANAMI
-                        : FlagValueSource.IZANAMI_ERROR_STRATEGY;
-                    metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, valueSource.name());
-                    return new ResultWithMetadata(r, unmodifiableMap(metadata));
-                });
+                return service.evaluateFeatureResult(flagConfig, user, context)
+                    .thenApply(r -> new ResultWithMetadata(r, unmodifiableMap(metadata)));
             } catch (Exception e) {
                 if (flagConfig.errorStrategy() == ErrorStrategy.FAIL) {
                     return CompletableFuture.failedFuture(e);
                 }
-                metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
                 return CompletableFuture.completedFuture(new ResultWithMetadata(
                     new IzanamiResult.Error(flagConfig.clientErrorStrategy(), new IzanamiError(e.getMessage())),
                     unmodifiableMap(metadata)
@@ -390,26 +393,11 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
         @Override
         public CompletableFuture<ResultValueWithDetails<Boolean>> booleanValueDetails() {
             log.debug("Evaluating flag {} as boolean with details", flagConfig.key());
-            return featureResultWithMetadata().thenApply(resultWithMetadata -> {
-                Map<String, String> metadata = new LinkedHashMap<>(resultWithMetadata.metadata());
-                IzanamiResult.Result result = resultWithMetadata.result();
-                Boolean value = result.booleanValue(BooleanCastStrategy.LAX);
-
-                String reason;
-                if (result instanceof IzanamiResult.Success) {
-                    metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.IZANAMI.name());
-                    // Boolean features: false means disabled
-                    reason = Boolean.FALSE.equals(value) ? "DISABLED" : "ORIGIN_OR_CACHE";
-                } else {
-                    metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.IZANAMI_ERROR_STRATEGY.name());
-                    reason = "ERROR";
-                }
-
-                metadata.put(FlagMetadataKeys.FLAG_EVALUATION_REASON, reason);
-
-                log.debug("Evaluated flag {} as boolean = {} with details, reason={}", flagConfig.key(), value, reason);
-                return new ResultValueWithDetails<>(value, unmodifiableMap(metadata));
-            });
+            return evaluateWithDetails(
+                result -> result.booleanValue(BooleanCastStrategy.LAX),
+                () -> null,  // Boolean doesn't use default for disabled - false is the disabled value
+                Boolean.FALSE::equals  // false means disabled for boolean features
+            );
         }
 
         /**
@@ -421,35 +409,11 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
         @Override
         public CompletableFuture<ResultValueWithDetails<String>> stringValueDetails() {
             log.debug("Evaluating flag {} as string with details", flagConfig.key());
-            return featureResultWithMetadata().thenApply(resultWithMetadata -> {
-                Map<String, String> metadata = new LinkedHashMap<>(resultWithMetadata.metadata());
-                IzanamiResult.Result result = resultWithMetadata.result();
-                String rawValue = result.stringValue();
-
-                String reason;
-                String value = rawValue;
-                if (result instanceof IzanamiResult.Success) {
-                    if (rawValue == null) {
-                        metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
-                        // Feature is disabled. Apply the defaultValue if configured.
-                        reason = "DISABLED";
-                        if (flagConfig.defaultValue() != null) {
-                            value = flagConfig.defaultValue().toString();
-                        }
-                    } else {
-                        metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.IZANAMI.name());
-                        reason = "ORIGIN_OR_CACHE";
-                    }
-                } else {
-                    metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.IZANAMI_ERROR_STRATEGY.name());
-                    reason = "ERROR";
-                }
-
-                metadata.put(FlagMetadataKeys.FLAG_EVALUATION_REASON, reason);
-
-                log.debug("Evaluated flag {} as string = {} with details, reason={}", flagConfig.key(), value, reason);
-                return new ResultValueWithDetails<>(value, unmodifiableMap(metadata));
-            });
+            return evaluateWithDetails(
+                IzanamiResult.Result::stringValue,
+                () -> flagConfig.defaultValue() != null ? flagConfig.defaultValue().toString() : null,
+                Objects::isNull  // null means disabled for string features
+            );
         }
 
         /**
@@ -461,42 +425,11 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
         @Override
         public CompletableFuture<ResultValueWithDetails<BigDecimal>> numberValueDetails() {
             log.debug("Evaluating flag {} as number with details", flagConfig.key());
-            return featureResultWithMetadata().thenApply(resultWithMetadata -> {
-                Map<String, String> metadata = new LinkedHashMap<>(resultWithMetadata.metadata());
-                IzanamiResult.Result result = resultWithMetadata.result();
-                BigDecimal rawValue = result.numberValue();
-
-                String reason;
-                BigDecimal value = rawValue;
-                if (result instanceof IzanamiResult.Success) {
-                    if (rawValue == null) {
-                        metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
-                        // Feature is disabled. Apply the defaultValue if configured.
-                        reason = "DISABLED";
-                        if (flagConfig.defaultValue() != null) {
-                            Object defaultValue = flagConfig.defaultValue();
-                            if (defaultValue instanceof BigDecimal) {
-                                value = (BigDecimal) defaultValue;
-                            } else if (defaultValue instanceof Number) {
-                                value = new BigDecimal(defaultValue.toString());
-                            }
-                        }
-                    } else {
-                        metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.IZANAMI.name());
-                        reason = "ORIGIN_OR_CACHE";
-
-                    }
-                } else {
-                    metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.IZANAMI_ERROR_STRATEGY.name());
-                    reason = "ERROR";
-                }
-
-
-                metadata.put(FlagMetadataKeys.FLAG_EVALUATION_REASON, reason);
-
-                log.debug("Evaluated flag {} as number = {} with details, reason={}", flagConfig.key(), value, reason);
-                return new ResultValueWithDetails<>(value, unmodifiableMap(metadata));
-            });
+            return evaluateWithDetails(
+                IzanamiResult.Result::numberValue,
+                () -> toBigDecimal(flagConfig.defaultValue()),
+                Objects::isNull  // null means disabled for number features
+            );
         }
 
         private SingleFeatureRequest buildRequest() {
@@ -510,6 +443,63 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
                 request = request.withContext(context);
             }
             return request;
+        }
+
+        /**
+         * Generic evaluation method that handles the common flow for all *ValueDetails methods.
+         *
+         * @param valueExtractor       extracts the raw value from IzanamiResult.Result
+         * @param disabledValueResolver resolves the value when feature is disabled (null from Izanami)
+         * @param isDisabledCheck      checks if the value indicates a disabled feature
+         */
+        private <T> CompletableFuture<ResultValueWithDetails<T>> evaluateWithDetails(
+                Function<IzanamiResult.Result, T> valueExtractor,
+                Supplier<T> disabledValueResolver,
+                Predicate<T> isDisabledCheck
+        ) {
+            return featureResultWithMetadata().thenApply(resultWithMetadata -> {
+                Map<String, String> metadata = new LinkedHashMap<>(resultWithMetadata.metadata());
+                IzanamiResult.Result result = resultWithMetadata.result();
+                T rawValue = valueExtractor.apply(result);
+
+                EvaluationOutcome<T> outcome = computeOutcome(result, rawValue, disabledValueResolver, isDisabledCheck);
+
+                metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, outcome.source().name());
+                metadata.put(FlagMetadataKeys.FLAG_EVALUATION_REASON, outcome.reason());
+
+                log.debug("Evaluated flag {} = {} with details, reason={}", flagConfig.key(), outcome.value(), outcome.reason());
+                return new ResultValueWithDetails<>(outcome.value(), unmodifiableMap(metadata));
+            });
+        }
+
+        /**
+         * Computes the evaluation outcome (value, source, reason) based on the Izanami result.
+         * <p>
+         * For disabled non-boolean features, Izanami returns null (Success with NullValue).
+         * In this case, the configured defaultValue is applied if available.
+         *
+         * @see <a href="https://github.com/MAIF/izanami-java-client/blob/v2.3.7/src/main/java/fr/maif/features/values/NullValue.java">NullValue</a>
+         */
+        private <T> EvaluationOutcome<T> computeOutcome(
+                IzanamiResult.Result result,
+                T rawValue,
+                Supplier<T> disabledValueResolver,
+                Predicate<T> isDisabledCheck
+        ) {
+            if (result instanceof IzanamiResult.Success) {
+                if (isDisabledCheck.test(rawValue)) {
+                    // Feature is disabled - apply default value if configured
+                    T resolvedValue = disabledValueResolver.get();
+                    return new EvaluationOutcome<>(
+                        resolvedValue != null ? resolvedValue : rawValue,
+                        resolvedValue != null ? FlagValueSource.APPLICATION_ERROR_STRATEGY : FlagValueSource.IZANAMI,
+                        "DISABLED"
+                    );
+                }
+                return new EvaluationOutcome<>(rawValue, FlagValueSource.IZANAMI, "ORIGIN_OR_CACHE");
+            }
+            // Error case - value comes from Izanami's error strategy
+            return new EvaluationOutcome<>(rawValue, FlagValueSource.IZANAMI_ERROR_STRATEGY, "ERROR");
         }
     }
 
@@ -564,11 +554,7 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
     private CompletableFuture<String> evaluateString(SingleFeatureRequest request, FlagConfig flagConfig) {
         return requireClient().stringValue(request)
             .thenApply(value -> {
-                // For disabled non-boolean features, Izanami returns null.
-                // Apply the defaultValue if configured and error strategy is DEFAULT_VALUE.
-                // https://github.com/MAIF/izanami-java-client/blob/v2.3.7/src/main/java/fr/maif/requests/FetchFeatureService.java#L99-L100
-                // https://github.com/MAIF/izanami-java-client/blob/v2.3.7/src/main/java/fr/maif/features/values/NullValue.java
-                // new Success(new NullValue()) is returned for disabled features.
+                // Disabled features return null - apply default if configured
                 if (value == null && flagConfig.defaultValue() != null
                         && flagConfig.errorStrategy() == ErrorStrategy.DEFAULT_VALUE) {
                     return flagConfig.defaultValue().toString();
@@ -580,19 +566,10 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
     private CompletableFuture<BigDecimal> evaluateNumber(SingleFeatureRequest request, FlagConfig flagConfig) {
         return requireClient().numberValue(request)
             .thenApply(value -> {
-                // For disabled non-boolean features, Izanami returns null.
-                // Apply the defaultValue if configured and error strategy is DEFAULT_VALUE.
-                // https://github.com/MAIF/izanami-java-client/blob/v2.3.7/src/main/java/fr/maif/requests/FetchFeatureService.java#L99-L100
-                // https://github.com/MAIF/izanami-java-client/blob/v2.3.7/src/main/java/fr/maif/features/values/NullValue.java
-                // new Success(new NullValue()) is returned for disabled features.
+                // Disabled features return null - apply default if configured
                 if (value == null && flagConfig.defaultValue() != null
                         && flagConfig.errorStrategy() == ErrorStrategy.DEFAULT_VALUE) {
-                    Object defaultValue = flagConfig.defaultValue();
-                    if (defaultValue instanceof BigDecimal) {
-                        return (BigDecimal) defaultValue;
-                    } else if (defaultValue instanceof Number) {
-                        return new BigDecimal(defaultValue.toString());
-                    }
+                    return toBigDecimal(flagConfig.defaultValue());
                 }
                 return value;
             });
@@ -629,4 +606,22 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
     private static boolean isBlank(String value) {
         return value == null || value.isBlank();
     }
+
+    /**
+     * Converts a value to BigDecimal. Returns null if the input is null or not a number.
+     */
+    private static BigDecimal toBigDecimal(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof BigDecimal bd) {
+            return bd;
+        }
+        if (value instanceof Number) {
+            return new BigDecimal(value.toString());
+        }
+        return null;
+    }
+
+
 }
