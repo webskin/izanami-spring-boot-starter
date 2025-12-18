@@ -563,8 +563,9 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
                 // Disabled features return null - apply default if configured
                 if (value == null && flagConfig.defaultValue() != null
                         && flagConfig.errorStrategy() == ErrorStrategy.DEFAULT_VALUE) {
-                    // TODO CLAUDE add warn log for using disabled feature
-                    return flagConfig.defaultValue().toString();
+                    String defaultValue = flagConfig.defaultValue().toString();
+                    log.warn("Flag {} evaluated using application default value (feature disabled), value={}", flagConfig.key(), defaultValue);
+                    return defaultValue;
                 }
                 return value;
             });
@@ -576,8 +577,9 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
                 // Disabled features return null - apply default if configured
                 if (value == null && flagConfig.defaultValue() != null
                         && flagConfig.errorStrategy() == ErrorStrategy.DEFAULT_VALUE) {
-                    // TODO CLAUDE add warn log for using disabled feature 
-                    return toBigDecimal(flagConfig.defaultValue());
+                    BigDecimal defaultValue = toBigDecimal(flagConfig.defaultValue());
+                    log.warn("Flag {} evaluated using application default value (feature disabled), value={}", flagConfig.key(), defaultValue);
+                    return defaultValue;
                 }
                 return value;
             });
