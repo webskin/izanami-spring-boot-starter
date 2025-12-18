@@ -42,7 +42,7 @@ class IzanamiFeatureProviderTest {
         flagConfigService = mock(FlagConfigService.class);
         izanamiService = mock(IzanamiService.class);
         objectMapper = new ObjectMapper();
-        valueConverter = new ValueConverter(objectMapper);
+        valueConverter = new ValueConverter();
 
         // Setup fluent builder mock
         mockBuilder = mock(FeatureRequestBuilder.class);

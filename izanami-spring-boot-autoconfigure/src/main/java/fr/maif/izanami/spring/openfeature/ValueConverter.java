@@ -30,12 +30,6 @@ import java.util.Map;
 public final class ValueConverter {
     private static final Logger log = LoggerFactory.getLogger(ValueConverter.class);
 
-    private final ObjectMapper objectMapper;
-
-    public ValueConverter(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
-
     /**
      * Convert a Java object to an OpenFeature {@link Value}.
      * <p>

@@ -32,13 +32,12 @@ public class OpenFeatureAutoConfiguration {
     /**
      * Create the ValueConverter for converting Java objects to OpenFeature Values.
      *
-     * @param objectMapper Jackson ObjectMapper
      * @return the value converter
      */
     @Bean
     @ConditionalOnMissingBean
-    public ValueConverter valueConverter(ObjectMapper objectMapper) {
-        return new ValueConverter(objectMapper);
+    public ValueConverter valueConverter() {
+        return new ValueConverter();
     }
 
     /**
