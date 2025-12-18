@@ -37,38 +37,6 @@ public final class ValueConverter {
     }
 
     /**
-     * Convert an object to an OpenFeature {@link Value}, with fallback to caller default.
-     * <p>
-     * If the configured default is a JSON string, it will be parsed first.
-     *
-     * @param configuredDefault the configured default value (may be null)
-     * @param callerDefault     the caller-provided default to use if conversion fails
-     * @return the converted Value, never null
-     */
-    public Value toOpenFeatureValueOrNullSafe(@Nullable Object configuredDefault, @Nullable Value callerDefault) {
-        if (configuredDefault == null) {
-            return callerDefault != null ? callerDefault : new Value();
-        }
-        if (configuredDefault instanceof Value v) {
-            return v;
-        }
-        if (configuredDefault instanceof String s) {
-            try {
-                Object tree = objectMapper.readValue(s, Object.class);
-                return objectToValue(tree);
-            } catch (JsonProcessingException e) {
-                return new Value(s);
-            }
-        }
-        try {
-            return objectToValue(configuredDefault);
-        } catch (Exception e) {
-            log.debug("Failed to convert configured default to OpenFeature Value, falling back to caller default: {}", e.getMessage());
-            return callerDefault != null ? callerDefault : new Value();
-        }
-    }
-
-    /**
      * Convert a Java object to an OpenFeature {@link Value}.
      * <p>
      * Supported types:

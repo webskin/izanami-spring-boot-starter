@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.text.MessageFormat;
+import java.util.function.Function;
 
 /**
  * OpenFeature {@link FeatureProvider} backed by Izanami.
@@ -71,11 +72,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
     private static final String IZANAMI_CONTEXT_ATTRIBUTE = "context";
 
     private final IzanamiService izanamiService;
-    // TODO
-    private final ObjectMapper objectMapper;
     private final EvaluationDependencies evaluationDependencies;
-    // TODO
-    private final ValueConverter valueConverter;
 
     /**
      * Create a provider.
@@ -92,8 +89,6 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         ValueConverter valueConverter
     ) {
         this.izanamiService = izanamiService;
-        this.objectMapper = objectMapper;
-        this.valueConverter = valueConverter;
         this.evaluationDependencies = new EvaluationDependencies(flagConfigService, izanamiService, objectMapper, valueConverter);
     }
 
@@ -218,13 +213,13 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
                 .withContext(context);
         }
 
-        protected <V> ProviderEvaluation<T> buildProviderEvaluation(V value, ResultValueWithDetails<?> result, TypeConverter<V, T> converter) {
+        protected <V> ProviderEvaluation<T> buildProviderEvaluation(V value, ResultValueWithDetails<?> result, Function<V, T> converter) {
             String valueSource = result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE);
             String reason = result.metadata().get(FlagMetadataKeys.FLAG_EVALUATION_REASON);
             ImmutableMetadata metadata = computeImmutableMetadata(result);
             ErrorCode errorCode = mapValueSourceToErrorCode(reason, valueSource);
 
-            T convertedValue = converter.convert(value);
+            T convertedValue = converter.apply(value);
 
             if (errorCode != null) {
                 return buildErrorProviderEvaluation(
@@ -331,16 +326,11 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         private static ErrorCode mapValueSourceToErrorCode(String reason, String valueSource) {
             if (FlagValueSource.IZANAMI.name().equals(valueSource)) {
                 return null;
-            } else if (reason == "DISABLED") {
+            } else if ("DISABLED".equals(reason)) {
                 return null;
             }
             return ErrorCode.GENERAL;
         }
-    }
-
-    @FunctionalInterface
-    interface TypeConverter<V, T> {
-        T convert(V value);
     }
 
     static class BooleanEvaluationExecution extends EvaluationExecution<Boolean> {
@@ -357,7 +347,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         protected ProviderEvaluation<Boolean> evaluateViaIzanami() {
             try {
                 ResultValueWithDetails<Boolean> result = buildIzanamiRequest().booleanValueDetails().join();
-                return buildProviderEvaluation(result.value(), result, v -> v);
+                return buildProviderEvaluation(result.value(), result, Function.identity());
             } catch (Exception e) {
                 return handleEvaluationException(e);
             }
@@ -378,7 +368,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         protected ProviderEvaluation<String> evaluateViaIzanami() {
             try {
                 ResultValueWithDetails<String> result = buildIzanamiRequest().stringValueDetails().join();
-                return buildProviderEvaluation(result.value(), result, v -> v);
+                return buildProviderEvaluation(result.value(), result, Function.identity());
             } catch (Exception e) {
                 return handleEvaluationException(e);
             }
