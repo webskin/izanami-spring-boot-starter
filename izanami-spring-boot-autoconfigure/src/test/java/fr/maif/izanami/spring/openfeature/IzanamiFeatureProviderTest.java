@@ -678,7 +678,7 @@ class IzanamiFeatureProviderTest {
     class IzanamiErrorStrategyTests {
 
         @Test
-        void getBooleanEvaluation_izanamiError_returnsFallbackValue() {
+        void getBooleanEvaluation_izanamiError_returnsFallbackValueWithErrorReasonAndIzanamiErrorStrategySource() {
             FlagConfig config = testDefaultBooleanFlagConfig("bool-flag", "bool-flag", false);
             setupFlagConfig("bool-flag", config);
 
@@ -691,37 +691,7 @@ class IzanamiFeatureProviderTest {
             );
 
             assertThat(result.getValue()).isFalse();
-        }
-
-        @Test
-        void getBooleanEvaluation_izanamiError_reasonIsError() {
-            FlagConfig config = testDefaultBooleanFlagConfig("bool-flag", "bool-flag", false);
-            setupFlagConfig("bool-flag", config);
-
-            IzanamiResult.Error mockError = mock(IzanamiResult.Error.class);
-            when(mockError.booleanValue(BooleanCastStrategy.LAX)).thenReturn(false);
-            setupErrorEvaluation("bool-flag", mockError);
-
-            ProviderEvaluation<Boolean> result = provider.getBooleanEvaluation(
-                "bool-flag", true, emptyContext()
-            );
-
             assertThat(result.getReason()).isEqualTo(Reason.ERROR.name());
-        }
-
-        @Test
-        void getBooleanEvaluation_izanamiError_flagValueSourceIsIzanamiErrorStrategy() {
-            FlagConfig config = testDefaultBooleanFlagConfig("bool-flag", "bool-flag", false);
-            setupFlagConfig("bool-flag", config);
-
-            IzanamiResult.Error mockError = mock(IzanamiResult.Error.class);
-            when(mockError.booleanValue(BooleanCastStrategy.LAX)).thenReturn(false);
-            setupErrorEvaluation("bool-flag", mockError);
-
-            ProviderEvaluation<Boolean> result = provider.getBooleanEvaluation(
-                "bool-flag", true, emptyContext()
-            );
-
             assertThat(result.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                 .isEqualTo(FlagValueSource.IZANAMI_ERROR_STRATEGY.name());
         }
@@ -826,7 +796,7 @@ class IzanamiFeatureProviderTest {
     class ApplicationErrorStrategyTests {
 
         @Test
-        void getBooleanEvaluation_clientNotAvailable_returnsCallerDefault() {
+        void getBooleanEvaluation_clientNotAvailable_returnsCallerDefaultWithApplicationErrorStrategySource() {
             FlagConfig config = testDefaultBooleanFlagConfig("bool-flag", "bool-flag", false);
             setupFlagConfig("bool-flag", config);
 
@@ -840,21 +810,6 @@ class IzanamiFeatureProviderTest {
 
             assertThat(result.getValue()).isTrue();
             assertThat(result.getErrorCode()).isEqualTo(ErrorCode.GENERAL);
-        }
-
-        @Test
-        void getBooleanEvaluation_clientNotAvailable_flagValueSourceIsApplicationErrorStrategy() {
-            FlagConfig config = testDefaultBooleanFlagConfig("bool-flag", "bool-flag", false);
-            setupFlagConfig("bool-flag", config);
-
-            when(izanamiService.forFlagKey("bool-flag")).thenReturn(mockBuilder);
-            when(mockBuilder.booleanValueDetails())
-                .thenReturn(CompletableFuture.failedFuture(new IzanamiClientNotAvailableException()));
-
-            ProviderEvaluation<Boolean> result = provider.getBooleanEvaluation(
-                "bool-flag", true, emptyContext()
-            );
-
             assertThat(result.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                 .isEqualTo(FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
         }
@@ -963,7 +918,7 @@ class IzanamiFeatureProviderTest {
     class MetadataPopulationTests {
 
         @Test
-        void evaluation_success_populatesAllMetadata() {
+        void evaluation_success_populatesAllMetadataWithIzanamiSource() {
             FlagConfig config = testDefaultBooleanFlagConfig("bool-flag", "bool-flag", false);
             setupFlagConfig("bool-flag", config);
 
@@ -981,23 +936,7 @@ class IzanamiFeatureProviderTest {
             assertThat(metadata.getString(FlagMetadataKeys.FLAG_CONFIG_DESCRIPTION)).isNotNull();
             assertThat(metadata.getString(FlagMetadataKeys.FLAG_CONFIG_VALUE_TYPE)).isNotNull();
             assertThat(metadata.getString(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY)).isNotNull();
-            assertThat(metadata.getString(FlagMetadataKeys.FLAG_VALUE_SOURCE)).isNotNull();
-        }
-
-        @Test
-        void evaluation_success_flagValueSourceIsIzanami() {
-            FlagConfig config = testDefaultBooleanFlagConfig("bool-flag", "bool-flag", false);
-            setupFlagConfig("bool-flag", config);
-
-            IzanamiResult.Success mockSuccess = mock(IzanamiResult.Success.class);
-            when(mockSuccess.booleanValue(BooleanCastStrategy.LAX)).thenReturn(true);
-            setupSuccessfulEvaluation("bool-flag", mockSuccess);
-
-            ProviderEvaluation<Boolean> result = provider.getBooleanEvaluation(
-                "bool-flag", false, emptyContext()
-            );
-
-            assertThat(result.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+            assertThat(metadata.getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                 .isEqualTo(FlagValueSource.IZANAMI.name());
         }
     }
