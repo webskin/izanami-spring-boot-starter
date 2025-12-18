@@ -1,10 +1,6 @@
 package fr.maif.izanami.spring.integration;
 
-import dev.openfeature.sdk.FlagEvaluationDetails;
-import dev.openfeature.sdk.FlagValueType;
-import dev.openfeature.sdk.Reason;
-import dev.openfeature.sdk.Structure;
-import dev.openfeature.sdk.Value;
+import dev.openfeature.sdk.*;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
 import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
 import fr.maif.izanami.spring.openfeature.api.ExtendedOpenFeatureClient;

@@ -3,7 +3,6 @@ package fr.maif.izanami.spring.openfeature.internal;
 import dev.openfeature.sdk.FlagValueType;
 import fr.maif.izanami.spring.autoconfigure.DefaultValueMap;
 import fr.maif.izanami.spring.openfeature.ErrorStrategy;
-import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 
 import java.util.Comparator;

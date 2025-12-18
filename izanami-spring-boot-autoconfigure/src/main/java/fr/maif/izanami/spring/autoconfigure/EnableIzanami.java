@@ -2,11 +2,7 @@ package fr.maif.izanami.spring.autoconfigure;
 
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 
 /**
  * Optional explicit opt-in annotation for Izanami + OpenFeature auto-configuration.

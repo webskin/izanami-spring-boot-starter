@@ -1,10 +1,6 @@
 package fr.maif.izanami.spring.openfeature.api;
 
-import dev.openfeature.sdk.Client;
-import dev.openfeature.sdk.EvaluationContext;
-import dev.openfeature.sdk.FlagEvaluationDetails;
-import dev.openfeature.sdk.FlagEvaluationOptions;
-import dev.openfeature.sdk.Value;
+import dev.openfeature.sdk.*;
 
 /**
  * Extended OpenFeature client that auto-computes default values from flag configuration.

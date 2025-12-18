@@ -1,7 +1,6 @@
 package fr.maif.izanami.spring.service;
 
 import fr.maif.features.results.IzanamiResult;
-import fr.maif.izanami.spring.openfeature.FlagValueSource;
 
 import java.util.Map;
 
