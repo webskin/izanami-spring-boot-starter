@@ -12,26 +12,52 @@ import java.time.Duration;
  * configured OpenFeature flag defaults.
  */
 @ConfigurationProperties(prefix = "izanami")
-public record IzanamiProperties(
-    String baseUrl,
-    String apiPath,
-    String clientId,
-    String clientSecret,
-    Cache cache
-) {
-    /**
-     * Compact constructor setting sensible defaults.
-     */
-    public IzanamiProperties {
-        if (baseUrl == null) {
-            baseUrl = "http://localhost:9000";
-        }
-        if (apiPath == null || apiPath.isBlank()) {
-            apiPath = "/api";
-        }
-        if (cache == null) {
-            cache = new Cache(null, null, null);
-        }
+public class IzanamiProperties {
+
+    private String baseUrl = "http://localhost:9000";
+    private String apiPath = "/api";
+    private String clientId;
+    private String clientSecret;
+    private Cache cache = new Cache();
+
+    public String getBaseUrl() {
+        return baseUrl;
+    }
+
+    public void setBaseUrl(String baseUrl) {
+        this.baseUrl = baseUrl;
+    }
+
+    public String getApiPath() {
+        return apiPath;
+    }
+
+    public void setApiPath(String apiPath) {
+        this.apiPath = apiPath;
+    }
+
+    public String getClientId() {
+        return clientId;
+    }
+
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
+    }
+
+    public String getClientSecret() {
+        return clientSecret;
+    }
+
+    public void setClientSecret(String clientSecret) {
+        this.clientSecret = clientSecret;
+    }
+
+    public Cache getCache() {
+        return cache;
+    }
+
+    public void setCache(Cache cache) {
+        this.cache = cache;
     }
 
     /**
@@ -52,51 +78,59 @@ public record IzanamiProperties(
 
     /**
      * Cache configuration for the Izanami client.
-     *
-     * @param enabled         enables the client cache (defaults to {@code true})
-     * @param refreshInterval cache refresh interval when polling (defaults to 5 minutes)
-     * @param sse             Server-Sent Events configuration (defaults: enabled, keep-alive 25 seconds)
      */
-    public record Cache(
-        Boolean enabled,
-        Duration refreshInterval,
-        Sse sse
-    ) {
-        /**
-         * Compact constructor setting defaults compatible with the Izanami showcase.
-         */
-        public Cache {
-            if (enabled == null) {
-                enabled = true;
-            }
-            if (refreshInterval == null) {
-                refreshInterval = Duration.ofMinutes(5);
-            }
-            if (sse == null) {
-                sse = new Sse(null, null);
-            }
+    public static class Cache {
+
+        private Boolean enabled = true;
+        private Duration refreshInterval = Duration.ofMinutes(5);
+        private Sse sse = new Sse();
+
+        public Boolean getEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(Boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public Duration getRefreshInterval() {
+            return refreshInterval;
+        }
+
+        public void setRefreshInterval(Duration refreshInterval) {
+            this.refreshInterval = refreshInterval;
+        }
+
+        public Sse getSse() {
+            return sse;
+        }
+
+        public void setSse(Sse sse) {
+            this.sse = sse;
         }
 
         /**
          * Server-Sent Events configuration for receiving updates from Izanami.
-         *
-         * @param enabled           enables SSE (defaults to {@code true})
-         * @param keepAliveInterval keep-alive interval (defaults to 25 seconds)
          */
-        public record Sse(
-            Boolean enabled,
-            Duration keepAliveInterval
-        ) {
-            /**
-             * Compact constructor setting defaults compatible with the Izanami showcase.
-             */
-            public Sse {
-                if (enabled == null) {
-                    enabled = true;
-                }
-                if (keepAliveInterval == null) {
-                    keepAliveInterval = Duration.ofSeconds(25);
-                }
+        public static class Sse {
+
+            private Boolean enabled = true;
+            private Duration keepAliveInterval = Duration.ofSeconds(25);
+
+            public Boolean getEnabled() {
+                return enabled;
+            }
+
+            public void setEnabled(Boolean enabled) {
+                this.enabled = enabled;
+            }
+
+            public Duration getKeepAliveInterval() {
+                return keepAliveInterval;
+            }
+
+            public void setKeepAliveInterval(Duration keepAliveInterval) {
+                this.keepAliveInterval = keepAliveInterval;
             }
         }
     }

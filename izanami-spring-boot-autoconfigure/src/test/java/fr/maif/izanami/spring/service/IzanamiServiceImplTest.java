@@ -57,37 +57,38 @@ class IzanamiServiceImplTest {
     // =====================================================================
 
     private static IzanamiProperties validProperties() {
-        return new IzanamiProperties(
-            "http://localhost:9999",
-            "/api",
-            "test-client-id",
-            "test-client-secret",
-            new IzanamiProperties.Cache(
-                true,
-                Duration.ofMinutes(5),
-                new IzanamiProperties.Cache.Sse(false, Duration.ofSeconds(25))
-            )
-        );
+        IzanamiProperties props = new IzanamiProperties();
+        props.setBaseUrl("http://localhost:9999");
+        props.setApiPath("/api");
+        props.setClientId("test-client-id");
+        props.setClientSecret("test-client-secret");
+        IzanamiProperties.Cache cache = new IzanamiProperties.Cache();
+        cache.setEnabled(true);
+        cache.setRefreshInterval(Duration.ofMinutes(5));
+        IzanamiProperties.Cache.Sse sse = new IzanamiProperties.Cache.Sse();
+        sse.setEnabled(false);
+        sse.setKeepAliveInterval(Duration.ofSeconds(25));
+        cache.setSse(sse);
+        props.setCache(cache);
+        return props;
     }
 
     private static IzanamiProperties blankUrlProperties() {
-        return new IzanamiProperties(
-            "",
-            "/api",
-            "test-client-id",
-            "test-client-secret",
-            null
-        );
+        IzanamiProperties props = new IzanamiProperties();
+        props.setBaseUrl("");
+        props.setApiPath("/api");
+        props.setClientId("test-client-id");
+        props.setClientSecret("test-client-secret");
+        return props;
     }
 
     private static IzanamiProperties blankCredentialsProperties(String clientId, String clientSecret) {
-        return new IzanamiProperties(
-            "http://localhost:9999",
-            "/api",
-            clientId,
-            clientSecret,
-            null
-        );
+        IzanamiProperties props = new IzanamiProperties();
+        props.setBaseUrl("http://localhost:9999");
+        props.setApiPath("/api");
+        props.setClientId(clientId);
+        props.setClientSecret(clientSecret);
+        return props;
     }
 
     private static FlagConfig testDefaultBooleanFlagConfig(String key, String name, boolean defaultValue) {
@@ -168,15 +169,12 @@ class IzanamiServiceImplTest {
 
         @Test
         void afterPropertiesSet_withNullUrl_remainsInactive() {
-            IzanamiProperties props = new IzanamiProperties(
-                null, "/api", "client-id", "client-secret", null
-            );
-            // The compact constructor sets default baseUrl, but url() returns null if baseUrl is blank
-            // Actually, the compact constructor sets baseUrl = "http://localhost:9000" if null
-            // So we need to test with blank baseUrl instead
-            IzanamiProperties blankProps = new IzanamiProperties(
-                "   ", "/api", "client-id", "client-secret", null
-            );
+            // Default constructor sets baseUrl to default, so we test with blank baseUrl instead
+            IzanamiProperties blankProps = new IzanamiProperties();
+            blankProps.setBaseUrl("   ");
+            blankProps.setApiPath("/api");
+            blankProps.setClientId("client-id");
+            blankProps.setClientSecret("client-secret");
             IzanamiServiceImpl service = new IzanamiServiceImpl(
                 blankProps, flagConfigService, objectMapper, mockFactory
             );

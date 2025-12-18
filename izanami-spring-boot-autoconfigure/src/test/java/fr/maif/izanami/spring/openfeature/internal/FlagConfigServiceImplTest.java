@@ -57,11 +57,15 @@ class FlagConfigServiceImplTest {
     }
 
     private FlagConfigServiceImpl createService(RawFlagConfig... configs) {
-        return new FlagConfigServiceImpl(new FlagsProperties(Arrays.asList(configs)), errorStrategyFactory);
+        FlagsProperties props = new FlagsProperties();
+        props.setFlags(Arrays.asList(configs));
+        return new FlagConfigServiceImpl(props, errorStrategyFactory);
     }
 
     private FlagConfigServiceImpl createService(List<RawFlagConfig> configs) {
-        return new FlagConfigServiceImpl(new FlagsProperties(configs), errorStrategyFactory);
+        FlagsProperties props = new FlagsProperties();
+        props.setFlags(configs);
+        return new FlagConfigServiceImpl(props, errorStrategyFactory);
     }
 
     // ========== 1. Valid Configuration Tests ==========
@@ -525,8 +529,10 @@ class FlagConfigServiceImplTest {
 
     @Test
     void handlesNullFlagsPropertyGracefully() {
-        // FlagsProperties constructor handles null by returning empty list
-        FlagConfigServiceImpl service = new FlagConfigServiceImpl(new FlagsProperties(null), errorStrategyFactory);
+        // FlagsProperties setter handles null by returning empty list
+        FlagsProperties props = new FlagsProperties();
+        props.setFlags(null);
+        FlagConfigServiceImpl service = new FlagConfigServiceImpl(props, errorStrategyFactory);
 
         assertThat(service.getAllFlagConfigs()).isEmpty();
     }

@@ -125,7 +125,7 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
             log.info("Izanami URL is not configured (izanami.base-url / izanami.api-path); Izanami client will remain inactive");
             return;
         }
-        if (isBlank(properties.clientId()) || isBlank(properties.clientSecret())) {
+        if (isBlank(properties.getClientId()) || isBlank(properties.getClientSecret())) {
             log.info("Izanami credentials are not configured (izanami.client-id / izanami.client-secret); Izanami client will remain inactive");
             return;
         }
@@ -134,15 +134,15 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
 
         IzanamiConnectionInformation connectionInformation = IzanamiConnectionInformation.connectionInformation()
             .withUrl(url)
-            .withClientId(properties.clientId())
-            .withClientSecret(properties.clientSecret());
+            .withClientId(properties.getClientId())
+            .withClientSecret(properties.getClientSecret());
 
-        IzanamiProperties.Cache cacheProperties = properties.cache();
+        IzanamiProperties.Cache cacheProperties = properties.getCache();
         FeatureCacheConfiguration cacheConfiguration = FeatureCacheConfiguration.newBuilder()
-            .enabled(Boolean.TRUE.equals(cacheProperties.enabled()))
-            .withRefreshInterval(cacheProperties.refreshInterval())
-            .shouldUseServerSentEvent(Boolean.TRUE.equals(cacheProperties.sse().enabled()))
-            .withServerSentEventKeepAliveInterval(cacheProperties.sse().keepAliveInterval())
+            .enabled(Boolean.TRUE.equals(cacheProperties.getEnabled()))
+            .withRefreshInterval(cacheProperties.getRefreshInterval())
+            .shouldUseServerSentEvent(Boolean.TRUE.equals(cacheProperties.getSse().getEnabled()))
+            .withServerSentEventKeepAliveInterval(cacheProperties.getSse().getKeepAliveInterval())
             .build();
 
         FeatureClientErrorStrategy.DefaultValueStrategy defaultErrorStrategy =
