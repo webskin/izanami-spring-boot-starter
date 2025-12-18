@@ -333,16 +333,6 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
         }
 
         /**
-         * Retrieve the raw feature result asynchronously.
-         *
-         * @return a future containing an optional with the result if available
-         * @throws IzanamiClientNotAvailableException if the Izanami client is not available
-         */
-        public CompletableFuture<IzanamiResult.Result> featureResult() {
-            return service.evaluateFeatureResult(flagConfig, user, context);
-        }
-
-        /**
          * Retrieve the raw feature result with metadata asynchronously.
          *
          * @return a future containing an optional with the result and metadata if available
