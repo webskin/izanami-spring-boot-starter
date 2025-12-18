@@ -740,7 +740,7 @@ class IzanamiServiceIT extends BaseIzanamiIT {
                 assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                     .isEqualTo("IZANAMI");
                 assertThat(result.metadata().get(FlagMetadataKeys.FLAG_EVALUATION_REASON))
-                    .isEqualTo("UNKNOWN");
+                    .isEqualTo("ORIGIN_OR_CACHE");
             });
     }
 
@@ -765,7 +765,7 @@ class IzanamiServiceIT extends BaseIzanamiIT {
                 assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                     .isEqualTo("IZANAMI");
                 assertThat(result.metadata().get(FlagMetadataKeys.FLAG_EVALUATION_REASON))
-                    .isEqualTo("UNKNOWN");
+                    .isEqualTo("ORIGIN_OR_CACHE");
             });
     }
 
@@ -790,7 +790,7 @@ class IzanamiServiceIT extends BaseIzanamiIT {
                 assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                     .isEqualTo("IZANAMI");
                 assertThat(result.metadata().get(FlagMetadataKeys.FLAG_EVALUATION_REASON))
-                    .isEqualTo("UNKNOWN");
+                    .isEqualTo("ORIGIN_OR_CACHE");
             });
     }
 

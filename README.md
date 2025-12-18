@@ -228,7 +228,7 @@ ResultValueWithDetails<BigDecimal> numberResult = izanamiService.forFlagName("di
 
 | Value | Meaning |
 |-------|---------|
-| `UNKNOWN` | Feature is active, value from Izanami |
+| `ORIGIN_OR_CACHE` | Feature is active, value from Izanami |
 | `DISABLED` | Feature is disabled (boolean=false, or non-boolean using default) |
 | `ERROR` | Server error occurred |
 
@@ -259,7 +259,7 @@ EvaluationContext ctx = new ImmutableContext("user-123", attributes);
 FlagEvaluationDetails<Boolean> details = client.getBooleanDetails("turbo-mode", ctx);
 
 Boolean value = details.getValue();
-String reason = details.getReason();        // e.g., "DISABLED" for false, "UNKNOWN" for true
+String reason = details.getReason();        // e.g., "DISABLED", "ORIGIN_OR_CACHE"
 ErrorCode errorCode = details.getErrorCode(); // null on success
 String valueSource = details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE);
 ```

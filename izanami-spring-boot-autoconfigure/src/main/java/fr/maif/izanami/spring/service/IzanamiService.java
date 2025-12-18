@@ -2,10 +2,7 @@ package fr.maif.izanami.spring.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.openfeature.sdk.ErrorCode;
 import dev.openfeature.sdk.FlagValueType;
-import dev.openfeature.sdk.ImmutableMetadata;
-import dev.openfeature.sdk.Reason;
 import fr.maif.FeatureCacheConfiguration;
 import fr.maif.FeatureClientErrorStrategy;
 import fr.maif.IzanamiClient;
@@ -25,7 +22,6 @@ import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 
 import java.math.BigDecimal;
-import java.text.MessageFormat;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -396,10 +392,10 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
                 if (result instanceof IzanamiResult.Success) {
                     metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.IZANAMI.name());
                     // Boolean features: false means disabled
-                    reason = Boolean.FALSE.equals(value) ? "DISABLED" : "UNKNOWN";
+                    reason = Boolean.FALSE.equals(value) ? "DISABLED" : "ORIGIN_OR_CACHE";
                 } else {
-                    reason = "ERROR";
                     metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.IZANAMI_ERROR_STRATEGY.name());
+                    reason = "ERROR";
                 }
 
                 metadata.put(FlagMetadataKeys.FLAG_EVALUATION_REASON, reason);
@@ -434,7 +430,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
                         }
                     } else {
                         metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.IZANAMI.name());
-                        reason = "UNKNOWN";
+                        reason = "ORIGIN_OR_CACHE";
                     }
                 } else {
                     metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.IZANAMI_ERROR_STRATEGY.name());
@@ -478,7 +474,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
                         }
                     } else {
                         metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.IZANAMI.name());
-                        reason = "UNKNOWN";
+                        reason = "ORIGIN_OR_CACHE";
 
                     }
                 } else {

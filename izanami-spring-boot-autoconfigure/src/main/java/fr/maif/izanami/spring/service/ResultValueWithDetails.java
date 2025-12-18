@@ -22,7 +22,7 @@ import java.util.Map;
  *   <li>{@code FLAG_CONFIG_DEFAULT_VALUE} - the configured default value</li>
  *   <li>{@code FLAG_CONFIG_ERROR_STRATEGY} - the configured error strategy</li>
  *   <li>{@code FLAG_VALUE_SOURCE} - where the value originated (IZANAMI, IZANAMI_ERROR_STRATEGY, or APPLICATION_ERROR_STRATEGY)</li>
- *   <li>{@code FLAG_EVALUATION_REASON} - evaluation reason ("DISABLED", "UNKNOWN", or "ERROR")</li>
+ *   <li>{@code FLAG_EVALUATION_REASON} - evaluation reason ("DISABLED", "ORIGIN_OR_CACHE", or "ERROR")</li>
  * </ul>
  *
  * @param value    the typed evaluation result (may be null for disabled non-boolean features)

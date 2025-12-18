@@ -527,7 +527,6 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
 
                 // Disabled non-boolean features return the defaultValue when configured
                 assertThat(details.getValue()).isEqualTo("fallback");
-                // Reason is UNKNOWN since value is not null (defaultValue is applied)
                 assertThat(details.getReason()).isEqualTo(Reason.DISABLED.name());
                 assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                     .isEqualTo("IZANAMI");
@@ -553,7 +552,6 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
 
                 // Disabled non-boolean features return the defaultValue when configured
                 assertThat(details.getValue()).isEqualTo(999);
-                // Reason is UNKNOWN since value is not null (defaultValue is applied)
                 assertThat(details.getReason()).isEqualTo(Reason.DISABLED.name());
                 assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                     .isEqualTo("IZANAMI");
@@ -579,7 +577,6 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
 
                 // Disabled non-boolean features return the defaultValue when configured
                 assertThat(details.getValue()).isEqualTo(99.9);
-                // Reason is UNKNOWN since value is not null (defaultValue is applied)
                 assertThat(details.getReason()).isEqualTo(Reason.DISABLED.name());
                 assertThat(details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                     .isEqualTo("IZANAMI");

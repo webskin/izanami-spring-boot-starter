@@ -256,7 +256,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
                             extractorResult.getValue(),
                             metadata,
                             // May be CACHED, may be from ORIGIN
-                            Reason.UNKNOWN.name()
+                            "ORIGIN_OR_CACHE"
                         );
                     }
                 } else {

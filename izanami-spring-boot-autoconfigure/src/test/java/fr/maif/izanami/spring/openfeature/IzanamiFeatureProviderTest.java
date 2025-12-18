@@ -444,7 +444,6 @@ class IzanamiFeatureProviderTest {
             );
 
             assertThat(result.getValue()).isFalse();
-            // Boolean false is a valid value (not null), so reason is UNKNOWN
             assertThat(result.getReason()).isEqualTo(Reason.DISABLED.name());
         }
 
@@ -462,7 +461,7 @@ class IzanamiFeatureProviderTest {
             );
 
             assertThat(result.getValue()).isTrue();
-            assertThat(result.getReason()).isEqualTo(Reason.UNKNOWN.name());
+            assertThat(result.getReason()).isEqualTo("ORIGIN_OR_CACHE");
         }
 
         @Test
@@ -683,7 +682,6 @@ class IzanamiFeatureProviderTest {
             );
 
             assertThat(result.getValue()).isFalse();
-            // Boolean false is a valid value (not null), so reason is UNKNOWN
             assertThat(result.getReason()).isEqualTo(Reason.DISABLED.name());
             assertThat(result.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                 .isEqualTo(FlagValueSource.IZANAMI.name());
