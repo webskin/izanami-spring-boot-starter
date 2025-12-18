@@ -84,7 +84,7 @@ class IzanamiServiceIT extends BaseIzanamiIT {
                 waitForIzanami(context);
 
                 IzanamiService service = context.getBean(IzanamiService.class);
-                String value = service.forFlagKey(JSON_CONFIG_ID).featureResult().get().stringValue();
+                String value = service.forFlagKey(JSON_CONFIG_ID).stringValue().get();
 
                 assertThat(value).isEqualTo("""
                     {
