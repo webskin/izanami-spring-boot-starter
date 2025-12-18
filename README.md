@@ -264,6 +264,27 @@ ErrorCode errorCode = details.getErrorCode(); // null on success
 String valueSource = details.getFlagMetadata().getString(FlagMetadataKeys.FLAG_VALUE_SOURCE);
 ```
 
+### Direct IzanamiClient Access (Advanced)
+
+For advanced use cases requiring direct access to the underlying [Izanami Java client](https://github.com/MAIF/izanami-java-client), use `unwrapClient()`:
+
+```java
+import fr.maif.IzanamiClient;
+import fr.maif.izanami.spring.service.api.IzanamiService;
+
+@Autowired IzanamiService izanamiService;
+
+// Access the underlying client (returns Optional)
+Optional<IzanamiClient> client = izanamiService.unwrapClient();
+
+client.ifPresent(c -> {
+    // Use native IzanamiClient API directly
+    // See: https://github.com/MAIF/izanami-java-client
+});
+```
+
+> **Note**: The client may be absent if Izanami is not configured or failed to initialize. Always handle the `Optional` appropriately.
+
 ## Important: Error Strategy Limitations
 
 When using OpenFeature clients (`dev.openfeature.sdk.Client` or `fr.maif.izanami.spring.openfeature.api.ExtendedOpenFeatureClient`), only the `DEFAULT_VALUE` error strategy is fully supported.
