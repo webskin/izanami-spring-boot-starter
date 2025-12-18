@@ -602,7 +602,7 @@ class IzanamiServiceImplTest {
             assertThat(result).isEqualByComparingTo(new BigDecimal("999"));
         }
 
-        // Note: featureResultWithMetadata tests for inactive features are covered by integration tests
+        // Note: *WithDetails tests for inactive features are covered by integration tests
         // (IzanamiServiceIT) since mocking featureValues() is complex due to the FeatureResponse wrapper.
         // The key behavior tested here (defaultValue application) is covered by stringValue/numberValue tests.
     }
@@ -704,17 +704,14 @@ class IzanamiServiceImplTest {
     }
 
     // =====================================================================
-    // featureResultWithMetadata Tests
+    // ValueDetails Tests
     // =====================================================================
-    // Note: Tests that require mocking featureValues() are covered by integration tests
-    // (IzanamiServiceIT) as the response type from the izanami-client library is complex to mock.
-    // Unit tests here focus on error handling when the client is unavailable.
 
     @Nested
-    class FeatureResultWithMetadataTests {
+    class ValueDetailsTests {
 
         @Test
-        void featureResultWithMetadata_whenClientNull_andFailStrategy_returnsFailedFuture() {
+        void featureResultValueWithDetails_whenClientNull_andFailStrategy_returnsFailedFuture() {
             FlagConfig failConfig = new FlagConfig(
                 "uuid-fail",
                 "fail-flag",
@@ -732,14 +729,14 @@ class IzanamiServiceImplTest {
             );
             inactiveService.afterPropertiesSet();
 
-            CompletableFuture<ResultWithMetadata> future = inactiveService.forFlagKey("uuid-fail")
-                .featureResultWithMetadata();
+            CompletableFuture<ResultValueWithDetails<Boolean>> future = inactiveService.forFlagKey("uuid-fail")
+                .booleanValueDetails();
 
             assertThat(future).isCompletedExceptionally();
         }
 
         @Test
-        void featureResultWithMetadata_whenClientNull_andDefaultStrategy_returnsApplicationErrorStrategy() {
+        void featureResultValueWithDetails_whenClientNull_andDefaultStrategy_returnsApplicationErrorStrategy() {
             FlagConfig config = testDefaultBooleanFlagConfig("uuid-123", "my-flag", false);
             when(flagConfigService.getFlagConfigByKey("uuid-123")).thenReturn(Optional.of(config));
 
@@ -748,17 +745,16 @@ class IzanamiServiceImplTest {
             );
             inactiveService.afterPropertiesSet();
 
-            ResultWithMetadata result = inactiveService.forFlagKey("uuid-123")
-                .featureResultWithMetadata()
+            ResultValueWithDetails<Boolean> result = inactiveService.forFlagKey("uuid-123")
+                .booleanValueDetails()
                 .join();
 
             assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
-                .isEqualTo(FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
-            assertThat(result.result()).isInstanceOf(IzanamiResult.Error.class);
+                .isEqualTo(FlagValueSource.IZANAMI_ERROR_STRATEGY.name());
         }
 
         @Test
-        void featureResultWithMetadata_whenClientNull_includesMetadataKeys() {
+        void featureResultValueWithDetails_whenClientNull_includesMetadataKeys() {
             FlagConfig config = testDefaultBooleanFlagConfig("uuid-123", "my-flag", false);
             when(flagConfigService.getFlagConfigByKey("uuid-123")).thenReturn(Optional.of(config));
 
@@ -767,8 +763,8 @@ class IzanamiServiceImplTest {
             );
             inactiveService.afterPropertiesSet();
 
-            ResultWithMetadata result = inactiveService.forFlagKey("uuid-123")
-                .featureResultWithMetadata()
+            ResultValueWithDetails<Boolean> result = inactiveService.forFlagKey("uuid-123")
+                .booleanValueDetails()
                 .join();
 
             Map<String, String> metadata = result.metadata();
@@ -782,7 +778,7 @@ class IzanamiServiceImplTest {
         }
 
         @Test
-        void featureResultWithMetadata_whenClientNull_populatesMetadataValues() {
+        void featureResultValueWithDetails_whenClientNull_populatesMetadataValues() {
             FlagConfig detailedConfig = new FlagConfig(
                 "uuid-detailed",
                 "detailed-flag",
@@ -800,8 +796,8 @@ class IzanamiServiceImplTest {
             );
             inactiveService.afterPropertiesSet();
 
-            ResultWithMetadata result = inactiveService.forFlagKey("uuid-detailed")
-                .featureResultWithMetadata()
+            ResultValueWithDetails<String> result = inactiveService.forFlagKey("uuid-detailed")
+                .stringValueDetails()
                 .join();
 
             Map<String, String> metadata = result.metadata();
@@ -812,14 +808,6 @@ class IzanamiServiceImplTest {
             assertThat(metadata.get(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE)).isEqualTo("default-string-value");
             assertThat(metadata.get(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY)).isEqualTo("DEFAULT_VALUE");
         }
-    }
-
-    // =====================================================================
-    // ValueDetails Tests
-    // =====================================================================
-
-    @Nested
-    class ValueDetailsTests {
 
         @Test
         void booleanValueDetails_whenClientNull_andFailStrategy_returnsFailedFuture() {

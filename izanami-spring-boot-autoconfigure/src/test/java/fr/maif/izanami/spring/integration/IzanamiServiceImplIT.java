@@ -304,7 +304,7 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
 
 
     @Test
-    void evaluatesDoubleResultWithMetadataFromServer() {
+    void evaluatesDoubleResultValueWithDetailsFromServer() {
         contextRunner
             .withPropertyValues(withFlagConfig(
                 "openfeature.flags[0].key=" + DISCOUNT_RATE_ID,
@@ -326,7 +326,7 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
             });
     }
 
-    // ========== featureResultWithMetadata unavailable server fallback tests ==========
+    // ========== featureResultValueWithDetails unavailable server fallback tests ==========
 
     @Test
     void returnsBooleanDefaultWithMetadataWhenServerUnavailable() {
@@ -565,10 +565,10 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
             });
     }
 
-    // ========== Inactive (disabled) feature ResultWithMetadata tests ==========
+    // ========== Inactive (disabled) feature ResultValueWithDetails tests ==========
 
     @Test
-    void evaluatesInactiveBooleanResultWithMetadata() {
+    void evaluatesInactiveBooleanResultValueWithDetails() {
         contextRunner
             .withPropertyValues(withFlagConfig(
                 "openfeature.flags[0].key=" + INACTIVE_BOOL_ID,
@@ -593,7 +593,7 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     }
 
     @Test
-    void evaluatesInactiveStringResultWithMetadata() {
+    void evaluatesInactiveStringResultValueWithDetails() {
         contextRunner
             .withPropertyValues(withFlagConfig(
                 "openfeature.flags[0].key=" + INACTIVE_STRING_ID,
@@ -619,7 +619,7 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     }
 
     @Test
-    void evaluatesInactiveNumberResultWithMetadata() {
+    void evaluatesInactiveNumberResultValueWithDetails() {
         contextRunner
             .withPropertyValues(withFlagConfig(
                 "openfeature.flags[0].key=" + INACTIVE_NUMBER_ID,
