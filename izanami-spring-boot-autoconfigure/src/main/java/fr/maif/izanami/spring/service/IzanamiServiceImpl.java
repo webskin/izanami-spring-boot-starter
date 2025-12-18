@@ -467,7 +467,13 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
                 metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, outcome.source().name());
                 metadata.put(FlagMetadataKeys.FLAG_EVALUATION_REASON, outcome.reason());
 
-                log.debug("Evaluated flag {} = {} with details, reason={}", flagConfig.key(), outcome.value(), outcome.reason());
+                if (outcome.source() == FlagValueSource.APPLICATION_ERROR_STRATEGY) {
+                    log.warn("Flag {} evaluated using application default value (feature disabled), value={}", flagConfig.key(), outcome.value());
+                } else if (outcome.source() == FlagValueSource.IZANAMI_ERROR_STRATEGY) {
+                    log.warn("Flag {} evaluated using Izanami error strategy (evaluation error), value={}", flagConfig.key(), outcome.value());
+                } else {
+                    log.debug("Evaluated flag {} = {} with details, reason={}", flagConfig.key(), outcome.value(), outcome.reason());
+                }
                 return new ResultValueWithDetails<>(outcome.value(), unmodifiableMap(metadata));
             });
         }
@@ -557,6 +563,7 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
                 // Disabled features return null - apply default if configured
                 if (value == null && flagConfig.defaultValue() != null
                         && flagConfig.errorStrategy() == ErrorStrategy.DEFAULT_VALUE) {
+                    // TODO CLAUDE add warn log for using disabled feature
                     return flagConfig.defaultValue().toString();
                 }
                 return value;
@@ -569,6 +576,7 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
                 // Disabled features return null - apply default if configured
                 if (value == null && flagConfig.defaultValue() != null
                         && flagConfig.errorStrategy() == ErrorStrategy.DEFAULT_VALUE) {
+                    // TODO CLAUDE add warn log for using disabled feature 
                     return toBigDecimal(flagConfig.defaultValue());
                 }
                 return value;
