@@ -4,8 +4,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.openfeature.sdk.*;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
-import fr.maif.izanami.spring.service.IzanamiService;
-import fr.maif.izanami.spring.service.ResultValueWithDetails;
+import fr.maif.izanami.spring.service.IzanamiServiceImpl;
+import fr.maif.izanami.spring.service.api.FeatureRequestBuilder;
+import fr.maif.izanami.spring.service.api.IzanamiService;
+import fr.maif.izanami.spring.service.api.ResultValueWithDetails;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,8 +71,10 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
     private static final String IZANAMI_CONTEXT_ATTRIBUTE = "context";
 
     private final IzanamiService izanamiService;
+    // TODO
     private final ObjectMapper objectMapper;
     private final EvaluationDependencies evaluationDependencies;
+    // TODO
     private final ValueConverter valueConverter;
 
     /**
@@ -202,7 +206,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
             return evaluateViaIzanami();
         }
 
-        protected IzanamiService.FeatureRequestBuilder buildIzanamiRequest() {
+        protected FeatureRequestBuilder buildIzanamiRequest() {
             Value contextValue = evaluationContext.getValue(IZANAMI_CONTEXT_ATTRIBUTE);
             String context = contextValue != null ? contextValue.asString() : null;
             if (log.isTraceEnabled()) {
@@ -286,7 +290,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         }
 
         private ImmutableMetadata applicationErrorMetadata(FlagConfig flagConfig) {
-            String defaultValueString = IzanamiService.stringifyDefaultValue(deps.objectMapper(), flagConfig);
+            String defaultValueString = IzanamiServiceImpl.stringifyDefaultValue(deps.objectMapper(), flagConfig);
             return ImmutableMetadata.builder()
                 .addString(FlagMetadataKeys.FLAG_CONFIG_KEY, flagConfig.key())
                 .addString(FlagMetadataKeys.FLAG_CONFIG_NAME, flagConfig.name())

@@ -1,4 +1,6 @@
-package fr.maif.izanami.spring.service;
+package fr.maif.izanami.spring.service.api;
+
+import fr.maif.izanami.spring.service.IzanamiServiceImpl;
 
 import java.util.Map;
 
@@ -6,7 +8,7 @@ import java.util.Map;
  * Result wrapper that includes both the extracted typed value and metadata about the evaluation.
  * <p>
  * This record is returned by the {@code *ValueDetails()} methods in
- * {@link IzanamiService.FeatureRequestBuilder} and provides:
+ * {@link IzanamiServiceImpl.FeatureRequestBuilder} and provides:
  * <ul>
  *   <li>The typed value extracted from the Izanami result</li>
  *   <li>Metadata about the flag configuration and evaluation source</li>
@@ -28,9 +30,9 @@ import java.util.Map;
  * @param value    the typed evaluation result (may be null for disabled non-boolean features)
  * @param metadata metadata about the flag configuration and evaluation source
  * @param <T>      the value type (Boolean, String, or BigDecimal)
- * @see IzanamiService.FeatureRequestBuilder#booleanValueDetails()
- * @see IzanamiService.FeatureRequestBuilder#stringValueDetails()
- * @see IzanamiService.FeatureRequestBuilder#numberValueDetails()
+ * @see IzanamiServiceImpl.FeatureRequestBuilder#booleanValueDetails()
+ * @see IzanamiServiceImpl.FeatureRequestBuilder#stringValueDetails()
+ * @see IzanamiServiceImpl.FeatureRequestBuilder#numberValueDetails()
  */
 public record ResultValueWithDetails<T>(
     T value,

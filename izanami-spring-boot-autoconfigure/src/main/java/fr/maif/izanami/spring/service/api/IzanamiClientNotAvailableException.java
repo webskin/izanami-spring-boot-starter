@@ -1,4 +1,4 @@
-package fr.maif.izanami.spring.service;
+package fr.maif.izanami.spring.service.api;
 
 /**
  * Exception thrown when the Izanami client is not available.

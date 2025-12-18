@@ -1,6 +1,6 @@
 package fr.maif.izanami.spring.actuate;
 
-import fr.maif.izanami.spring.service.IzanamiService;
+import fr.maif.izanami.spring.service.api.IzanamiService;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.Status;

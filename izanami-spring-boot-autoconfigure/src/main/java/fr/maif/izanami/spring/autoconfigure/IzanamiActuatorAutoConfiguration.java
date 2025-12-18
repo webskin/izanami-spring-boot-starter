@@ -1,7 +1,7 @@
 package fr.maif.izanami.spring.autoconfigure;
 
 import fr.maif.izanami.spring.actuate.IzanamiHealthIndicator;
-import fr.maif.izanami.spring.service.IzanamiService;
+import fr.maif.izanami.spring.service.api.IzanamiService;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;

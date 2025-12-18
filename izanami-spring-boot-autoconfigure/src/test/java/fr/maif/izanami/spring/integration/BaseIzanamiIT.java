@@ -2,7 +2,7 @@ package fr.maif.izanami.spring.integration;
 
 import fr.maif.izanami.spring.autoconfigure.IzanamiAutoConfiguration;
 import fr.maif.izanami.spring.autoconfigure.OpenFeatureAutoConfiguration;
-import fr.maif.izanami.spring.service.IzanamiService;
+import fr.maif.izanami.spring.service.api.IzanamiService;
 import org.junit.jupiter.api.BeforeAll;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.assertj.AssertableApplicationContext;

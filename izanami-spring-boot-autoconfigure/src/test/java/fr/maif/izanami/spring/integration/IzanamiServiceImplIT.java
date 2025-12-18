@@ -1,12 +1,11 @@
 package fr.maif.izanami.spring.integration;
 
 import dev.openfeature.sdk.FlagValueType;
-import fr.maif.features.values.BooleanCastStrategy;
 import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
+import fr.maif.izanami.spring.openfeature.FlagValueSource;
 import fr.maif.izanami.spring.openfeature.api.IzanamiErrorCallback;
-import fr.maif.izanami.spring.service.IzanamiService;
-import fr.maif.izanami.spring.service.ResultValueWithDetails;
-import fr.maif.izanami.spring.service.ResultWithMetadata;
+import fr.maif.izanami.spring.service.api.IzanamiService;
+import fr.maif.izanami.spring.service.api.ResultValueWithDetails;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.context.annotation.Bean;
@@ -23,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * Integration tests for {@link IzanamiService} running against a real Izanami server.
  */
 @EnabledIfEnvironmentVariable(named = "IZANAMI_INTEGRATION_TEST", matches = "true")
-class IzanamiServiceIT extends BaseIzanamiIT {
+class IzanamiServiceImplIT extends BaseIzanamiIT {
 
     // ========== By Key integration tests ==========
 
@@ -303,76 +302,6 @@ class IzanamiServiceIT extends BaseIzanamiIT {
             });
     }
 
-    // ========== featureResultWithMetadata integration tests ==========
-
-    @Test
-    void evaluatesBooleanResultWithMetadataFromServer() {
-        contextRunner
-            .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + TURBO_MODE_ID,
-                "openfeature.flags[0].name=turbo-mode",
-                "openfeature.flags[0].description=Enable turbo mode",
-                "openfeature.flags[0].valueType=boolean",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=false"
-            ))
-            .run(context -> {
-                waitForIzanami(context);
-
-                IzanamiService service = context.getBean(IzanamiService.class);
-                ResultWithMetadata result = service.forFlagKey(TURBO_MODE_ID).featureResultWithMetadata().join();
-
-                assertThat(result.result().booleanValue(BooleanCastStrategy.LAX)).isTrue();
-                assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
-                    .isEqualTo("IZANAMI");
-            });
-    }
-
-    @Test
-    void evaluatesStringResultWithMetadataFromServer() {
-        contextRunner
-            .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
-                "openfeature.flags[0].name=secret-codename",
-                "openfeature.flags[0].description=The secret codename",
-                "openfeature.flags[0].valueType=string",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=classified"
-            ))
-            .run(context -> {
-                waitForIzanami(context);
-
-                IzanamiService service = context.getBean(IzanamiService.class);
-                ResultWithMetadata result = service.forFlagKey(SECRET_CODENAME_ID).featureResultWithMetadata().join();
-
-                assertThat(result.result().stringValue()).isEqualTo("Operation Thunderbolt");
-                assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
-                    .isEqualTo("IZANAMI");
-            });
-    }
-
-    @Test
-    void evaluatesIntegerResultWithMetadataFromServer() {
-        contextRunner
-            .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + MAX_POWER_LEVEL_ID,
-                "openfeature.flags[0].name=max-power-level",
-                "openfeature.flags[0].description=Maximum power level",
-                "openfeature.flags[0].valueType=integer",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=100"
-            ))
-            .run(context -> {
-                waitForIzanami(context);
-
-                IzanamiService service = context.getBean(IzanamiService.class);
-                ResultWithMetadata result = service.forFlagKey(MAX_POWER_LEVEL_ID).featureResultWithMetadata().join();
-
-                assertThat(result.result().numberValue().intValue()).isEqualTo(9001);
-                assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
-                    .isEqualTo("IZANAMI");
-            });
-    }
 
     @Test
     void evaluatesDoubleResultWithMetadataFromServer() {
@@ -389,9 +318,9 @@ class IzanamiServiceIT extends BaseIzanamiIT {
                 waitForIzanami(context);
 
                 IzanamiService service = context.getBean(IzanamiService.class);
-                ResultWithMetadata result = service.forFlagKey(DISCOUNT_RATE_ID).featureResultWithMetadata().join();
+                ResultValueWithDetails<BigDecimal> result = service.forFlagKey(DISCOUNT_RATE_ID).numberValueDetails().join();
 
-                assertThat(result.result().numberValue().doubleValue()).isEqualTo(0.15);
+                assertThat(result.value().doubleValue()).isEqualTo(0.15);
                 assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                     .isEqualTo("IZANAMI");
             });
@@ -412,9 +341,9 @@ class IzanamiServiceIT extends BaseIzanamiIT {
             ))
             .run(context -> {
                 IzanamiService service = context.getBean(IzanamiService.class);
-                ResultWithMetadata result = service.forFlagKey(TURBO_MODE_ID).featureResultWithMetadata().join();
+                ResultValueWithDetails<Boolean> result = service.forFlagKey(TURBO_MODE_ID).booleanValueDetails().join();
 
-                assertThat(result.result().booleanValue(BooleanCastStrategy.LAX)).isFalse();
+                assertThat(result.value()).isFalse();
                 assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                     .isEqualTo("IZANAMI_ERROR_STRATEGY");
             });
@@ -433,9 +362,9 @@ class IzanamiServiceIT extends BaseIzanamiIT {
             ))
             .run(context -> {
                 IzanamiService service = context.getBean(IzanamiService.class);
-                ResultWithMetadata result = service.forFlagKey(SECRET_CODENAME_ID).featureResultWithMetadata().join();
+                ResultValueWithDetails<String> result = service.forFlagKey(SECRET_CODENAME_ID).stringValueDetails().join();
 
-                assertThat(result.result().stringValue()).isEqualTo("classified");
+                assertThat(result.value()).isEqualTo("classified");
                 assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                     .isEqualTo("IZANAMI_ERROR_STRATEGY");
             });
@@ -454,9 +383,9 @@ class IzanamiServiceIT extends BaseIzanamiIT {
             ))
             .run(context -> {
                 IzanamiService service = context.getBean(IzanamiService.class);
-                ResultWithMetadata result = service.forFlagKey(MAX_POWER_LEVEL_ID).featureResultWithMetadata().join();
+                ResultValueWithDetails<BigDecimal> result = service.forFlagKey(MAX_POWER_LEVEL_ID).numberValueDetails().join();
 
-                assertThat(result.result().numberValue().intValue()).isEqualTo(100);
+                assertThat(result.value().intValue()).isEqualTo(100);
                 assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                     .isEqualTo("IZANAMI_ERROR_STRATEGY");
             });
@@ -475,9 +404,9 @@ class IzanamiServiceIT extends BaseIzanamiIT {
             ))
             .run(context -> {
                 IzanamiService service = context.getBean(IzanamiService.class);
-                ResultWithMetadata result = service.forFlagKey(DISCOUNT_RATE_ID).featureResultWithMetadata().join();
+                ResultValueWithDetails<BigDecimal> result = service.forFlagKey(DISCOUNT_RATE_ID).numberValueDetails().join();
 
-                assertThat(result.result().numberValue().doubleValue()).isEqualTo(0.0);
+                assertThat(result.value().doubleValue()).isEqualTo(0.0);
                 assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                     .isEqualTo("IZANAMI_ERROR_STRATEGY");
             });
@@ -502,9 +431,9 @@ class IzanamiServiceIT extends BaseIzanamiIT {
                 waitForIzanami(context);
 
                 IzanamiService service = context.getBean(IzanamiService.class);
-                ResultWithMetadata result = service.forFlagKey(NON_EXISTENT_FLAG_ID).featureResultWithMetadata().join();
+                ResultValueWithDetails<Boolean> result = service.forFlagKey(NON_EXISTENT_FLAG_ID).booleanValueDetails().join();
 
-                assertThat(result.result().booleanValue(BooleanCastStrategy.LAX)).isTrue();
+                assertThat(result.value()).isTrue();
                 assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                     .isEqualTo("IZANAMI_ERROR_STRATEGY");
             });
@@ -653,10 +582,10 @@ class IzanamiServiceIT extends BaseIzanamiIT {
                 waitForIzanami(context);
 
                 IzanamiService service = context.getBean(IzanamiService.class);
-                ResultWithMetadata result = service.forFlagKey(INACTIVE_BOOL_ID).featureResultWithMetadata().join();
+                ResultValueWithDetails<Boolean> result = service.forFlagKey(INACTIVE_BOOL_ID).booleanValueDetails().join();
 
                 // Disabled boolean features evaluate to false
-                assertThat(result.result().booleanValue(BooleanCastStrategy.LAX)).isFalse();
+                assertThat(result.value()).isFalse();
                 // Source is IZANAMI because the result is a Success (not an Error)
                 assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                     .isEqualTo("IZANAMI");
@@ -678,15 +607,14 @@ class IzanamiServiceIT extends BaseIzanamiIT {
                 waitForIzanami(context);
 
                 IzanamiService service = context.getBean(IzanamiService.class);
-                ResultWithMetadata result = service.forFlagKey(INACTIVE_STRING_ID).featureResultWithMetadata().join();
+                ResultValueWithDetails<String> result = service.forFlagKey(INACTIVE_STRING_ID).stringValueDetails().join();
 
                 // Raw result returns null for disabled non-boolean features
                 // (defaultValue is applied only in stringValue() fluent API, not in raw result)
-                // TODO should not be null
-                assertThat(result.result().stringValue()).isNull();
+                assertThat(result.value()).isEqualTo("fallback");
                 // Source is IZANAMI because the result is a Success(NullValue)
                 assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
-                    .isEqualTo("IZANAMI");
+                    .isEqualTo(FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
             });
     }
 
@@ -705,15 +633,14 @@ class IzanamiServiceIT extends BaseIzanamiIT {
                 waitForIzanami(context);
 
                 IzanamiService service = context.getBean(IzanamiService.class);
-                ResultWithMetadata result = service.forFlagKey(INACTIVE_NUMBER_ID).featureResultWithMetadata().join();
+                ResultValueWithDetails<BigDecimal> result = service.forFlagKey(INACTIVE_NUMBER_ID).numberValueDetails().join();
 
                 // Raw result returns null for disabled non-boolean features
                 // (defaultValue is applied only in numberValue() fluent API, not in raw result)
-                // TODO should not be null
-                assertThat(result.result().numberValue()).isNull();
+                assertThat(result.value()).isEqualTo(new BigDecimal("999"));
                 // Source is IZANAMI because the result is a Success(NullValue)
                 assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
-                    .isEqualTo("IZANAMI");
+                    .isEqualTo(FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
             });
     }
 

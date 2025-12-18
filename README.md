@@ -126,7 +126,7 @@ openfeature:
 ### Simple Usage with IzanamiService (Fluent API)
 
 ```java
-import fr.maif.izanami.spring.service.IzanamiService;
+import fr.maif.izanami.spring.service.api.IzanamiService;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @Autowired IzanamiService izanamiService;
@@ -183,8 +183,8 @@ Boolean premium = client.getBooleanValueByName("turbo-mode", fullCtx);
 Use `*ValueDetails()` methods to get both the typed value and evaluation metadata:
 
 ```java
-import fr.maif.izanami.spring.service.IzanamiService;
-import fr.maif.izanami.spring.service.ResultValueWithDetails;
+import fr.maif.izanami.spring.service.api.IzanamiService;
+import fr.maif.izanami.spring.service.api.ResultValueWithDetails;
 import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
 
 // Boolean with details
@@ -344,7 +344,7 @@ management:
 If you need flags immediately at application startup (e.g., in `@PostConstruct` or `ApplicationRunner`), wait for preloading to complete:
 
 ```java
-import fr.maif.izanami.spring.service.IzanamiService;
+import fr.maif.izanami.spring.service.api.IzanamiService;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;

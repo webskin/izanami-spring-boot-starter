@@ -7,9 +7,10 @@ import fr.maif.IzanamiClient;
 import fr.maif.features.results.IzanamiResult;
 import fr.maif.features.values.BooleanCastStrategy;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
-import fr.maif.izanami.spring.service.IzanamiClientNotAvailableException;
-import fr.maif.izanami.spring.service.IzanamiService;
-import fr.maif.izanami.spring.service.ResultValueWithDetails;
+import fr.maif.izanami.spring.service.api.FeatureRequestBuilder;
+import fr.maif.izanami.spring.service.api.IzanamiClientNotAvailableException;
+import fr.maif.izanami.spring.service.api.IzanamiService;
+import fr.maif.izanami.spring.service.api.ResultValueWithDetails;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -34,7 +35,7 @@ class IzanamiFeatureProviderTest {
     private IzanamiFeatureProvider provider;
 
     // Mock for fluent builder
-    private IzanamiService.FeatureRequestBuilder mockBuilder;
+    private FeatureRequestBuilder mockBuilder;
 
     @BeforeEach
     void setUp() {
@@ -44,7 +45,7 @@ class IzanamiFeatureProviderTest {
         valueConverter = new ValueConverter(objectMapper);
 
         // Setup fluent builder mock
-        mockBuilder = mock(IzanamiService.FeatureRequestBuilder.class);
+        mockBuilder = mock(FeatureRequestBuilder.class);
         when(mockBuilder.withUser(any())).thenReturn(mockBuilder);
         when(mockBuilder.withContext(any())).thenReturn(mockBuilder);
 
@@ -830,7 +831,7 @@ class IzanamiFeatureProviderTest {
             setupFlagConfig("bool-flag", config);
 
             when(izanamiService.forFlagKey("bool-flag")).thenReturn(mockBuilder);
-            when(mockBuilder.featureResultWithMetadata())
+            when(mockBuilder.booleanValueDetails())
                 .thenReturn(CompletableFuture.failedFuture(new IzanamiClientNotAvailableException()));
 
             ProviderEvaluation<Boolean> result = provider.getBooleanEvaluation(
@@ -847,7 +848,7 @@ class IzanamiFeatureProviderTest {
             setupFlagConfig("bool-flag", config);
 
             when(izanamiService.forFlagKey("bool-flag")).thenReturn(mockBuilder);
-            when(mockBuilder.featureResultWithMetadata())
+            when(mockBuilder.booleanValueDetails())
                 .thenReturn(CompletableFuture.failedFuture(new IzanamiClientNotAvailableException()));
 
             ProviderEvaluation<Boolean> result = provider.getBooleanEvaluation(

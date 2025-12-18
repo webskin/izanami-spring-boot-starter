@@ -10,7 +10,7 @@ import fr.maif.izanami.spring.openfeature.api.ExtendedOpenFeatureClient;
 import fr.maif.izanami.spring.openfeature.api.ExtendedOpenFeatureClientFactory;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
 import fr.maif.izanami.spring.openfeature.internal.ExtendedOpenFeatureClientFactoryImpl;
-import fr.maif.izanami.spring.service.IzanamiService;
+import fr.maif.izanami.spring.service.api.IzanamiService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;

@@ -15,6 +15,9 @@ import fr.maif.izanami.spring.openfeature.FlagConfig;
 import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
 import fr.maif.izanami.spring.openfeature.FlagValueSource;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
+import fr.maif.izanami.spring.service.api.FlagNotFoundException;
+import fr.maif.izanami.spring.service.api.IzanamiClientNotAvailableException;
+import fr.maif.izanami.spring.service.api.ResultValueWithDetails;
 import fr.maif.requests.FeatureRequest;
 import fr.maif.requests.IzanamiConnectionInformation;
 import fr.maif.requests.SingleFeatureRequest;
@@ -48,8 +51,8 @@ import static java.util.Collections.unmodifiableMap;
  * The underlying {@link IzanamiClient} is intentionally not exposed as a Spring bean; for advanced use-cases,
  * {@link #unwrapClient()} provides an explicit escape hatch.
  */
-public final class IzanamiService implements InitializingBean, DisposableBean {
-    private static final Logger log = LoggerFactory.getLogger(IzanamiService.class);
+public final class IzanamiServiceImpl implements InitializingBean, DisposableBean, fr.maif.izanami.spring.service.api.IzanamiService {
+    private static final Logger log = LoggerFactory.getLogger(IzanamiServiceImpl.class);
 
     private final IzanamiProperties properties;
     private final FlagConfigService flagConfigService;
@@ -67,15 +70,15 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
      * @param flagConfigService flag configuration service providing IDs to preload
      * @param objectMapper      Jackson ObjectMapper for JSON serialization
      */
-    public IzanamiService(IzanamiProperties properties, FlagConfigService flagConfigService, ObjectMapper objectMapper) {
+    public IzanamiServiceImpl(IzanamiProperties properties, FlagConfigService flagConfigService, ObjectMapper objectMapper) {
         this(properties, flagConfigService, objectMapper, IzanamiClientFactory.DEFAULT);
     }
 
     /**
      * Package-private constructor for testing with a custom client factory.
      */
-    IzanamiService(IzanamiProperties properties, FlagConfigService flagConfigService,
-                   ObjectMapper objectMapper, IzanamiClientFactory clientFactory) {
+    IzanamiServiceImpl(IzanamiProperties properties, FlagConfigService flagConfigService,
+                       ObjectMapper objectMapper, IzanamiClientFactory clientFactory) {
         this.properties = properties;
         this.flagConfigService = flagConfigService;
         this.objectMapper = objectMapper;
@@ -172,6 +175,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
      *
      * @return the configured {@link IzanamiClient} when available
      */
+    @Override
     public Optional<IzanamiClient> unwrapClient() {
         return Optional.ofNullable(clientRef.get());
     }
@@ -179,6 +183,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
     /**
      * @return a future which completes when the initial preload has finished (successfully or not).
      */
+    @Override
     public CompletableFuture<Void> whenLoaded() {
         return loadedRef.get();
     }
@@ -188,6 +193,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
      *
      * @return {@code true} if connected and preloaded, {@code false} otherwise
      */
+    @Override
     public boolean isConnected() {
         return connected;
     }
@@ -211,6 +217,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
      * @return a builder for configuring and executing the feature request
      * @throws FlagNotFoundException if the flag key is not found in configuration
      */
+    @Override
     public FeatureRequestBuilder forFlagKey(String flagKey) {
         log.debug("Building feature request for flag key: {}", flagKey);
         FlagConfig flagConfig = flagConfigService
@@ -234,6 +241,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
      * @return a builder for configuring and executing the feature request
      * @throws FlagNotFoundException if the flag name is not found in configuration
      */
+    @Override
     public FeatureRequestBuilder forFlagName(String flagName) {
         log.debug("Building feature request for flag name: {}", flagName);
         FlagConfig flagConfig = flagConfigService
@@ -251,13 +259,13 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
      * <p>
      * Use {@link #forFlagKey(String)} or {@link #forFlagName(String)} to obtain an instance.
      */
-    public static final class FeatureRequestBuilder {
-        private final IzanamiService service;
+    public static final class FeatureRequestBuilder implements fr.maif.izanami.spring.service.api.FeatureRequestBuilder {
+        private final IzanamiServiceImpl service;
         private final FlagConfig flagConfig;
         private String user;
         private String context;
 
-        private FeatureRequestBuilder(IzanamiService service, FlagConfig flagConfig) {
+        private FeatureRequestBuilder(IzanamiServiceImpl service, FlagConfig flagConfig) {
             this.service = service;
             this.flagConfig = flagConfig;
         }
@@ -268,6 +276,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
          * @param user the user identifier
          * @return this builder for chaining
          */
+        @Override
         public FeatureRequestBuilder withUser(@Nullable String user) {
             this.user = user;
             return this;
@@ -279,6 +288,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
          * @param context the evaluation context
          * @return this builder for chaining
          */
+        @Override
         public FeatureRequestBuilder withContext(@Nullable String context) {
             this.context = context;
             return this;
@@ -290,6 +300,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
          * @return a future containing the boolean value
          * @throws IzanamiClientNotAvailableException if the Izanami client is not available
          */
+        @Override
         public CompletableFuture<Boolean> booleanValue() {
             log.debug("Evaluating flag {} as boolean", flagConfig.key());
             return service.evaluateBoolean(buildRequest())
@@ -306,6 +317,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
          * @return a future containing the string value
          * @throws IzanamiClientNotAvailableException if the Izanami client is not available
          */
+        @Override
         public CompletableFuture<String> stringValue() {
             log.debug("Evaluating flag {} as string", flagConfig.key());
             return service.evaluateString(buildRequest(), flagConfig)
@@ -322,6 +334,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
          * @return a future containing the number value as BigDecimal
          * @throws IzanamiClientNotAvailableException if the Izanami client is not available
          */
+        @Override
         public CompletableFuture<BigDecimal> numberValue() {
             log.debug("Evaluating flag {} as number", flagConfig.key());
             return service.evaluateNumber(buildRequest(), flagConfig)
@@ -374,6 +387,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
          * @return a future containing the boolean value with evaluation metadata
          * @throws IzanamiClientNotAvailableException if the Izanami client is not available
          */
+        @Override
         public CompletableFuture<ResultValueWithDetails<Boolean>> booleanValueDetails() {
             log.debug("Evaluating flag {} as boolean with details", flagConfig.key());
             return featureResultWithMetadata().thenApply(resultWithMetadata -> {
@@ -404,6 +418,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
          * @return a future containing the string value with evaluation metadata
          * @throws IzanamiClientNotAvailableException if the Izanami client is not available
          */
+        @Override
         public CompletableFuture<ResultValueWithDetails<String>> stringValueDetails() {
             log.debug("Evaluating flag {} as string with details", flagConfig.key());
             return featureResultWithMetadata().thenApply(resultWithMetadata -> {
@@ -443,6 +458,7 @@ public final class IzanamiService implements InitializingBean, DisposableBean {
          * @return a future containing the number value as BigDecimal with evaluation metadata
          * @throws IzanamiClientNotAvailableException if the Izanami client is not available
          */
+        @Override
         public CompletableFuture<ResultValueWithDetails<BigDecimal>> numberValueDetails() {
             log.debug("Evaluating flag {} as number with details", flagConfig.key());
             return featureResultWithMetadata().thenApply(resultWithMetadata -> {

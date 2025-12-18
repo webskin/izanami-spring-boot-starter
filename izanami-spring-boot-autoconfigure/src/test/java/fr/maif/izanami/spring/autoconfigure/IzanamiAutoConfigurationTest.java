@@ -10,7 +10,7 @@ import fr.maif.izanami.spring.openfeature.api.ErrorStrategyFactory;
 import fr.maif.izanami.spring.openfeature.api.ExtendedOpenFeatureClient;
 import fr.maif.izanami.spring.openfeature.api.ExtendedOpenFeatureClientFactory;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
-import fr.maif.izanami.spring.service.IzanamiService;
+import fr.maif.izanami.spring.service.api.IzanamiService;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;

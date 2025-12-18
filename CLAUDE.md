@@ -146,6 +146,6 @@ FlagEvaluationDetails<Boolean> details = client.getBooleanDetails("feature-uuid"
 ## Code Conventions
 
 - Async-first: Evaluation methods return `CompletableFuture<T>`, not `Optional`
-- Records for immutable data (FlagConfig, ResultWithMetadata)
+- Records for immutable data (FlagConfig, ResultValueWithDetails)
 - Package structure: `api/` for public interfaces, `internal/` for implementations
 - Resilience: Service stays inactive rather than failing on misconfiguration

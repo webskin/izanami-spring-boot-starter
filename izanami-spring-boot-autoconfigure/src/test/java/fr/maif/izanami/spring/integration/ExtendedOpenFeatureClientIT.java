@@ -408,7 +408,7 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
     // to the OpenFeature caller-default since extraction cannot proceed.
     //
     // For proper error strategy handling with these specific strategies, use IzanamiService directly
-    // (see IzanamiServiceIT for those tests). The DEFAULT_VALUE strategy works through OpenFeature
+    // (see IzanamiServiceImplIT for those tests). The DEFAULT_VALUE strategy works through OpenFeature
     // because it provides an extractable fallback value.
 
     @Test

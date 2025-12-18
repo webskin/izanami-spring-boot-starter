@@ -9,7 +9,8 @@ import fr.maif.izanami.spring.openfeature.api.ErrorStrategyFactory;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
 import fr.maif.izanami.spring.openfeature.internal.ErrorStrategyFactoryImpl;
 import fr.maif.izanami.spring.openfeature.internal.FlagConfigServiceImpl;
-import fr.maif.izanami.spring.service.IzanamiService;
+import fr.maif.izanami.spring.service.IzanamiServiceImpl;
+import fr.maif.izanami.spring.service.api.IzanamiService;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
@@ -147,6 +148,6 @@ public class IzanamiAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public IzanamiService izanamiService(IzanamiProperties properties, FlagConfigService flagConfigService, ObjectMapper objectMapper) {
-        return new IzanamiService(properties, flagConfigService, objectMapper);
+        return new IzanamiServiceImpl(properties, flagConfigService, objectMapper);
     }
 }
