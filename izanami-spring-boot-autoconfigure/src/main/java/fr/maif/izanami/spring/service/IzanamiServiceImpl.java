@@ -6,10 +6,9 @@ import dev.openfeature.sdk.FlagValueType;
 import fr.maif.FeatureCacheConfiguration;
 import fr.maif.FeatureClientErrorStrategy;
 import fr.maif.IzanamiClient;
+import fr.maif.features.values.BooleanCastStrategy;
 import fr.maif.izanami.spring.autoconfigure.IzanamiProperties;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
-import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
-import fr.maif.izanami.spring.openfeature.FlagValueSource;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
 import fr.maif.izanami.spring.service.api.BatchFeatureRequestBuilder;
 import fr.maif.izanami.spring.service.api.BatchResult;
@@ -22,6 +21,7 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.lang.Nullable;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
@@ -330,10 +330,17 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
      */
     public static final class FeatureRequestBuilder implements fr.maif.izanami.spring.service.api.FeatureRequestBuilder {
         private final IzanamiServiceImpl service;
+        // Optional as field: justified here because the builder has exactly two construction paths
+        // (flag found vs not found) and flagConfig is always accessed through Optional methods.
         private final Optional<FlagConfig> flagConfig;
         private final String flagIdentifier;  // Original identifier for metadata when flag not found
         private String user;
         private String context;
+        private boolean ignoreCache = false;
+        private Duration callTimeout = null;
+        private String payload = null;
+        private BooleanCastStrategy booleanCastStrategy = BooleanCastStrategy.LAX;
+        private FeatureClientErrorStrategy<?> errorStrategy = null;
 
         private FeatureRequestBuilder(IzanamiServiceImpl service, FlagConfig flagConfig) {
             this.service = service;
@@ -351,27 +358,45 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
             this.flagIdentifier = flagIdentifier;
         }
 
-        /**
-         * Set the user identifier for this evaluation.
-         *
-         * @param user the user identifier
-         * @return this builder for chaining
-         */
         @Override
         public FeatureRequestBuilder withUser(@Nullable String user) {
             this.user = user;
             return this;
         }
 
-        /**
-         * Set the context for this evaluation.
-         *
-         * @param context the evaluation context
-         * @return this builder for chaining
-         */
         @Override
         public FeatureRequestBuilder withContext(@Nullable String context) {
             this.context = context;
+            return this;
+        }
+
+        @Override
+        public FeatureRequestBuilder ignoreCache(boolean ignoreCache) {
+            this.ignoreCache = ignoreCache;
+            return this;
+        }
+
+        @Override
+        public FeatureRequestBuilder withCallTimeout(@Nullable Duration timeout) {
+            this.callTimeout = timeout;
+            return this;
+        }
+
+        @Override
+        public FeatureRequestBuilder withPayload(@Nullable String payload) {
+            this.payload = payload;
+            return this;
+        }
+
+        @Override
+        public FeatureRequestBuilder withBooleanCastStrategy(BooleanCastStrategy strategy) {
+            this.booleanCastStrategy = strategy;
+            return this;
+        }
+
+        @Override
+        public FeatureRequestBuilder withErrorStrategy(@Nullable FeatureClientErrorStrategy<?> errorStrategy) {
+            this.errorStrategy = errorStrategy;
             return this;
         }
 
@@ -413,20 +438,24 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
 
         private <T> ResultValueWithDetails<T> flagNotFoundResult(T defaultValue) {
             log.warn("Flag '{}' not found in configuration, returning default value: {}", flagIdentifier, defaultValue);
-            Map<String, String> metadata = new LinkedHashMap<>();
-            metadata.put(FlagMetadataKeys.FLAG_CONFIG_KEY, flagIdentifier);
-            metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
-            metadata.put(FlagMetadataKeys.FLAG_EVALUATION_REASON, "FLAG_NOT_FOUND");
-            return new ResultValueWithDetails<>(defaultValue, metadata);
+            return new ResultValueWithDetails<>(defaultValue, IzanamiEvaluationHelper.buildFlagNotFoundMetadata(flagIdentifier));
         }
 
         private IzanamiFeatureEvaluator createEvaluator(FlagConfig fc) {
+            FeatureClientErrorStrategy<?> effectiveErrorStrategy =
+                IzanamiEvaluationHelper.computeEffectiveErrorStrategy(errorStrategy, fc.clientErrorStrategy());
+
             return new IzanamiFeatureEvaluator(
                 service.clientRef.get(),  // May be null - evaluator handles gracefully
                 service.objectMapper,
                 fc,
                 user,
-                context
+                context,
+                ignoreCache,
+                callTimeout,
+                payload,
+                booleanCastStrategy,
+                effectiveErrorStrategy
             );
         }
     }
@@ -447,7 +476,11 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
         private final Set<String> notFoundIdentifiers;
         private String user;
         private String context;
-        private boolean ignoreCache;
+        private boolean ignoreCache = false;
+        private Duration callTimeout = null;
+        private String payload = null;
+        private BooleanCastStrategy booleanCastStrategy = BooleanCastStrategy.LAX;
+        private FeatureClientErrorStrategy<?> errorStrategy = null;
 
         private BatchFeatureRequestBuilderImpl(
                 IzanamiServiceImpl service,
@@ -479,6 +512,30 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
         }
 
         @Override
+        public BatchFeatureRequestBuilder withCallTimeout(@Nullable Duration timeout) {
+            this.callTimeout = timeout;
+            return this;
+        }
+
+        @Override
+        public BatchFeatureRequestBuilder withPayload(@Nullable String payload) {
+            this.payload = payload;
+            return this;
+        }
+
+        @Override
+        public BatchFeatureRequestBuilder withBooleanCastStrategy(BooleanCastStrategy strategy) {
+            this.booleanCastStrategy = strategy;
+            return this;
+        }
+
+        @Override
+        public BatchFeatureRequestBuilder withErrorStrategy(@Nullable FeatureClientErrorStrategy<?> errorStrategy) {
+            this.errorStrategy = errorStrategy;
+            return this;
+        }
+
+        @Override
         public CompletableFuture<BatchResult> values() {
             IzanamiBatchFeatureEvaluator evaluator = new IzanamiBatchFeatureEvaluator(
                 service.clientRef.get(),  // May be null - evaluator handles gracefully
@@ -488,9 +545,14 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
                 notFoundIdentifiers,
                 user,
                 context,
-                ignoreCache
+                ignoreCache,
+                callTimeout,
+                payload,
+                booleanCastStrategy,
+                errorStrategy
             );
-            return evaluator.evaluate().thenApply(r -> r);
+            // Cast to BatchResult for API compatibility (BatchResultImpl implements BatchResult)
+            return evaluator.evaluate().thenApply(result -> result);
         }
     }
 

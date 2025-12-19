@@ -1,15 +1,19 @@
 package fr.maif.izanami.spring.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fr.maif.FeatureClientErrorStrategy;
 import fr.maif.features.results.IzanamiResult;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
 import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
 import fr.maif.izanami.spring.openfeature.FlagValueSource;
 import fr.maif.izanami.spring.service.api.ResultValueWithDetails;
+import fr.maif.requests.FeatureRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.lang.Nullable;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Function;
@@ -143,5 +147,98 @@ final class IzanamiEvaluationHelper {
             return new BigDecimal(value.toString());
         }
         return null;
+    }
+
+    // =========================================================================
+    // Error Strategy Utilities
+    // =========================================================================
+
+    /**
+     * Computes the effective error strategy, preferring override if provided.
+     *
+     * @param override      optional per-request error strategy override
+     * @param configDefault the default error strategy from flag configuration
+     * @return the effective error strategy to use
+     */
+    static FeatureClientErrorStrategy<?> computeEffectiveErrorStrategy(
+            @Nullable FeatureClientErrorStrategy<?> override,
+            FeatureClientErrorStrategy<?> configDefault
+    ) {
+        return override != null ? override : configDefault;
+    }
+
+    /**
+     * Checks if the given strategy is the FAIL strategy.
+     *
+     * @param strategy the error strategy to check
+     * @return true if this is the FAIL strategy
+     */
+    static boolean isFailStrategy(FeatureClientErrorStrategy<?> strategy) {
+        return FeatureClientErrorStrategy.failStrategy().equals(strategy);
+    }
+
+    // =========================================================================
+    // Request Configuration Utilities
+    // =========================================================================
+
+    /**
+     * Applies common configuration options to a FeatureRequest.
+     * <p>
+     * This consolidates the repeated pattern of conditionally setting
+     * user, context, cache, timeout, and payload on a request.
+     *
+     * @param request     the base feature request
+     * @param user        optional user identifier
+     * @param context     optional context identifier
+     * @param ignoreCache whether to bypass cache
+     * @param callTimeout optional per-request timeout
+     * @param payload     optional extra payload
+     * @return the configured feature request
+     */
+    static FeatureRequest applyCommonConfiguration(
+            FeatureRequest request,
+            @Nullable String user,
+            @Nullable String context,
+            boolean ignoreCache,
+            @Nullable Duration callTimeout,
+            @Nullable String payload
+    ) {
+        if (ignoreCache) {
+            request = request.ignoreCache(true);
+        }
+        if (user != null) {
+            request = request.withUser(user);
+        }
+        if (context != null) {
+            request = request.withContext(context);
+        }
+        if (callTimeout != null) {
+            request = request.withCallTimeout(callTimeout);
+        }
+        if (payload != null) {
+            request = request.withPayload(payload);
+        }
+        return request;
+    }
+
+    // =========================================================================
+    // Metadata Utilities
+    // =========================================================================
+
+    /**
+     * Builds metadata map for FLAG_NOT_FOUND scenario.
+     * <p>
+     * Uses APPLICATION_ERROR_STRATEGY as the source since we're returning
+     * application-level default values when a flag is not in configuration.
+     *
+     * @param identifier the flag identifier that was not found
+     * @return metadata map with FLAG_NOT_FOUND information
+     */
+    static Map<String, String> buildFlagNotFoundMetadata(String identifier) {
+        Map<String, String> metadata = new LinkedHashMap<>();
+        metadata.put(FlagMetadataKeys.FLAG_CONFIG_KEY, identifier);
+        metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
+        metadata.put(FlagMetadataKeys.FLAG_EVALUATION_REASON, "FLAG_NOT_FOUND");
+        return metadata;
     }
 }

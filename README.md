@@ -121,6 +121,43 @@ openfeature:
       callbackBean: "myErrorCallback"
 ```
 
+### Per-Request Error Strategy Override
+
+You can override the configured error strategy on a per-request basis using `withErrorStrategy()`. This is useful when a specific request needs different error handling (e.g., fail-fast for critical operations):
+
+```java
+import fr.maif.FeatureClientErrorStrategy;
+
+// Single flag: Override to FAIL for a critical operation
+try {
+    Boolean value = izanamiService.forFlagKey("feature-uuid")
+        .withErrorStrategy(FeatureClientErrorStrategy.failStrategy())
+        .booleanValue()
+        .join();  // Throws CompletionException if error occurs
+} catch (CompletionException e) {
+    // Handle error - evaluation failed
+}
+
+// Batch: Per-request override applies to all flags in batch
+BatchResult result = izanamiService.forFlagKeys("uuid-1", "uuid-2")
+    .withErrorStrategy(FeatureClientErrorStrategy.failStrategy())
+    .values()
+    .join();  // Succeeds even if individual flags have errors
+
+// Exception thrown when accessing value for flag with FAIL + error
+try {
+    Boolean value = result.booleanValue("uuid-1");  // May throw RuntimeException
+} catch (RuntimeException e) {
+    // Handle individual flag error
+}
+```
+
+**Override hierarchy:**
+
+1. Per-request override (via `withErrorStrategy()`) - highest priority
+2. FlagConfig default (from `openfeature.flags` configuration)
+3. Application default (for flags not in configuration)
+
 ### Custom Configuration Prefix
 
 If you need to nest the configuration under a custom prefix (e.g., `organisation.izanami` instead of `izanami`), define your own beans with `@Primary`:
@@ -253,6 +290,10 @@ String source = details.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE);
 | `withUser(user)` | Set user identifier for all flags |
 | `withContext(context)` | Set evaluation context for all flags |
 | `ignoreCache(true)` | Bypass cache for this request |
+| `withCallTimeout(Duration)` | Per-request HTTP timeout |
+| `withPayload(String)` | Extra context JSON sent to server |
+| `withBooleanCastStrategy(BooleanCastStrategy)` | Control casting (STRICT vs LAX, default: LAX) |
+| `withErrorStrategy(FeatureClientErrorStrategy)` | Per-request error strategy override |
 | `values()` | Execute and return `CompletableFuture<BatchResult>` |
 
 ### Simple Usage with ExtendedOpenFeatureClient

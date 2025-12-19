@@ -1,12 +1,10 @@
 package fr.maif.izanami.spring.service.api;
 
-import org.springframework.lang.Nullable;
-
 import java.math.BigDecimal;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Fluent builder for configuring and executing feature flag evaluations.
+ * Fluent builder for configuring and executing single feature flag evaluations.
  * <p>
  * Obtain an instance via {@link IzanamiService#forFlagKey(String)} or {@link IzanamiService#forFlagName(String)}.
  * <p>
@@ -21,36 +19,16 @@ import java.util.concurrent.CompletableFuture;
  *
  * @see IzanamiService#forFlagKey(String)
  * @see IzanamiService#forFlagName(String)
+ * @see BaseFeatureRequestBuilder
  */
-public interface FeatureRequestBuilder {
-
-    /**
-     * Set the user identifier for this evaluation.
-     * <p>
-     * The user identifier is used by Izanami for user-based targeting rules
-     * (e.g., percentage rollouts, user allowlists).
-     *
-     * @param user the user identifier, or {@code null} for anonymous evaluation
-     * @return this builder for method chaining
-     */
-    FeatureRequestBuilder withUser(@Nullable String user);
-
-    /**
-     * Set the context for this evaluation.
-     * <p>
-     * The context provides additional targeting information beyond the user
-     * (e.g., environment, tenant, feature tier).
-     *
-     * @param context the evaluation context, or {@code null} for no context
-     * @return this builder for method chaining
-     */
-    FeatureRequestBuilder withContext(@Nullable String context);
+public interface FeatureRequestBuilder extends BaseFeatureRequestBuilder<FeatureRequestBuilder> {
 
     /**
      * Evaluate the feature flag as a boolean.
      * <p>
      * For boolean features, returns {@code true} if enabled, {@code false} if disabled.
-     * For non-boolean features, the value is cast using a lax boolean strategy.
+     * For non-boolean features, the value is cast using the configured boolean cast strategy
+     * (default: LAX).
      *
      * @return a future containing the boolean value
      */

@@ -1,19 +1,19 @@
 package fr.maif.izanami.spring.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fr.maif.FeatureClientErrorStrategy;
 import fr.maif.IzanamiClient;
 import fr.maif.errors.IzanamiError;
 import fr.maif.features.results.IzanamiResult;
 import fr.maif.features.values.BooleanCastStrategy;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
-import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
-import fr.maif.izanami.spring.openfeature.FlagValueSource;
 import fr.maif.requests.FeatureRequest;
 import fr.maif.requests.SpecificFeatureRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.Nullable;
 
+import java.time.Duration;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -38,6 +38,13 @@ final class IzanamiBatchFeatureEvaluator {
     private final String user;
     private final String context;
     private final boolean ignoreCache;
+    @Nullable
+    private final Duration callTimeout;
+    @Nullable
+    private final String payload;
+    private final BooleanCastStrategy booleanCastStrategy;
+    @Nullable
+    private final FeatureClientErrorStrategy<?> errorStrategyOverride;
 
     IzanamiBatchFeatureEvaluator(
             @Nullable IzanamiClient client,
@@ -47,7 +54,11 @@ final class IzanamiBatchFeatureEvaluator {
             Set<String> notFoundIdentifiers,
             @Nullable String user,
             @Nullable String context,
-            boolean ignoreCache
+            boolean ignoreCache,
+            @Nullable Duration callTimeout,
+            @Nullable String payload,
+            BooleanCastStrategy booleanCastStrategy,
+            @Nullable FeatureClientErrorStrategy<?> errorStrategyOverride
     ) {
         this.client = client;
         this.objectMapper = objectMapper;
@@ -57,6 +68,10 @@ final class IzanamiBatchFeatureEvaluator {
         this.user = user;
         this.context = context;
         this.ignoreCache = ignoreCache;
+        this.callTimeout = callTimeout;
+        this.payload = payload;
+        this.booleanCastStrategy = booleanCastStrategy;
+        this.errorStrategyOverride = errorStrategyOverride;
     }
 
     /**
@@ -82,17 +97,11 @@ final class IzanamiBatchFeatureEvaluator {
         // Build request with all features and their error strategies
         FeatureRequest request = FeatureRequest.newFeatureRequest()
             .withSpecificFeatures(specificRequests)
-            .withBooleanCastStrategy(BooleanCastStrategy.LAX);
+            .withBooleanCastStrategy(booleanCastStrategy);
 
-        if (user != null) {
-            request = request.withUser(user);
-        }
-        if (context != null) {
-            request = request.withContext(context);
-        }
-        if (ignoreCache) {
-            request = request.ignoreCache(true);
-        }
+        request = IzanamiEvaluationHelper.applyCommonConfiguration(
+            request, user, context, ignoreCache, callTimeout, payload
+        );
 
         log.debug("Making bulk Izanami query for {} features", specificRequests.size());
 
@@ -107,13 +116,16 @@ final class IzanamiBatchFeatureEvaluator {
     }
 
     /**
-     * Build SpecificFeatureRequests with per-feature error strategies from FlagConfig.
+     * Build SpecificFeatureRequests with per-feature error strategies.
+     * Uses per-request override if provided, otherwise uses FlagConfig default.
      */
     private Set<SpecificFeatureRequest> buildSpecificFeatureRequests() {
         Set<SpecificFeatureRequest> requests = new HashSet<>();
         for (FlagConfig config : flagConfigs.values()) {
+            FeatureClientErrorStrategy<?> effectiveStrategy =
+                IzanamiEvaluationHelper.computeEffectiveErrorStrategy(errorStrategyOverride, config.clientErrorStrategy());
             SpecificFeatureRequest specific = SpecificFeatureRequest.feature(config.key())
-                .withErrorStrategy(config.clientErrorStrategy());
+                .withErrorStrategy(effectiveStrategy);
             requests.add(specific);
         }
         return requests;
@@ -130,18 +142,22 @@ final class IzanamiBatchFeatureEvaluator {
             String izanamiKey = mapping.getValue();
             FlagConfig config = flagConfigs.get(izanamiKey);
 
+            FeatureClientErrorStrategy<?> effectiveStrategy =
+                IzanamiEvaluationHelper.computeEffectiveErrorStrategy(errorStrategyOverride, config.clientErrorStrategy());
+            boolean isFailStrategy = IzanamiEvaluationHelper.isFailStrategy(effectiveStrategy);
+
             IzanamiResult.Result result = izanamiResult.results.get(izanamiKey);
             if (result == null) {
                 // Feature not in response - create error result
                 log.warn("Feature {} not found in Izanami response", izanamiKey);
                 result = new IzanamiResult.Error(
-                    config.clientErrorStrategy(),
+                    effectiveStrategy,
                     new IzanamiError("Feature not found in response: " + izanamiKey)
                 );
             }
 
             Map<String, String> metadata = IzanamiEvaluationHelper.buildBaseMetadata(config, objectMapper);
-            entries.put(userIdentifier, new BatchResultImpl.BatchResultEntry(result, config, metadata));
+            entries.put(userIdentifier, new BatchResultImpl.BatchResultEntry(result, config, metadata, isFailStrategy));
         }
 
         // Add not-found entries
@@ -152,7 +168,7 @@ final class IzanamiBatchFeatureEvaluator {
     }
 
     /**
-     * Build result when client is not available - all flags get APPLICATION_ERROR_STRATEGY.
+     * Build result when client is not available - all flags get error result.
      */
     private BatchResultImpl buildAllDefaultResults() {
         Map<String, BatchResultImpl.BatchResultEntry> entries = new LinkedHashMap<>();
@@ -162,14 +178,17 @@ final class IzanamiBatchFeatureEvaluator {
             String izanamiKey = mapping.getValue();
             FlagConfig config = flagConfigs.get(izanamiKey);
 
-            // Create error result with the configured error strategy
+            FeatureClientErrorStrategy<?> effectiveStrategy =
+                IzanamiEvaluationHelper.computeEffectiveErrorStrategy(errorStrategyOverride, config.clientErrorStrategy());
+            boolean isFailStrategy = IzanamiEvaluationHelper.isFailStrategy(effectiveStrategy);
+
             IzanamiResult.Result result = new IzanamiResult.Error(
-                config.clientErrorStrategy(),
+                effectiveStrategy,
                 new IzanamiError("Izanami client not available")
             );
 
             Map<String, String> metadata = IzanamiEvaluationHelper.buildBaseMetadata(config, objectMapper);
-            entries.put(userIdentifier, new BatchResultImpl.BatchResultEntry(result, config, metadata));
+            entries.put(userIdentifier, new BatchResultImpl.BatchResultEntry(result, config, metadata, isFailStrategy));
         }
 
         // Add not-found entries
@@ -189,14 +208,17 @@ final class IzanamiBatchFeatureEvaluator {
             String izanamiKey = mapping.getValue();
             FlagConfig config = flagConfigs.get(izanamiKey);
 
-            // Create error result with the configured error strategy
+            FeatureClientErrorStrategy<?> effectiveStrategy =
+                IzanamiEvaluationHelper.computeEffectiveErrorStrategy(errorStrategyOverride, config.clientErrorStrategy());
+            boolean isFailStrategy = IzanamiEvaluationHelper.isFailStrategy(effectiveStrategy);
+
             IzanamiResult.Result result = new IzanamiResult.Error(
-                config.clientErrorStrategy(),
+                effectiveStrategy,
                 new IzanamiError(error.getMessage())
             );
 
             Map<String, String> metadata = IzanamiEvaluationHelper.buildBaseMetadata(config, objectMapper);
-            entries.put(userIdentifier, new BatchResultImpl.BatchResultEntry(result, config, metadata));
+            entries.put(userIdentifier, new BatchResultImpl.BatchResultEntry(result, config, metadata, isFailStrategy));
         }
 
         // Add not-found entries
@@ -216,15 +238,14 @@ final class IzanamiBatchFeatureEvaluator {
 
     /**
      * Add entries for flags not found in configuration with FLAG_NOT_FOUND reason.
+     * Not-found flags never use FAIL strategy (no configuration to specify it).
      */
     private void addNotFoundEntries(Map<String, BatchResultImpl.BatchResultEntry> entries) {
         for (String identifier : notFoundIdentifiers) {
             log.warn("Flag '{}' not found in configuration, returning default values", identifier);
-            Map<String, String> metadata = new LinkedHashMap<>();
-            metadata.put(FlagMetadataKeys.FLAG_CONFIG_KEY, identifier);
-            metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
-            metadata.put(FlagMetadataKeys.FLAG_EVALUATION_REASON, "FLAG_NOT_FOUND");
-            entries.put(identifier, new BatchResultImpl.BatchResultEntry(null, null, metadata));
+            Map<String, String> metadata = IzanamiEvaluationHelper.buildFlagNotFoundMetadata(identifier);
+            // Not-found flags never have FAIL strategy - no configuration exists for them
+            entries.put(identifier, new BatchResultImpl.BatchResultEntry(null, null, metadata, false));
         }
     }
 

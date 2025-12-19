@@ -1,11 +1,11 @@
 package fr.maif.izanami.spring.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fr.maif.FeatureClientErrorStrategy;
 import fr.maif.IzanamiClient;
 import fr.maif.errors.IzanamiError;
 import fr.maif.features.results.IzanamiResult;
 import fr.maif.features.values.BooleanCastStrategy;
-import fr.maif.izanami.spring.openfeature.ErrorStrategy;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
 import fr.maif.izanami.spring.service.api.ResultValueWithDetails;
 import fr.maif.requests.FeatureRequest;
@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.lang.Nullable;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -38,16 +39,38 @@ final class IzanamiFeatureEvaluator {
     private final FlagConfig flagConfig;
     private final String user;
     private final String context;
+    private final boolean ignoreCache;
+    @Nullable
+    private final Duration callTimeout;
+    @Nullable
+    private final String payload;
+    private final BooleanCastStrategy booleanCastStrategy;
+    private final FeatureClientErrorStrategy<?> effectiveErrorStrategy;
 
     private record ResultWithMetadata(IzanamiResult.Result result, Map<String, String> metadata) {}
 
-    IzanamiFeatureEvaluator(@Nullable IzanamiClient client, ObjectMapper objectMapper, FlagConfig flagConfig,
-                            String user, String context) {
+    IzanamiFeatureEvaluator(
+            @Nullable IzanamiClient client,
+            ObjectMapper objectMapper,
+            FlagConfig flagConfig,
+            String user,
+            String context,
+            boolean ignoreCache,
+            @Nullable Duration callTimeout,
+            @Nullable String payload,
+            BooleanCastStrategy booleanCastStrategy,
+            FeatureClientErrorStrategy<?> effectiveErrorStrategy
+    ) {
         this.client = client;
         this.objectMapper = objectMapper;
         this.flagConfig = flagConfig;
         this.user = user;
         this.context = context;
+        this.ignoreCache = ignoreCache;
+        this.callTimeout = callTimeout;
+        this.payload = payload;
+        this.booleanCastStrategy = booleanCastStrategy;
+        this.effectiveErrorStrategy = effectiveErrorStrategy;
     }
 
     /**
@@ -58,7 +81,7 @@ final class IzanamiFeatureEvaluator {
     CompletableFuture<ResultValueWithDetails<Boolean>> booleanValueDetails() {
         log.debug("Evaluating flag {} as boolean with details", flagConfig.key());
         return evaluateWithDetails(
-            result -> result.booleanValue(BooleanCastStrategy.LAX),
+            result -> result.booleanValue(booleanCastStrategy),
             () -> null,  // Boolean doesn't use default for disabled - false is the disabled value
             Boolean.FALSE::equals  // false means disabled for boolean features
         );
@@ -101,16 +124,17 @@ final class IzanamiFeatureEvaluator {
      */
     private CompletableFuture<ResultWithMetadata> featureResultWithMetadata() {
         Map<String, String> metadata = IzanamiEvaluationHelper.buildBaseMetadata(flagConfig, objectMapper);
+        boolean isFailStrategy = IzanamiEvaluationHelper.isFailStrategy(effectiveErrorStrategy);
         try {
             return evaluateFeatureResult()
                 .handle((result, error) -> {
                     if (error != null) {
                         // Handle both sync and async errors
-                        if (flagConfig.errorStrategy() == ErrorStrategy.FAIL) {
+                        if (isFailStrategy) {
                             throw error instanceof RuntimeException ? (RuntimeException) error : new RuntimeException(error);
                         }
                         return new ResultWithMetadata(
-                            new IzanamiResult.Error(flagConfig.clientErrorStrategy(), new IzanamiError(error.getMessage())),
+                            new IzanamiResult.Error(effectiveErrorStrategy, new IzanamiError(error.getMessage())),
                             unmodifiableMap(metadata)
                         );
                     }
@@ -118,11 +142,11 @@ final class IzanamiFeatureEvaluator {
                 });
         } catch (Exception e) {
             // Handle synchronous exceptions from evaluateFeatureResult()
-            if (flagConfig.errorStrategy() == ErrorStrategy.FAIL) {
+            if (isFailStrategy) {
                 return CompletableFuture.failedFuture(e);
             }
             return CompletableFuture.completedFuture(new ResultWithMetadata(
-                new IzanamiResult.Error(flagConfig.clientErrorStrategy(), new IzanamiError(e.getMessage())),
+                new IzanamiResult.Error(effectiveErrorStrategy, new IzanamiError(e.getMessage())),
                 unmodifiableMap(metadata)
             ));
         }
@@ -136,24 +160,24 @@ final class IzanamiFeatureEvaluator {
             log.debug("Izanami client not available; returning error result");
             return CompletableFuture.completedFuture(
                 new IzanamiResult.Error(
-                    flagConfig.clientErrorStrategy(),
+                    effectiveErrorStrategy,
                     new IzanamiError("Izanami client not available")
                 )
             );
         }
         if (log.isTraceEnabled()) {
-            log.trace("Querying Izanami: key={}, user={}, context={}", flagConfig.key(), user, context);
+            log.trace("Querying Izanami: key={}, user={}, context={}, ignoreCache={}",
+                flagConfig.key(), user, context, ignoreCache);
         }
         FeatureRequest featureRequest = FeatureRequest.newFeatureRequest()
             .withFeature(flagConfig.key())
-            .withErrorStrategy(flagConfig.clientErrorStrategy())
-            .withBooleanCastStrategy(BooleanCastStrategy.LAX);
-        if (user != null) {
-            featureRequest = featureRequest.withUser(user);
-        }
-        if (context != null) {
-            featureRequest = featureRequest.withContext(context);
-        }
+            .withErrorStrategy(effectiveErrorStrategy)
+            .withBooleanCastStrategy(booleanCastStrategy);
+
+        featureRequest = IzanamiEvaluationHelper.applyCommonConfiguration(
+            featureRequest, user, context, ignoreCache, callTimeout, payload
+        );
+
         return client
             .featureValues(featureRequest)
             .thenApply(r -> r.results.values().iterator().next());

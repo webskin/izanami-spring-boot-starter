@@ -659,4 +659,133 @@ class IzanamiServiceBatchTest {
             assertThat(details.metadata().get(FlagMetadataKeys.FLAG_EVALUATION_REASON)).isEqualTo("ORIGIN_OR_CACHE");
         }
     }
+
+    // =====================================================================
+    // FAIL Strategy Tests
+    // =====================================================================
+
+    @Nested
+    class FailStrategyTests {
+
+        @Test
+        void booleanValue_withFailStrategyAndError_throwsException() {
+            FlagConfig config1 = testFailBooleanFlagConfig("uuid-1", "flag-1");
+
+            when(flagConfigService.getFlagConfigByKey("uuid-1")).thenReturn(Optional.of(config1));
+
+            // Create service without initializing client (blank URL) to simulate error
+            IzanamiServiceImpl service = new IzanamiServiceImpl(blankUrlProperties(), flagConfigService, objectMapper);
+            service.afterPropertiesSet();
+
+            BatchResult result = service.forFlagKeys("uuid-1")
+                .values()
+                .join();  // values() succeeds
+
+            // Accessing value with FAIL strategy should throw
+            org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () -> {
+                result.booleanValue("uuid-1");
+            });
+        }
+
+        @Test
+        void stringValue_withFailStrategyAndError_throwsException() {
+            FlagConfig config1 = testFailStringFlagConfig("uuid-1", "flag-1");
+
+            when(flagConfigService.getFlagConfigByKey("uuid-1")).thenReturn(Optional.of(config1));
+
+            // Create service without initializing client (blank URL) to simulate error
+            IzanamiServiceImpl service = new IzanamiServiceImpl(blankUrlProperties(), flagConfigService, objectMapper);
+            service.afterPropertiesSet();
+
+            BatchResult result = service.forFlagKeys("uuid-1")
+                .values()
+                .join();  // values() succeeds
+
+            // Accessing value with FAIL strategy should throw
+            org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () -> {
+                result.stringValue("uuid-1");
+            });
+        }
+
+        @Test
+        void numberValue_withFailStrategyAndError_throwsException() {
+            FlagConfig config1 = testFailNumberFlagConfig("uuid-1", "flag-1");
+
+            when(flagConfigService.getFlagConfigByKey("uuid-1")).thenReturn(Optional.of(config1));
+
+            // Create service without initializing client (blank URL) to simulate error
+            IzanamiServiceImpl service = new IzanamiServiceImpl(blankUrlProperties(), flagConfigService, objectMapper);
+            service.afterPropertiesSet();
+
+            BatchResult result = service.forFlagKeys("uuid-1")
+                .values()
+                .join();  // values() succeeds
+
+            // Accessing value with FAIL strategy should throw
+            org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () -> {
+                result.numberValue("uuid-1");
+            });
+        }
+
+        @Test
+        void withPerRequestFailStrategy_overridesFlagConfigDefault() {
+            FlagConfig config1 = testDefaultBooleanFlagConfig("uuid-1", "flag-1", true);
+
+            when(flagConfigService.getFlagConfigByKey("uuid-1")).thenReturn(Optional.of(config1));
+
+            // Create service without initializing client (blank URL) to simulate error
+            IzanamiServiceImpl service = new IzanamiServiceImpl(blankUrlProperties(), flagConfigService, objectMapper);
+            service.afterPropertiesSet();
+
+            // Override with FAIL strategy per-request
+            BatchResult result = service.forFlagKeys("uuid-1")
+                .withErrorStrategy(FeatureClientErrorStrategy.failStrategy())
+                .values()
+                .join();  // values() succeeds
+
+            // Accessing value should throw despite FlagConfig having DEFAULT_VALUE strategy
+            org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () -> {
+                result.booleanValue("uuid-1");
+            });
+        }
+
+        private static FlagConfig testFailBooleanFlagConfig(String key, String name) {
+            return new FlagConfig(
+                key,
+                name,
+                "Test flag description",
+                FlagValueType.BOOLEAN,
+                ErrorStrategy.FAIL,
+                FeatureClientErrorStrategy.failStrategy(),
+                null,
+                null
+            );
+        }
+
+        private static FlagConfig testFailStringFlagConfig(String key, String name) {
+            return new FlagConfig(
+                key,
+                name,
+                "Test flag description",
+                FlagValueType.STRING,
+                ErrorStrategy.FAIL,
+                FeatureClientErrorStrategy.failStrategy(),
+                null,
+                null
+            );
+        }
+
+        private static FlagConfig testFailNumberFlagConfig(String key, String name) {
+            return new FlagConfig(
+                key,
+                name,
+                "Test flag description",
+                FlagValueType.INTEGER,
+                ErrorStrategy.FAIL,
+                FeatureClientErrorStrategy.failStrategy(),
+                null,
+                null
+            );
+        }
+    }
 }
