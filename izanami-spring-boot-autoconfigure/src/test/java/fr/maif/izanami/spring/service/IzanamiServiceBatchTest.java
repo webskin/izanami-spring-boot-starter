@@ -14,7 +14,6 @@ import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
 import fr.maif.izanami.spring.openfeature.FlagValueSource;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
 import fr.maif.izanami.spring.service.api.BatchResult;
-import fr.maif.izanami.spring.service.api.FlagNotFoundException;
 import fr.maif.izanami.spring.service.api.ResultValueWithDetails;
 import fr.maif.requests.FeatureRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,9 +29,9 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class IzanamiServiceBatchTest {
 
@@ -186,18 +185,36 @@ class IzanamiServiceBatchTest {
         }
 
         @Test
-        void forFlagKeys_whenAnyFlagMissing_throwsFlagNotFoundException() {
+        void forFlagKeys_whenAnyFlagMissing_includesMissingFlagWithDefaults() {
             FlagConfig config1 = testDefaultBooleanFlagConfig("uuid-1", "flag-1", false);
 
             when(flagConfigService.getFlagConfigByKey("uuid-1")).thenReturn(Optional.of(config1));
             when(flagConfigService.getFlagConfigByKey("uuid-missing")).thenReturn(Optional.empty());
 
+            IzanamiResult mockResult = createMockSuccessResult(Map.of(
+                "uuid-1", createBooleanFeatureValue(true)
+            ));
+            when(mockClient.featureValues(any(FeatureRequest.class)))
+                .thenReturn(CompletableFuture.completedFuture(mockResult));
+
             IzanamiServiceImpl service = createServiceWithMockFactory(validProperties());
             service.afterPropertiesSet();
 
-            assertThatThrownBy(() -> service.forFlagKeys("uuid-1", "uuid-missing"))
-                .isInstanceOf(FlagNotFoundException.class)
-                .hasMessageContaining("uuid-missing");
+            // Should not throw - missing flag is included with defaults
+            BatchResult batchResult = service.forFlagKeys("uuid-1", "uuid-missing")
+                .values()
+                .join();
+
+            // Existing flag should work normally
+            assertThat(batchResult.booleanValue("uuid-1")).isTrue();
+
+            // Missing flag should return defaults with FLAG_NOT_FOUND
+            assertThat(batchResult.hasFlag("uuid-missing")).isTrue();
+            ResultValueWithDetails<Boolean> missingResult = batchResult.booleanValueDetails("uuid-missing");
+            assertThat(missingResult.value()).isFalse();
+            assertThat(missingResult.metadata().get(FlagMetadataKeys.FLAG_EVALUATION_REASON)).isEqualTo("FLAG_NOT_FOUND");
+            assertThat(missingResult.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                .isEqualTo(FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
         }
     }
 
@@ -221,18 +238,36 @@ class IzanamiServiceBatchTest {
         }
 
         @Test
-        void forFlagNames_whenAnyFlagMissing_throwsFlagNotFoundException() {
+        void forFlagNames_whenAnyFlagMissing_includesMissingFlagWithDefaults() {
             FlagConfig config1 = testDefaultBooleanFlagConfig("uuid-1", "flag-1", false);
 
             when(flagConfigService.getFlagConfigByName("flag-1")).thenReturn(Optional.of(config1));
             when(flagConfigService.getFlagConfigByName("missing-flag")).thenReturn(Optional.empty());
 
+            IzanamiResult mockResult = createMockSuccessResult(Map.of(
+                "uuid-1", createBooleanFeatureValue(true)
+            ));
+            when(mockClient.featureValues(any(FeatureRequest.class)))
+                .thenReturn(CompletableFuture.completedFuture(mockResult));
+
             IzanamiServiceImpl service = createServiceWithMockFactory(validProperties());
             service.afterPropertiesSet();
 
-            assertThatThrownBy(() -> service.forFlagNames("flag-1", "missing-flag"))
-                .isInstanceOf(FlagNotFoundException.class)
-                .hasMessageContaining("missing-flag");
+            // Should not throw - missing flag is included with defaults
+            BatchResult batchResult = service.forFlagNames("flag-1", "missing-flag")
+                .values()
+                .join();
+
+            // Existing flag should work normally (by name)
+            assertThat(batchResult.booleanValue("flag-1")).isTrue();
+
+            // Missing flag should return defaults with FLAG_NOT_FOUND
+            assertThat(batchResult.hasFlag("missing-flag")).isTrue();
+            ResultValueWithDetails<String> missingResult = batchResult.stringValueDetails("missing-flag");
+            assertThat(missingResult.value()).isEqualTo("");
+            assertThat(missingResult.metadata().get(FlagMetadataKeys.FLAG_EVALUATION_REASON)).isEqualTo("FLAG_NOT_FOUND");
+            assertThat(missingResult.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                .isEqualTo(FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
         }
     }
 

@@ -5,12 +5,18 @@ import fr.maif.features.results.IzanamiResult;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
 import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
 import fr.maif.izanami.spring.openfeature.FlagValueSource;
+import fr.maif.izanami.spring.service.api.ResultValueWithDetails;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+
+import static java.util.Collections.unmodifiableMap;
 
 /**
  * Shared evaluation utilities for feature flag processing.
@@ -18,6 +24,7 @@ import java.util.function.Supplier;
  * This class is package-private and not part of the public API.
  */
 final class IzanamiEvaluationHelper {
+    private static final Logger log = LoggerFactory.getLogger(IzanamiEvaluationHelper.class);
 
     private IzanamiEvaluationHelper() {
         // Utility class
@@ -60,6 +67,48 @@ final class IzanamiEvaluationHelper {
         }
         // Error case - value comes from Izanami's error strategy
         return new EvaluationOutcome<>(rawValue, FlagValueSource.IZANAMI_ERROR_STRATEGY, "ERROR");
+    }
+
+    /**
+     * Builds the final {@link ResultValueWithDetails} from an Izanami result.
+     * <p>
+     * This is the common evaluation flow used by both single and batch evaluations.
+     * It extracts the value, computes the outcome, updates metadata, logs appropriately,
+     * and returns the final result.
+     *
+     * @param result               the Izanami result
+     * @param valueExtractor       extracts the raw value from IzanamiResult.Result
+     * @param baseMetadata         base metadata map (will be copied, not mutated)
+     * @param disabledValueResolver resolves the value when feature is disabled
+     * @param isDisabledCheck      checks if the value indicates a disabled feature
+     * @param flagKey              the flag key for logging purposes
+     * @return the result value with evaluation metadata
+     */
+    static <T> ResultValueWithDetails<T> buildResultWithDetails(
+            IzanamiResult.Result result,
+            Function<IzanamiResult.Result, T> valueExtractor,
+            Map<String, String> baseMetadata,
+            Supplier<T> disabledValueResolver,
+            Predicate<T> isDisabledCheck,
+            String flagKey
+    ) {
+        Map<String, String> metadata = new LinkedHashMap<>(baseMetadata);
+        T rawValue = valueExtractor.apply(result);
+
+        EvaluationOutcome<T> outcome = computeOutcome(result, rawValue, disabledValueResolver, isDisabledCheck);
+
+        metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, outcome.source().name());
+        metadata.put(FlagMetadataKeys.FLAG_EVALUATION_REASON, outcome.reason());
+
+        if (outcome.source() == FlagValueSource.APPLICATION_ERROR_STRATEGY) {
+            log.warn("Flag {} evaluated using application default value (feature disabled), value={}", flagKey, outcome.value());
+        } else if (outcome.source() == FlagValueSource.IZANAMI_ERROR_STRATEGY) {
+            log.warn("Flag {} evaluated using Izanami error strategy (evaluation error), value={}", flagKey, outcome.value());
+        } else {
+            log.debug("Evaluated flag {} = {} with details, reason={}", flagKey, outcome.value(), outcome.reason());
+        }
+
+        return new ResultValueWithDetails<>(outcome.value(), unmodifiableMap(metadata));
     }
 
     /**

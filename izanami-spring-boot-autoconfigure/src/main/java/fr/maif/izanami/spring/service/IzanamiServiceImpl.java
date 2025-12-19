@@ -6,16 +6,15 @@ import dev.openfeature.sdk.FlagValueType;
 import fr.maif.FeatureCacheConfiguration;
 import fr.maif.FeatureClientErrorStrategy;
 import fr.maif.IzanamiClient;
-import fr.maif.features.values.BooleanCastStrategy;
 import fr.maif.izanami.spring.autoconfigure.IzanamiProperties;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
+import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
+import fr.maif.izanami.spring.openfeature.FlagValueSource;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
 import fr.maif.izanami.spring.service.api.BatchFeatureRequestBuilder;
 import fr.maif.izanami.spring.service.api.BatchResult;
-import fr.maif.izanami.spring.service.api.FlagNotFoundException;
 import fr.maif.izanami.spring.service.api.ResultValueWithDetails;
 import fr.maif.requests.IzanamiConnectionInformation;
-import fr.maif.requests.SingleFeatureRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
@@ -23,10 +22,7 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.lang.Nullable;
 
 import java.math.BigDecimal;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -134,6 +130,8 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
             .withServerSentEventKeepAliveInterval(cacheProperties.getSse().getKeepAliveInterval())
             .build();
 
+        // Default error strategy for FLAG_NOT_FOUND (when flag key/name is not in configuration)
+        // Returns: false for boolean, "" for string, BigDecimal.ZERO for number
         FeatureClientErrorStrategy.DefaultValueStrategy defaultErrorStrategy =
             FeatureClientErrorStrategy.defaultValueStrategy(false, "", BigDecimal.ZERO);
 
@@ -198,6 +196,10 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
     /**
      * Start building a feature request for the given flag key (UUID).
      * <p>
+     * If the flag key is not found in configuration, the returned builder will
+     * produce default values ({@code false}, {@code ""}, {@code BigDecimal.ZERO})
+     * with {@code FLAG_NOT_FOUND} evaluation reason.
+     * <p>
      * Example usage:
      * <pre>{@code
      * izanamiService.forFlagKey("my-flag-uuid")
@@ -208,19 +210,24 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
      *
      * @param flagKey the flag key (UUID) as configured in Izanami
      * @return a builder for configuring and executing the feature request
-     * @throws FlagNotFoundException if the flag key is not found in configuration
      */
     @Override
     public FeatureRequestBuilder forFlagKey(String flagKey) {
         log.debug("Building feature request for flag key: {}", flagKey);
-        FlagConfig flagConfig = flagConfigService
-            .getFlagConfigByKey(flagKey)
-            .orElseThrow(() -> new FlagNotFoundException(flagKey, FlagNotFoundException.IdentifierType.KEY));
-        return new FeatureRequestBuilder(this, flagConfig);
+        Optional<FlagConfig> flagConfig = flagConfigService.getFlagConfigByKey(flagKey);
+        if (flagConfig.isPresent()) {
+            return new FeatureRequestBuilder(this, flagConfig.get());
+        }
+        log.debug("Flag key '{}' not found in configuration", flagKey);
+        return new FeatureRequestBuilder(this, flagKey);
     }
 
     /**
      * Start building a feature request for the given flag name.
+     * <p>
+     * If the flag name is not found in configuration, the returned builder will
+     * produce default values ({@code false}, {@code ""}, {@code BigDecimal.ZERO})
+     * with {@code FLAG_NOT_FOUND} evaluation reason.
      * <p>
      * Example usage:
      * <pre>{@code
@@ -232,15 +239,16 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
      *
      * @param flagName the flag name as configured in openfeature.flags
      * @return a builder for configuring and executing the feature request
-     * @throws FlagNotFoundException if the flag name is not found in configuration
      */
     @Override
     public FeatureRequestBuilder forFlagName(String flagName) {
         log.debug("Building feature request for flag name: {}", flagName);
-        FlagConfig flagConfig = flagConfigService
-            .getFlagConfigByName(flagName)
-            .orElseThrow(() -> new FlagNotFoundException(flagName, FlagNotFoundException.IdentifierType.NAME));
-        return new FeatureRequestBuilder(this, flagConfig);
+        Optional<FlagConfig> flagConfig = flagConfigService.getFlagConfigByName(flagName);
+        if (flagConfig.isPresent()) {
+            return new FeatureRequestBuilder(this, flagConfig.get());
+        }
+        log.debug("Flag name '{}' not found in configuration", flagName);
+        return new FeatureRequestBuilder(this, flagName);
     }
 
     // =====================================================================
@@ -249,10 +257,13 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
 
     /**
      * Start building a batch feature request for multiple flag keys (UUIDs).
+     * <p>
+     * If any flag key is not found in configuration, it will be included in the result
+     * with default values ({@code false}, {@code ""}, {@code BigDecimal.ZERO})
+     * and {@code FLAG_NOT_FOUND} evaluation reason.
      *
      * @param flagKeys the flag keys (UUIDs) as configured in Izanami
      * @return a builder for configuring and executing the batch feature request
-     * @throws FlagNotFoundException if any flag key is not found in configuration
      */
     @Override
     public BatchFeatureRequestBuilder forFlagKeys(String... flagKeys) {
@@ -260,23 +271,31 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
 
         Map<String, FlagConfig> configs = new LinkedHashMap<>();
         Map<String, String> identifierToKey = new LinkedHashMap<>();
+        Set<String> notFoundIdentifiers = new LinkedHashSet<>();
 
         for (String key : flagKeys) {
-            FlagConfig config = flagConfigService.getFlagConfigByKey(key)
-                .orElseThrow(() -> new FlagNotFoundException(key, FlagNotFoundException.IdentifierType.KEY));
-            configs.put(key, config);
-            identifierToKey.put(key, key);  // Keys map to themselves
+            Optional<FlagConfig> config = flagConfigService.getFlagConfigByKey(key);
+            if (config.isPresent()) {
+                configs.put(key, config.get());
+                identifierToKey.put(key, key);  // Keys map to themselves
+            } else {
+                log.debug("Flag key '{}' not found in configuration", key);
+                notFoundIdentifiers.add(key);
+            }
         }
 
-        return new BatchFeatureRequestBuilderImpl(this, configs, identifierToKey);
+        return new BatchFeatureRequestBuilderImpl(this, configs, identifierToKey, notFoundIdentifiers);
     }
 
     /**
      * Start building a batch feature request for multiple flag names.
+     * <p>
+     * If any flag name is not found in configuration, it will be included in the result
+     * with default values ({@code false}, {@code ""}, {@code BigDecimal.ZERO})
+     * and {@code FLAG_NOT_FOUND} evaluation reason.
      *
      * @param flagNames the flag names as configured in openfeature.flags
      * @return a builder for configuring and executing the batch feature request
-     * @throws FlagNotFoundException if any flag name is not found in configuration
      */
     @Override
     public BatchFeatureRequestBuilder forFlagNames(String... flagNames) {
@@ -284,15 +303,20 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
 
         Map<String, FlagConfig> configs = new LinkedHashMap<>();
         Map<String, String> identifierToKey = new LinkedHashMap<>();
+        Set<String> notFoundIdentifiers = new LinkedHashSet<>();
 
         for (String name : flagNames) {
-            FlagConfig config = flagConfigService.getFlagConfigByName(name)
-                .orElseThrow(() -> new FlagNotFoundException(name, FlagNotFoundException.IdentifierType.NAME));
-            configs.put(config.key(), config);
-            identifierToKey.put(name, config.key());  // Names map to keys
+            Optional<FlagConfig> config = flagConfigService.getFlagConfigByName(name);
+            if (config.isPresent()) {
+                configs.put(config.get().key(), config.get());
+                identifierToKey.put(name, config.get().key());  // Names map to keys
+            } else {
+                log.debug("Flag name '{}' not found in configuration", name);
+                notFoundIdentifiers.add(name);
+            }
         }
 
-        return new BatchFeatureRequestBuilderImpl(this, configs, identifierToKey);
+        return new BatchFeatureRequestBuilderImpl(this, configs, identifierToKey, notFoundIdentifiers);
     }
 
     // =====================================================================
@@ -306,13 +330,25 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
      */
     public static final class FeatureRequestBuilder implements fr.maif.izanami.spring.service.api.FeatureRequestBuilder {
         private final IzanamiServiceImpl service;
-        private final FlagConfig flagConfig;
+        private final Optional<FlagConfig> flagConfig;
+        private final String flagIdentifier;  // Original identifier for metadata when flag not found
         private String user;
         private String context;
 
         private FeatureRequestBuilder(IzanamiServiceImpl service, FlagConfig flagConfig) {
             this.service = service;
-            this.flagConfig = flagConfig;
+            this.flagConfig = Optional.of(flagConfig);
+            this.flagIdentifier = flagConfig.key();
+        }
+
+        /**
+         * Creates a builder for a flag that was not found in configuration.
+         * Evaluations will return default values with FLAG_NOT_FOUND reason.
+         */
+        private FeatureRequestBuilder(IzanamiServiceImpl service, String flagIdentifier) {
+            this.service = service;
+            this.flagConfig = Optional.empty();
+            this.flagIdentifier = flagIdentifier;
         }
 
         /**
@@ -341,56 +377,57 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
 
         @Override
         public CompletableFuture<Boolean> booleanValue() {
-            return createEvaluator().booleanValue();
+            return booleanValueDetails().thenApply(ResultValueWithDetails::value);
         }
 
         @Override
         public CompletableFuture<String> stringValue() {
-            return createEvaluator().stringValue();
+            return stringValueDetails().thenApply(ResultValueWithDetails::value);
         }
 
         @Override
         public CompletableFuture<BigDecimal> numberValue() {
-            return createEvaluator().numberValue();
+            return numberValueDetails().thenApply(ResultValueWithDetails::value);
         }
 
         @Override
         public CompletableFuture<ResultValueWithDetails<Boolean>> booleanValueDetails() {
-            return createEvaluator().booleanValueDetails();
+            return flagConfig
+                .map(fc -> createEvaluator(fc).booleanValueDetails())
+                .orElseGet(() -> CompletableFuture.completedFuture(flagNotFoundResult(false)));
         }
 
         @Override
         public CompletableFuture<ResultValueWithDetails<String>> stringValueDetails() {
-            return createEvaluator().stringValueDetails();
+            return flagConfig
+                .map(fc -> createEvaluator(fc).stringValueDetails())
+                .orElseGet(() -> CompletableFuture.completedFuture(flagNotFoundResult("")));
         }
 
         @Override
         public CompletableFuture<ResultValueWithDetails<BigDecimal>> numberValueDetails() {
-            return createEvaluator().numberValueDetails();
+            return flagConfig
+                .map(fc -> createEvaluator(fc).numberValueDetails())
+                .orElseGet(() -> CompletableFuture.completedFuture(flagNotFoundResult(BigDecimal.ZERO)));
         }
 
-        private IzanamiFeatureEvaluator createEvaluator() {
+        private <T> ResultValueWithDetails<T> flagNotFoundResult(T defaultValue) {
+            log.warn("Flag '{}' not found in configuration, returning default value: {}", flagIdentifier, defaultValue);
+            Map<String, String> metadata = new LinkedHashMap<>();
+            metadata.put(FlagMetadataKeys.FLAG_CONFIG_KEY, flagIdentifier);
+            metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
+            metadata.put(FlagMetadataKeys.FLAG_EVALUATION_REASON, "FLAG_NOT_FOUND");
+            return new ResultValueWithDetails<>(defaultValue, metadata);
+        }
+
+        private IzanamiFeatureEvaluator createEvaluator(FlagConfig fc) {
             return new IzanamiFeatureEvaluator(
                 service.clientRef.get(),  // May be null - evaluator handles gracefully
                 service.objectMapper,
-                flagConfig,
-                buildRequest(),
+                fc,
                 user,
                 context
             );
-        }
-
-        private SingleFeatureRequest buildRequest() {
-            SingleFeatureRequest request = SingleFeatureRequest.newSingleFeatureRequest(flagConfig.key())
-                .withErrorStrategy(flagConfig.clientErrorStrategy())
-                .withBooleanCastStrategy(BooleanCastStrategy.LAX);
-            if (user != null) {
-                request = request.withUser(user);
-            }
-            if (context != null) {
-                request = request.withContext(context);
-            }
-            return request;
         }
     }
 
@@ -407,6 +444,7 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
         private final IzanamiServiceImpl service;
         private final Map<String, FlagConfig> flagConfigs;
         private final Map<String, String> identifierToKey;
+        private final Set<String> notFoundIdentifiers;
         private String user;
         private String context;
         private boolean ignoreCache;
@@ -414,10 +452,12 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
         private BatchFeatureRequestBuilderImpl(
                 IzanamiServiceImpl service,
                 Map<String, FlagConfig> flagConfigs,
-                Map<String, String> identifierToKey) {
+                Map<String, String> identifierToKey,
+                Set<String> notFoundIdentifiers) {
             this.service = service;
             this.flagConfigs = flagConfigs;
             this.identifierToKey = identifierToKey;
+            this.notFoundIdentifiers = notFoundIdentifiers;
         }
 
         @Override
@@ -445,6 +485,7 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
                 service.objectMapper,
                 flagConfigs,
                 identifierToKey,
+                notFoundIdentifiers,
                 user,
                 context,
                 ignoreCache

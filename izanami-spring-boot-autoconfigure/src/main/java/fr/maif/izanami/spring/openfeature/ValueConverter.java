@@ -1,14 +1,11 @@
 package fr.maif.izanami.spring.openfeature;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.openfeature.sdk.MutableStructure;
 import dev.openfeature.sdk.Structure;
 import dev.openfeature.sdk.Value;
 import dev.openfeature.sdk.exceptions.TypeMismatchError;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.lang.Nullable;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;

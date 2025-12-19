@@ -7,26 +7,19 @@ import fr.maif.features.results.IzanamiResult;
 import fr.maif.features.values.BooleanCastStrategy;
 import fr.maif.izanami.spring.openfeature.ErrorStrategy;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
-import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
-import fr.maif.izanami.spring.openfeature.FlagValueSource;
-import fr.maif.izanami.spring.service.api.IzanamiClientNotAvailableException;
 import fr.maif.izanami.spring.service.api.ResultValueWithDetails;
 import fr.maif.requests.FeatureRequest;
-import fr.maif.requests.SingleFeatureRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.Nullable;
 
 import java.math.BigDecimal;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-
-import static fr.maif.izanami.spring.service.IzanamiEvaluationHelper.computeOutcome;
 
 import static java.util.Collections.unmodifiableMap;
 
@@ -43,54 +36,18 @@ final class IzanamiFeatureEvaluator {
     private final IzanamiClient client;
     private final ObjectMapper objectMapper;
     private final FlagConfig flagConfig;
-    private final SingleFeatureRequest request;
     private final String user;
     private final String context;
 
     private record ResultWithMetadata(IzanamiResult.Result result, Map<String, String> metadata) {}
 
     IzanamiFeatureEvaluator(@Nullable IzanamiClient client, ObjectMapper objectMapper, FlagConfig flagConfig,
-                            SingleFeatureRequest request, String user, String context) {
+                            String user, String context) {
         this.client = client;
         this.objectMapper = objectMapper;
         this.flagConfig = flagConfig;
-        this.request = request;
         this.user = user;
         this.context = context;
-    }
-
-    private IzanamiClient requireClient() {
-        if (client == null) {
-            throw new IzanamiClientNotAvailableException();
-        }
-        return client;
-    }
-
-    /**
-     * Evaluate the feature flag as a boolean.
-     *
-     * @return a future containing the boolean value
-     */
-    CompletableFuture<Boolean> booleanValue() {
-        return booleanValueDetails().thenApply(ResultValueWithDetails::value);
-    }
-
-    /**
-     * Evaluate the feature flag as a string.
-     *
-     * @return a future containing the string value
-     */
-    CompletableFuture<String> stringValue() {
-        return stringValueDetails().thenApply(ResultValueWithDetails::value);
-    }
-
-    /**
-     * Evaluate the feature flag as a number.
-     *
-     * @return a future containing the number value as BigDecimal
-     */
-    CompletableFuture<BigDecimal> numberValue() {
-        return numberValueDetails().thenApply(ResultValueWithDetails::value);
     }
 
     /**
@@ -175,28 +132,31 @@ final class IzanamiFeatureEvaluator {
      * Evaluate the feature and return the raw result.
      */
     private CompletableFuture<IzanamiResult.Result> evaluateFeatureResult() {
+        if (client == null) {
+            log.debug("Izanami client not available; returning error result");
+            return CompletableFuture.completedFuture(
+                new IzanamiResult.Error(
+                    flagConfig.clientErrorStrategy(),
+                    new IzanamiError("Izanami client not available")
+                )
+            );
+        }
         if (log.isTraceEnabled()) {
             log.trace("Querying Izanami: key={}, user={}, context={}", flagConfig.key(), user, context);
         }
-        try {
-            IzanamiClient izanamiClient = requireClient();
-            FeatureRequest featureRequest = FeatureRequest.newFeatureRequest()
-                .withFeature(flagConfig.key())
-                .withErrorStrategy(flagConfig.clientErrorStrategy())
-                .withBooleanCastStrategy(BooleanCastStrategy.LAX);
-            if (user != null) {
-                featureRequest = featureRequest.withUser(user);
-            }
-            if (context != null) {
-                featureRequest = featureRequest.withContext(context);
-            }
-            return izanamiClient
-                .featureValues(featureRequest)
-                .thenApply(r -> r.results.values().iterator().next());
-        } catch (Exception e) {
-            log.debug("Izanami evaluation failed; falling back to configured defaults: {}", e.getMessage());
-            return CompletableFuture.failedFuture(e);
+        FeatureRequest featureRequest = FeatureRequest.newFeatureRequest()
+            .withFeature(flagConfig.key())
+            .withErrorStrategy(flagConfig.clientErrorStrategy())
+            .withBooleanCastStrategy(BooleanCastStrategy.LAX);
+        if (user != null) {
+            featureRequest = featureRequest.withUser(user);
         }
+        if (context != null) {
+            featureRequest = featureRequest.withContext(context);
+        }
+        return client
+            .featureValues(featureRequest)
+            .thenApply(r -> r.results.values().iterator().next());
     }
 
     /**
@@ -211,24 +171,15 @@ final class IzanamiFeatureEvaluator {
             Supplier<T> disabledValueResolver,
             Predicate<T> isDisabledCheck
     ) {
-        return featureResultWithMetadata().thenApply(resultWithMetadata -> {
-            Map<String, String> metadata = new LinkedHashMap<>(resultWithMetadata.metadata());
-            IzanamiResult.Result result = resultWithMetadata.result();
-            T rawValue = valueExtractor.apply(result);
-
-            IzanamiEvaluationHelper.EvaluationOutcome<T> outcome = computeOutcome(result, rawValue, disabledValueResolver, isDisabledCheck);
-
-            metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, outcome.source().name());
-            metadata.put(FlagMetadataKeys.FLAG_EVALUATION_REASON, outcome.reason());
-
-            if (outcome.source() == FlagValueSource.APPLICATION_ERROR_STRATEGY) {
-                log.warn("Flag {} evaluated using application default value (feature disabled), value={}", flagConfig.key(), outcome.value());
-            } else if (outcome.source() == FlagValueSource.IZANAMI_ERROR_STRATEGY) {
-                log.warn("Flag {} evaluated using Izanami error strategy (evaluation error), value={}", flagConfig.key(), outcome.value());
-            } else {
-                log.debug("Evaluated flag {} = {} with details, reason={}", flagConfig.key(), outcome.value(), outcome.reason());
-            }
-            return new ResultValueWithDetails<>(outcome.value(), unmodifiableMap(metadata));
-        });
+        return featureResultWithMetadata().thenApply(resultWithMetadata ->
+            IzanamiEvaluationHelper.buildResultWithDetails(
+                resultWithMetadata.result(),
+                valueExtractor,
+                resultWithMetadata.metadata(),
+                disabledValueResolver,
+                isDisabledCheck,
+                flagConfig.key()
+            )
+        );
     }
 }

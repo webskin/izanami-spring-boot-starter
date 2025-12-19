@@ -1,23 +1,19 @@
 package fr.maif.izanami.spring.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.maif.features.results.IzanamiResult;
 import fr.maif.features.values.BooleanCastStrategy;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
-import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
-import fr.maif.izanami.spring.openfeature.FlagValueSource;
 import fr.maif.izanami.spring.service.api.BatchResult;
 import fr.maif.izanami.spring.service.api.ResultValueWithDetails;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-import static fr.maif.izanami.spring.service.IzanamiEvaluationHelper.computeOutcome;
 import static java.util.Collections.unmodifiableMap;
 
 /**
@@ -27,10 +23,8 @@ import static java.util.Collections.unmodifiableMap;
  * This class is package-private and not part of the public API.
  */
 final class BatchResultImpl implements BatchResult {
-    private static final Logger log = LoggerFactory.getLogger(BatchResultImpl.class);
 
     private final Map<String, BatchResultEntry> entries;
-    private final ObjectMapper objectMapper;
 
     /**
      * Internal record holding result + flagConfig + computed metadata for a single flag.
@@ -41,9 +35,8 @@ final class BatchResultImpl implements BatchResult {
         Map<String, String> baseMetadata
     ) {}
 
-    BatchResultImpl(Map<String, BatchResultEntry> entries, ObjectMapper objectMapper) {
+    BatchResultImpl(Map<String, BatchResultEntry> entries) {
         this.entries = Map.copyOf(entries);
-        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -67,6 +60,11 @@ final class BatchResultImpl implements BatchResult {
         if (entry == null) {
             return new ResultValueWithDetails<>(null, Map.of());
         }
+        // Handle FLAG_NOT_FOUND entries (no result or flagConfig)
+        // baseMetadata already includes FLAG_VALUE_SOURCE and FLAG_EVALUATION_REASON from IzanamiBatchFeatureEvaluator
+        if (entry.result() == null) {
+            return new ResultValueWithDetails<>(false, unmodifiableMap(entry.baseMetadata()));
+        }
         return evaluateWithDetails(
             entry,
             result -> result.booleanValue(BooleanCastStrategy.LAX),
@@ -81,6 +79,10 @@ final class BatchResultImpl implements BatchResult {
         if (entry == null) {
             return new ResultValueWithDetails<>(null, Map.of());
         }
+        // Handle FLAG_NOT_FOUND entries (no result or flagConfig)
+        if (entry.result() == null) {
+            return new ResultValueWithDetails<>("", unmodifiableMap(entry.baseMetadata()));
+        }
         return evaluateWithDetails(
             entry,
             IzanamiResult.Result::stringValue,
@@ -94,6 +96,10 @@ final class BatchResultImpl implements BatchResult {
         BatchResultEntry entry = entries.get(flagId);
         if (entry == null) {
             return new ResultValueWithDetails<>(null, Map.of());
+        }
+        // Handle FLAG_NOT_FOUND entries (no result or flagConfig)
+        if (entry.result() == null) {
+            return new ResultValueWithDetails<>(BigDecimal.ZERO, unmodifiableMap(entry.baseMetadata()));
         }
         return evaluateWithDetails(
             entry,
@@ -131,24 +137,13 @@ final class BatchResultImpl implements BatchResult {
             Supplier<T> disabledValueResolver,
             Predicate<T> isDisabledCheck
     ) {
-        Map<String, String> metadata = new LinkedHashMap<>(entry.baseMetadata());
-        IzanamiResult.Result result = entry.result();
-        FlagConfig flagConfig = entry.flagConfig();
-        T rawValue = valueExtractor.apply(result);
-
-        IzanamiEvaluationHelper.EvaluationOutcome<T> outcome = computeOutcome(result, rawValue, disabledValueResolver, isDisabledCheck);
-
-        metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, outcome.source().name());
-        metadata.put(FlagMetadataKeys.FLAG_EVALUATION_REASON, outcome.reason());
-
-        if (outcome.source() == FlagValueSource.APPLICATION_ERROR_STRATEGY) {
-            log.warn("Flag {} evaluated using application default value (feature disabled), value={}", flagConfig.key(), outcome.value());
-        } else if (outcome.source() == FlagValueSource.IZANAMI_ERROR_STRATEGY) {
-            log.warn("Flag {} evaluated using Izanami error strategy (evaluation error), value={}", flagConfig.key(), outcome.value());
-        } else {
-            log.debug("Evaluated flag {} = {} with details, reason={}", flagConfig.key(), outcome.value(), outcome.reason());
-        }
-
-        return new ResultValueWithDetails<>(outcome.value(), unmodifiableMap(metadata));
+        return IzanamiEvaluationHelper.buildResultWithDetails(
+            entry.result(),
+            valueExtractor,
+            entry.baseMetadata(),
+            disabledValueResolver,
+            isDisabledCheck,
+            entry.flagConfig().key()
+        );
     }
 }

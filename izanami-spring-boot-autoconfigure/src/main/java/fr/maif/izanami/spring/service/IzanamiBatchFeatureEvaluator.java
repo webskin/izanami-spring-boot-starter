@@ -6,13 +6,18 @@ import fr.maif.errors.IzanamiError;
 import fr.maif.features.results.IzanamiResult;
 import fr.maif.features.values.BooleanCastStrategy;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
+import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
+import fr.maif.izanami.spring.openfeature.FlagValueSource;
 import fr.maif.requests.FeatureRequest;
 import fr.maif.requests.SpecificFeatureRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.Nullable;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -29,6 +34,7 @@ final class IzanamiBatchFeatureEvaluator {
     private final ObjectMapper objectMapper;
     private final Map<String, FlagConfig> flagConfigs;  // keyed by Izanami key
     private final Map<String, String> identifierToKey;  // user identifier -> Izanami key
+    private final Set<String> notFoundIdentifiers;      // identifiers for flags not in configuration
     private final String user;
     private final String context;
     private final boolean ignoreCache;
@@ -38,6 +44,7 @@ final class IzanamiBatchFeatureEvaluator {
             ObjectMapper objectMapper,
             Map<String, FlagConfig> flagConfigs,
             Map<String, String> identifierToKey,
+            Set<String> notFoundIdentifiers,
             @Nullable String user,
             @Nullable String context,
             boolean ignoreCache
@@ -46,6 +53,7 @@ final class IzanamiBatchFeatureEvaluator {
         this.objectMapper = objectMapper;
         this.flagConfigs = flagConfigs;
         this.identifierToKey = identifierToKey;
+        this.notFoundIdentifiers = notFoundIdentifiers;
         this.user = user;
         this.context = context;
         this.ignoreCache = ignoreCache;
@@ -57,6 +65,12 @@ final class IzanamiBatchFeatureEvaluator {
      * @return a future containing the batch result
      */
     CompletableFuture<BatchResultImpl> evaluate() {
+        // If no configured flags, just return not-found results
+        if (flagConfigs.isEmpty()) {
+            log.debug("No configured flags, returning FLAG_NOT_FOUND for {} identifiers", notFoundIdentifiers.size());
+            return CompletableFuture.completedFuture(buildNotFoundOnlyResult());
+        }
+
         if (client == null) {
             log.debug("Izanami client not available, returning defaults for all {} flags", flagConfigs.size());
             return CompletableFuture.completedFuture(buildAllDefaultResults());
@@ -130,8 +144,11 @@ final class IzanamiBatchFeatureEvaluator {
             entries.put(userIdentifier, new BatchResultImpl.BatchResultEntry(result, config, metadata));
         }
 
+        // Add not-found entries
+        addNotFoundEntries(entries);
+
         log.debug("Successfully built batch result for {} features", entries.size());
-        return new BatchResultImpl(entries, objectMapper);
+        return new BatchResultImpl(entries);
     }
 
     /**
@@ -155,7 +172,10 @@ final class IzanamiBatchFeatureEvaluator {
             entries.put(userIdentifier, new BatchResultImpl.BatchResultEntry(result, config, metadata));
         }
 
-        return new BatchResultImpl(entries, objectMapper);
+        // Add not-found entries
+        addNotFoundEntries(entries);
+
+        return new BatchResultImpl(entries);
     }
 
     /**
@@ -179,7 +199,33 @@ final class IzanamiBatchFeatureEvaluator {
             entries.put(userIdentifier, new BatchResultImpl.BatchResultEntry(result, config, metadata));
         }
 
-        return new BatchResultImpl(entries, objectMapper);
+        // Add not-found entries
+        addNotFoundEntries(entries);
+
+        return new BatchResultImpl(entries);
+    }
+
+    /**
+     * Build result containing only not-found entries (when no configured flags).
+     */
+    private BatchResultImpl buildNotFoundOnlyResult() {
+        Map<String, BatchResultImpl.BatchResultEntry> entries = new LinkedHashMap<>();
+        addNotFoundEntries(entries);
+        return new BatchResultImpl(entries);
+    }
+
+    /**
+     * Add entries for flags not found in configuration with FLAG_NOT_FOUND reason.
+     */
+    private void addNotFoundEntries(Map<String, BatchResultImpl.BatchResultEntry> entries) {
+        for (String identifier : notFoundIdentifiers) {
+            log.warn("Flag '{}' not found in configuration, returning default values", identifier);
+            Map<String, String> metadata = new LinkedHashMap<>();
+            metadata.put(FlagMetadataKeys.FLAG_CONFIG_KEY, identifier);
+            metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
+            metadata.put(FlagMetadataKeys.FLAG_EVALUATION_REASON, "FLAG_NOT_FOUND");
+            entries.put(identifier, new BatchResultImpl.BatchResultEntry(null, null, metadata));
+        }
     }
 
 }

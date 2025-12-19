@@ -8,7 +8,6 @@ import fr.maif.features.results.IzanamiResult;
 import fr.maif.features.values.BooleanCastStrategy;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
 import fr.maif.izanami.spring.service.api.FeatureRequestBuilder;
-import fr.maif.izanami.spring.service.api.IzanamiClientNotAvailableException;
 import fr.maif.izanami.spring.service.api.IzanamiService;
 import fr.maif.izanami.spring.service.api.ResultValueWithDetails;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,7 +21,6 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -796,13 +794,13 @@ class IzanamiFeatureProviderTest {
     class ApplicationErrorStrategyTests {
 
         @Test
-        void getBooleanEvaluation_clientNotAvailable_returnsCallerDefaultWithApplicationErrorStrategySource() {
+        void getBooleanEvaluation_evaluationFails_returnsCallerDefaultWithApplicationErrorStrategySource() {
             FlagConfig config = testDefaultBooleanFlagConfig("bool-flag", "bool-flag", false);
             setupFlagConfig("bool-flag", config);
 
             when(izanamiService.forFlagKey("bool-flag")).thenReturn(mockBuilder);
             when(mockBuilder.booleanValueDetails())
-                .thenReturn(CompletableFuture.failedFuture(new IzanamiClientNotAvailableException()));
+                .thenReturn(CompletableFuture.failedFuture(new RuntimeException("Evaluation failed")));
 
             ProviderEvaluation<Boolean> result = provider.getBooleanEvaluation(
                 "bool-flag", true, emptyContext()

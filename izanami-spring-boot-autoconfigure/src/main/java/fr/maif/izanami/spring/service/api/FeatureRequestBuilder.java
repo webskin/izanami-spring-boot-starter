@@ -53,7 +53,6 @@ public interface FeatureRequestBuilder {
      * For non-boolean features, the value is cast using a lax boolean strategy.
      *
      * @return a future containing the boolean value
-     * @throws IzanamiClientNotAvailableException if the Izanami client is not available
      */
     CompletableFuture<Boolean> booleanValue();
 
@@ -64,7 +63,6 @@ public interface FeatureRequestBuilder {
      * unless a default value is configured with {@code DEFAULT_VALUE} error strategy.
      *
      * @return a future containing the string value, or {@code null} if disabled
-     * @throws IzanamiClientNotAvailableException if the Izanami client is not available
      */
     CompletableFuture<String> stringValue();
 
@@ -75,7 +73,6 @@ public interface FeatureRequestBuilder {
      * returns {@code null} unless a default value is configured with {@code DEFAULT_VALUE} error strategy.
      *
      * @return a future containing the number value as BigDecimal, or {@code null} if disabled
-     * @throws IzanamiClientNotAvailableException if the Izanami client is not available
      */
     CompletableFuture<BigDecimal> numberValue();
 
@@ -87,7 +84,6 @@ public interface FeatureRequestBuilder {
      * and evaluation reason ({@code ORIGIN_OR_CACHE}, {@code DISABLED}, {@code ERROR}).
      *
      * @return a future containing the boolean value with evaluation metadata
-     * @throws IzanamiClientNotAvailableException if the Izanami client is not available
      * @see ResultValueWithDetails
      */
     CompletableFuture<ResultValueWithDetails<Boolean>> booleanValueDetails();
@@ -99,7 +95,6 @@ public interface FeatureRequestBuilder {
      * and evaluation reason.
      *
      * @return a future containing the string value with evaluation metadata
-     * @throws IzanamiClientNotAvailableException if the Izanami client is not available
      * @see ResultValueWithDetails
      */
     CompletableFuture<ResultValueWithDetails<String>> stringValueDetails();
@@ -111,7 +106,6 @@ public interface FeatureRequestBuilder {
      * and evaluation reason.
      *
      * @return a future containing the number value as BigDecimal with evaluation metadata
-     * @throws IzanamiClientNotAvailableException if the Izanami client is not available
      * @see ResultValueWithDetails
      */
     CompletableFuture<ResultValueWithDetails<BigDecimal>> numberValueDetails();

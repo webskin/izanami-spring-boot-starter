@@ -91,6 +91,9 @@ public interface IzanamiService {
      * <p>
      * The flag key is the Izanami feature UUID as configured in the {@code openfeature.flags[].key} property.
      * <p>
+     * If the flag key is not found in configuration, the returned builder will produce default values
+     * ({@code false}, {@code ""}, {@code BigDecimal.ZERO}) with {@code FLAG_NOT_FOUND} evaluation reason.
+     * <p>
      * Example:
      * <pre>{@code
      * izanamiService.forFlagKey("a4c0d04f-69ac-41aa-a6e4-febcee541d51")
@@ -101,7 +104,6 @@ public interface IzanamiService {
      *
      * @param flagKey the flag key (UUID) as configured in Izanami
      * @return a builder for configuring and executing the feature request
-     * @throws FlagNotFoundException if the flag key is not found in configuration
      */
     FeatureRequestBuilder forFlagKey(String flagKey);
 
@@ -109,6 +111,9 @@ public interface IzanamiService {
      * Start building a feature request for the given flag name.
      * <p>
      * The flag name is the human-friendly identifier as configured in the {@code openfeature.flags[].name} property.
+     * <p>
+     * If the flag name is not found in configuration, the returned builder will produce default values
+     * ({@code false}, {@code ""}, {@code BigDecimal.ZERO}) with {@code FLAG_NOT_FOUND} evaluation reason.
      * <p>
      * Example:
      * <pre>{@code
@@ -120,7 +125,6 @@ public interface IzanamiService {
      *
      * @param flagName the flag name as configured in openfeature.flags
      * @return a builder for configuring and executing the feature request
-     * @throws FlagNotFoundException if the flag name is not found in configuration
      */
     FeatureRequestBuilder forFlagName(String flagName);
 
@@ -133,6 +137,10 @@ public interface IzanamiService {
      * <p>
      * Evaluates multiple flags in a single request to Izanami, improving performance
      * when you need to check several flags at once.
+     * <p>
+     * If any flag key is not found in configuration, it will be included in the result
+     * with default values ({@code false}, {@code ""}, {@code BigDecimal.ZERO})
+     * and {@code FLAG_NOT_FOUND} evaluation reason.
      * <p>
      * Example:
      * <pre>{@code
@@ -148,7 +156,6 @@ public interface IzanamiService {
      *
      * @param flagKeys the flag keys (UUIDs) as configured in Izanami
      * @return a builder for configuring and executing the batch feature request
-     * @throws FlagNotFoundException if any flag key is not found in configuration
      */
     BatchFeatureRequestBuilder forFlagKeys(String... flagKeys);
 
@@ -157,6 +164,10 @@ public interface IzanamiService {
      * <p>
      * Names are resolved to Izanami keys via configuration.
      * Results are accessible by the original names.
+     * <p>
+     * If any flag name is not found in configuration, it will be included in the result
+     * with default values ({@code false}, {@code ""}, {@code BigDecimal.ZERO})
+     * and {@code FLAG_NOT_FOUND} evaluation reason.
      * <p>
      * Example:
      * <pre>{@code
@@ -171,7 +182,6 @@ public interface IzanamiService {
      *
      * @param flagNames the flag names as configured in openfeature.flags
      * @return a builder for configuring and executing the batch feature request
-     * @throws FlagNotFoundException if any flag name is not found in configuration
      */
     BatchFeatureRequestBuilder forFlagNames(String... flagNames);
 }

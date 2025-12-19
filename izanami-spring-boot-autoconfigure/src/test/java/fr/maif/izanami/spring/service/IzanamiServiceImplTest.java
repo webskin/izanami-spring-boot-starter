@@ -9,14 +9,13 @@ import fr.maif.features.results.IzanamiResult;
 import fr.maif.features.values.BooleanCastStrategy;
 import fr.maif.features.values.FeatureValue;
 import fr.maif.izanami.spring.autoconfigure.IzanamiProperties;
-import fr.maif.requests.FeatureRequest;
 import fr.maif.izanami.spring.openfeature.ErrorStrategy;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
 import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
 import fr.maif.izanami.spring.openfeature.FlagValueSource;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
-import fr.maif.izanami.spring.service.api.FlagNotFoundException;
 import fr.maif.izanami.spring.service.api.ResultValueWithDetails;
+import fr.maif.requests.FeatureRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -31,7 +30,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -463,19 +461,22 @@ class IzanamiServiceImplTest {
         }
 
         @Test
-        void forFlagKey_whenFlagNotFound_throwsFlagNotFoundException() {
+        void forFlagKey_whenFlagNotFound_returnsBuilderWithDefaults() {
             when(flagConfigService.getFlagConfigByKey("unknown-key")).thenReturn(Optional.empty());
 
             IzanamiServiceImpl service = createServiceWithMockFactory(validProperties());
             service.afterPropertiesSet();
 
-            assertThatThrownBy(() -> service.forFlagKey("unknown-key"))
-                .isInstanceOf(FlagNotFoundException.class)
-                .satisfies(ex -> {
-                    FlagNotFoundException fnf = (FlagNotFoundException) ex;
-                    assertThat(fnf.getFlagIdentifier()).isEqualTo("unknown-key");
-                    assertThat(fnf.getIdentifierType()).isEqualTo(FlagNotFoundException.IdentifierType.KEY);
-                });
+            // Should not throw - returns a builder that produces defaults
+            IzanamiServiceImpl.FeatureRequestBuilder builder = service.forFlagKey("unknown-key");
+            assertThat(builder).isNotNull();
+
+            // Verify it returns defaults with FLAG_NOT_FOUND reason
+            ResultValueWithDetails<Boolean> result = builder.booleanValueDetails().join();
+            assertThat(result.value()).isFalse();
+            assertThat(result.metadata().get(FlagMetadataKeys.FLAG_EVALUATION_REASON)).isEqualTo("FLAG_NOT_FOUND");
+            assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                .isEqualTo(FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
         }
 
         @Test
@@ -492,19 +493,22 @@ class IzanamiServiceImplTest {
         }
 
         @Test
-        void forFlagName_whenFlagNotFound_throwsFlagNotFoundException() {
+        void forFlagName_whenFlagNotFound_returnsBuilderWithDefaults() {
             when(flagConfigService.getFlagConfigByName("unknown-name")).thenReturn(Optional.empty());
 
             IzanamiServiceImpl service = createServiceWithMockFactory(validProperties());
             service.afterPropertiesSet();
 
-            assertThatThrownBy(() -> service.forFlagName("unknown-name"))
-                .isInstanceOf(FlagNotFoundException.class)
-                .satisfies(ex -> {
-                    FlagNotFoundException fnf = (FlagNotFoundException) ex;
-                    assertThat(fnf.getFlagIdentifier()).isEqualTo("unknown-name");
-                    assertThat(fnf.getIdentifierType()).isEqualTo(FlagNotFoundException.IdentifierType.NAME);
-                });
+            // Should not throw - returns a builder that produces defaults
+            IzanamiServiceImpl.FeatureRequestBuilder builder = service.forFlagName("unknown-name");
+            assertThat(builder).isNotNull();
+
+            // Verify it returns defaults with FLAG_NOT_FOUND reason
+            ResultValueWithDetails<String> result = builder.stringValueDetails().join();
+            assertThat(result.value()).isEqualTo("");
+            assertThat(result.metadata().get(FlagMetadataKeys.FLAG_EVALUATION_REASON)).isEqualTo("FLAG_NOT_FOUND");
+            assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                .isEqualTo(FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
         }
     }
 

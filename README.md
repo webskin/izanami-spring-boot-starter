@@ -453,6 +453,48 @@ public class IzanamiConfig {}
 
 `izanami.enabled=false` still disables everything.
 
+## Resilience
+
+The starter is designed to be **fail-safe** and will never crash your application due to Izanami connectivity issues or misconfiguration.
+
+### Graceful Degradation
+
+| Scenario | Behavior |
+|----------|----------|
+| **Missing credentials** (`client-id`/`client-secret`) | Client stays inactive, evaluations return configured defaults |
+| **Missing URL** (`base-url`) | Client stays inactive, evaluations return configured defaults |
+| **Server unreachable** | Evaluations use Izanami client error strategy (cached value or default) |
+| **Flag not configured** | Returns sensible defaults (`false` for boolean, `null` for string/number) with `FLAG_NOT_FOUND` reason |
+| **Preload failure** | Application starts normally, evaluations fall back to configured defaults |
+
+### Metadata for Observability
+
+When evaluations fall back to defaults, the metadata indicates the source:
+
+```java
+ResultValueWithDetails<Boolean> result = izanamiService.forFlagName("my-flag")
+    .booleanValueDetails()
+    .join();
+
+String source = result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE);
+String reason = result.metadata().get(FlagMetadataKeys.FLAG_EVALUATION_REASON);
+
+// source = "IZANAMI_ERROR_STRATEGY" when server error occurred
+// source = "APPLICATION_ERROR_STRATEGY" when feature is disabled
+// reason = "FLAG_NOT_FOUND" when flag is not configured
+// reason = "ERROR" when server error occurred
+```
+
+### Startup Behavior
+
+The service initialization is resilient:
+
+- **No exceptions thrown** from Spring lifecycle callbacks (`afterPropertiesSet`, `destroy`)
+- **Preload failures are logged** but don't prevent application startup
+- **Health indicator** reports `OUT_OF_SERVICE` if preloading failed, allowing Kubernetes probes to detect issues
+
+This design ensures your application remains available even when Izanami is temporarily unreachable.
+
 ## Actuator Health Indicator
 
 When Spring Boot Actuator is on the classpath, an `IzanamiHealthIndicator` is automatically registered.

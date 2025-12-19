@@ -2,7 +2,6 @@ package fr.maif.izanami.spring.integration;
 
 import dev.openfeature.sdk.FlagValueType;
 import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
-import fr.maif.izanami.spring.openfeature.FlagValueSource;
 import fr.maif.izanami.spring.openfeature.api.IzanamiErrorCallback;
 import fr.maif.izanami.spring.service.api.IzanamiService;
 import fr.maif.izanami.spring.service.api.ResultValueWithDetails;
@@ -350,6 +349,128 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
                 assertThat(result.value()).isTrue();
                 assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
                     .isEqualTo("IZANAMI_ERROR_STRATEGY");
+            });
+    }
+
+    // ========== FLAG_NOT_FOUND tests (flag not in configuration) ==========
+
+    @Test
+    void forFlagKey_notConfigured_returnsDefaultsWithFlagNotFound() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + TURBO_MODE_ID,
+                "openfeature.flags[0].name=turbo-mode",
+                "openfeature.flags[0].description=Enable turbo mode",
+                "openfeature.flags[0].valueType=boolean",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=false"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                IzanamiService service = context.getBean(IzanamiService.class);
+                // Request a flag key that is NOT in openfeature.flags configuration
+                ResultValueWithDetails<Boolean> result = service.forFlagKey("not-configured-key").booleanValueDetails().join();
+
+                assertThat(result.value()).isFalse();  // default for boolean
+                assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("APPLICATION_ERROR_STRATEGY");
+                assertThat(result.metadata().get(FlagMetadataKeys.FLAG_EVALUATION_REASON))
+                    .isEqualTo("FLAG_NOT_FOUND");
+            });
+    }
+
+    @Test
+    void forFlagName_notConfigured_returnsDefaultsWithFlagNotFound() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + TURBO_MODE_ID,
+                "openfeature.flags[0].name=turbo-mode",
+                "openfeature.flags[0].description=Enable turbo mode",
+                "openfeature.flags[0].valueType=boolean",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=false"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                IzanamiService service = context.getBean(IzanamiService.class);
+                // Request a flag name that is NOT in openfeature.flags configuration
+                ResultValueWithDetails<String> result = service.forFlagName("not-configured-name").stringValueDetails().join();
+
+                assertThat(result.value()).isEqualTo("");  // default for string
+                assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("APPLICATION_ERROR_STRATEGY");
+                assertThat(result.metadata().get(FlagMetadataKeys.FLAG_EVALUATION_REASON))
+                    .isEqualTo("FLAG_NOT_FOUND");
+            });
+    }
+
+    @Test
+    void forFlagKeys_withMissingFlag_includesMissingWithFlagNotFound() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + TURBO_MODE_ID,
+                "openfeature.flags[0].name=turbo-mode",
+                "openfeature.flags[0].description=Enable turbo mode",
+                "openfeature.flags[0].valueType=boolean",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=false"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                IzanamiService service = context.getBean(IzanamiService.class);
+                // Request both configured and non-configured flag keys
+                var batchResult = service.forFlagKeys(TURBO_MODE_ID, "not-configured-key").values().join();
+
+                // Configured flag should work normally
+                assertThat(batchResult.booleanValue(TURBO_MODE_ID)).isTrue();
+                assertThat(batchResult.booleanValueDetails(TURBO_MODE_ID).metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI");
+
+                // Missing flag should return defaults with FLAG_NOT_FOUND
+                assertThat(batchResult.hasFlag("not-configured-key")).isTrue();
+                ResultValueWithDetails<Boolean> missingResult = batchResult.booleanValueDetails("not-configured-key");
+                assertThat(missingResult.value()).isFalse();
+                assertThat(missingResult.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("APPLICATION_ERROR_STRATEGY");
+                assertThat(missingResult.metadata().get(FlagMetadataKeys.FLAG_EVALUATION_REASON))
+                    .isEqualTo("FLAG_NOT_FOUND");
+            });
+    }
+
+    @Test
+    void forFlagNames_withMissingFlag_includesMissingWithFlagNotFound() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
+                "openfeature.flags[0].name=secret-codename",
+                "openfeature.flags[0].description=The secret codename",
+                "openfeature.flags[0].valueType=string",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=classified"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                IzanamiService service = context.getBean(IzanamiService.class);
+                // Request both configured and non-configured flag names
+                var batchResult = service.forFlagNames("secret-codename", "not-configured-name").values().join();
+
+                // Configured flag should work normally
+                assertThat(batchResult.stringValue("secret-codename")).isEqualTo("Operation Thunderbolt");
+                assertThat(batchResult.stringValueDetails("secret-codename").metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI");
+
+                // Missing flag should return defaults with FLAG_NOT_FOUND
+                assertThat(batchResult.hasFlag("not-configured-name")).isTrue();
+                ResultValueWithDetails<String> missingResult = batchResult.stringValueDetails("not-configured-name");
+                assertThat(missingResult.value()).isEqualTo("");
+                assertThat(missingResult.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("APPLICATION_ERROR_STRATEGY");
+                assertThat(missingResult.metadata().get(FlagMetadataKeys.FLAG_EVALUATION_REASON))
+                    .isEqualTo("FLAG_NOT_FOUND");
             });
     }
 
