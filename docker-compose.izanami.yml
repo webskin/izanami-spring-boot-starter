@@ -23,7 +23,7 @@ services:
 
   # Izanami - Feature Flag Management
   izanami:
-    image: maif/izanami:2.15.0
+    image: maif/izanami:2.16.1
     container_name: izanami
     ports:
       - "9999:9000"
