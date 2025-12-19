@@ -167,16 +167,6 @@ final class IzanamiEvaluationHelper {
         return override != null ? override : configDefault;
     }
 
-    /**
-     * Checks if the given strategy is the FAIL strategy.
-     *
-     * @param strategy the error strategy to check
-     * @return true if this is the FAIL strategy
-     */
-    static boolean isFailStrategy(FeatureClientErrorStrategy<?> strategy) {
-        return FeatureClientErrorStrategy.failStrategy().equals(strategy);
-    }
-
     // =========================================================================
     // Request Configuration Utilities
     // =========================================================================

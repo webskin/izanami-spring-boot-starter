@@ -144,11 +144,11 @@ final class IzanamiBatchFeatureEvaluator {
 
             FeatureClientErrorStrategy<?> effectiveStrategy =
                 IzanamiEvaluationHelper.computeEffectiveErrorStrategy(errorStrategyOverride, config.clientErrorStrategy());
-            boolean isFailStrategy = IzanamiEvaluationHelper.isFailStrategy(effectiveStrategy);
 
             IzanamiResult.Result result = izanamiResult.results.get(izanamiKey);
             if (result == null) {
-                // Feature not in response - create error result
+                // Feature not in response - create error result with effective strategy
+                // FAIL strategy will throw IzanamiException when value is extracted
                 log.warn("Feature {} not found in Izanami response", izanamiKey);
                 result = new IzanamiResult.Error(
                     effectiveStrategy,
@@ -157,7 +157,7 @@ final class IzanamiBatchFeatureEvaluator {
             }
 
             Map<String, String> metadata = IzanamiEvaluationHelper.buildBaseMetadata(config, objectMapper);
-            entries.put(userIdentifier, new BatchResultImpl.BatchResultEntry(result, config, metadata, isFailStrategy));
+            entries.put(userIdentifier, new BatchResultImpl.BatchResultEntry(result, config, metadata));
         }
 
         // Add not-found entries
@@ -180,15 +180,15 @@ final class IzanamiBatchFeatureEvaluator {
 
             FeatureClientErrorStrategy<?> effectiveStrategy =
                 IzanamiEvaluationHelper.computeEffectiveErrorStrategy(errorStrategyOverride, config.clientErrorStrategy());
-            boolean isFailStrategy = IzanamiEvaluationHelper.isFailStrategy(effectiveStrategy);
 
+            // FAIL strategy will throw IzanamiException when value is extracted
             IzanamiResult.Result result = new IzanamiResult.Error(
                 effectiveStrategy,
                 new IzanamiError("Izanami client not available")
             );
 
             Map<String, String> metadata = IzanamiEvaluationHelper.buildBaseMetadata(config, objectMapper);
-            entries.put(userIdentifier, new BatchResultImpl.BatchResultEntry(result, config, metadata, isFailStrategy));
+            entries.put(userIdentifier, new BatchResultImpl.BatchResultEntry(result, config, metadata));
         }
 
         // Add not-found entries
@@ -210,15 +210,15 @@ final class IzanamiBatchFeatureEvaluator {
 
             FeatureClientErrorStrategy<?> effectiveStrategy =
                 IzanamiEvaluationHelper.computeEffectiveErrorStrategy(errorStrategyOverride, config.clientErrorStrategy());
-            boolean isFailStrategy = IzanamiEvaluationHelper.isFailStrategy(effectiveStrategy);
 
+            // FAIL strategy will throw IzanamiException when value is extracted
             IzanamiResult.Result result = new IzanamiResult.Error(
                 effectiveStrategy,
                 new IzanamiError(error.getMessage())
             );
 
             Map<String, String> metadata = IzanamiEvaluationHelper.buildBaseMetadata(config, objectMapper);
-            entries.put(userIdentifier, new BatchResultImpl.BatchResultEntry(result, config, metadata, isFailStrategy));
+            entries.put(userIdentifier, new BatchResultImpl.BatchResultEntry(result, config, metadata));
         }
 
         // Add not-found entries
@@ -238,14 +238,13 @@ final class IzanamiBatchFeatureEvaluator {
 
     /**
      * Add entries for flags not found in configuration with FLAG_NOT_FOUND reason.
-     * Not-found flags never use FAIL strategy (no configuration to specify it).
+     * Not-found flags have null result, so value extraction returns type-safe defaults (no exception).
      */
     private void addNotFoundEntries(Map<String, BatchResultImpl.BatchResultEntry> entries) {
         for (String identifier : notFoundIdentifiers) {
             log.warn("Flag '{}' not found in configuration, returning default values", identifier);
             Map<String, String> metadata = IzanamiEvaluationHelper.buildFlagNotFoundMetadata(identifier);
-            // Not-found flags never have FAIL strategy - no configuration exists for them
-            entries.put(identifier, new BatchResultImpl.BatchResultEntry(null, null, metadata, false));
+            entries.put(identifier, new BatchResultImpl.BatchResultEntry(null, null, metadata));
         }
     }
 

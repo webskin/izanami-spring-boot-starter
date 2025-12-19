@@ -121,18 +121,17 @@ final class IzanamiFeatureEvaluator {
 
     /**
      * Retrieve the raw feature result with metadata asynchronously.
+     * <p>
+     * Errors are wrapped in {@link IzanamiResult.Error} with the effective error strategy.
+     * For FAIL strategy, exception is thrown when value is extracted via {@code result.booleanValue()} etc.
      */
     private CompletableFuture<ResultWithMetadata> featureResultWithMetadata() {
         Map<String, String> metadata = IzanamiEvaluationHelper.buildBaseMetadata(flagConfig, objectMapper);
-        boolean isFailStrategy = IzanamiEvaluationHelper.isFailStrategy(effectiveErrorStrategy);
         try {
             return evaluateFeatureResult()
                 .handle((result, error) -> {
                     if (error != null) {
-                        // Handle both sync and async errors
-                        if (isFailStrategy) {
-                            throw error instanceof RuntimeException ? (RuntimeException) error : new RuntimeException(error);
-                        }
+                        // Wrap error in IzanamiResult.Error - FAIL strategy throws on value extraction
                         return new ResultWithMetadata(
                             new IzanamiResult.Error(effectiveErrorStrategy, new IzanamiError(error.getMessage())),
                             unmodifiableMap(metadata)
@@ -142,9 +141,6 @@ final class IzanamiFeatureEvaluator {
                 });
         } catch (Exception e) {
             // Handle synchronous exceptions from evaluateFeatureResult()
-            if (isFailStrategy) {
-                return CompletableFuture.failedFuture(e);
-            }
             return CompletableFuture.completedFuture(new ResultWithMetadata(
                 new IzanamiResult.Error(effectiveErrorStrategy, new IzanamiError(e.getMessage())),
                 unmodifiableMap(metadata)

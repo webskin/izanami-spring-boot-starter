@@ -27,18 +27,18 @@ final class BatchResultImpl implements BatchResult {
     private final Map<String, BatchResultEntry> entries;
 
     /**
-     * Internal record holding result + flagConfig + computed metadata + FAIL strategy flag for a single flag.
+     * Internal record holding result + flagConfig + computed metadata for a single flag.
+     * <p>
+     * For FAIL strategy, exception is thrown when value is extracted via {@code result.booleanValue()} etc.
      *
      * @param result        the Izanami result (may be null for FLAG_NOT_FOUND)
      * @param flagConfig    the flag configuration (may be null for FLAG_NOT_FOUND)
      * @param baseMetadata  pre-computed metadata for this flag
-     * @param isFailStrategy whether the effective error strategy is FAIL (for exception throwing)
      */
     record BatchResultEntry(
         IzanamiResult.Result result,
         FlagConfig flagConfig,
-        Map<String, String> baseMetadata,
-        boolean isFailStrategy
+        Map<String, String> baseMetadata
     ) {}
 
     BatchResultImpl(Map<String, BatchResultEntry> entries) {
@@ -66,13 +66,12 @@ final class BatchResultImpl implements BatchResult {
         if (entry == null) {
             return new ResultValueWithDetails<>(null, Map.of());
         }
-        // Check for FAIL strategy + error before returning value
-        throwIfFailStrategyWithError(entry, flagId);
         // Handle FLAG_NOT_FOUND entries (no result or flagConfig)
         // baseMetadata already includes FLAG_VALUE_SOURCE and FLAG_EVALUATION_REASON from IzanamiBatchFeatureEvaluator
         if (entry.result() == null) {
             return new ResultValueWithDetails<>(false, unmodifiableMap(entry.baseMetadata()));
         }
+        // FAIL strategy throws IzanamiException in result.booleanValue() via valueExtractor
         return evaluateWithDetails(
             entry,
             result -> result.booleanValue(BooleanCastStrategy.LAX),
@@ -87,12 +86,11 @@ final class BatchResultImpl implements BatchResult {
         if (entry == null) {
             return new ResultValueWithDetails<>(null, Map.of());
         }
-        // Check for FAIL strategy + error before returning value
-        throwIfFailStrategyWithError(entry, flagId);
         // Handle FLAG_NOT_FOUND entries (no result or flagConfig)
         if (entry.result() == null) {
             return new ResultValueWithDetails<>("", unmodifiableMap(entry.baseMetadata()));
         }
+        // FAIL strategy throws IzanamiException in result.stringValue() via valueExtractor
         return evaluateWithDetails(
             entry,
             IzanamiResult.Result::stringValue,
@@ -107,27 +105,17 @@ final class BatchResultImpl implements BatchResult {
         if (entry == null) {
             return new ResultValueWithDetails<>(null, Map.of());
         }
-        // Check for FAIL strategy + error before returning value
-        throwIfFailStrategyWithError(entry, flagId);
         // Handle FLAG_NOT_FOUND entries (no result or flagConfig)
         if (entry.result() == null) {
             return new ResultValueWithDetails<>(BigDecimal.ZERO, unmodifiableMap(entry.baseMetadata()));
         }
+        // FAIL strategy throws IzanamiException in result.numberValue() via valueExtractor
         return evaluateWithDetails(
             entry,
             IzanamiResult.Result::numberValue,
             () -> IzanamiEvaluationHelper.toBigDecimal(entry.flagConfig().defaultValue()),
             Objects::isNull  // null means disabled for number features
         );
-    }
-
-    /**
-     * Throws an exception if FAIL strategy is configured and an error occurred.
-     */
-    private void throwIfFailStrategyWithError(BatchResultEntry entry, String flagId) {
-        if (entry.isFailStrategy() && entry.result() instanceof IzanamiResult.Error) {
-            throw new RuntimeException("Feature evaluation failed for flag '" + flagId + "'");
-        }
     }
 
     @Override
