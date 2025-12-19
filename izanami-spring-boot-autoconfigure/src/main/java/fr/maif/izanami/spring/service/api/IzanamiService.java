@@ -123,4 +123,55 @@ public interface IzanamiService {
      * @throws FlagNotFoundException if the flag name is not found in configuration
      */
     FeatureRequestBuilder forFlagName(String flagName);
+
+    // =====================================================================
+    // Batch evaluation methods
+    // =====================================================================
+
+    /**
+     * Start building a batch feature request for multiple flag keys (UUIDs).
+     * <p>
+     * Evaluates multiple flags in a single request to Izanami, improving performance
+     * when you need to check several flags at once.
+     * <p>
+     * Example:
+     * <pre>{@code
+     * izanamiService.forFlagKeys("uuid-1", "uuid-2", "uuid-3")
+     *     .withUser("user-123")
+     *     .withContext("production")
+     *     .values()
+     *     .thenAccept(result -> {
+     *         Boolean enabled = result.booleanValue("uuid-1");
+     *         String value = result.stringValue("uuid-2");
+     *     });
+     * }</pre>
+     *
+     * @param flagKeys the flag keys (UUIDs) as configured in Izanami
+     * @return a builder for configuring and executing the batch feature request
+     * @throws FlagNotFoundException if any flag key is not found in configuration
+     */
+    BatchFeatureRequestBuilder forFlagKeys(String... flagKeys);
+
+    /**
+     * Start building a batch feature request for multiple flag names.
+     * <p>
+     * Names are resolved to Izanami keys via configuration.
+     * Results are accessible by the original names.
+     * <p>
+     * Example:
+     * <pre>{@code
+     * izanamiService.forFlagNames("feature-a", "feature-b")
+     *     .withUser("user-123")
+     *     .values()
+     *     .thenAccept(result -> {
+     *         Boolean enabled = result.booleanValue("feature-a");
+     *         String value = result.stringValue("feature-b");
+     *     });
+     * }</pre>
+     *
+     * @param flagNames the flag names as configured in openfeature.flags
+     * @return a builder for configuring and executing the batch feature request
+     * @throws FlagNotFoundException if any flag name is not found in configuration
+     */
+    BatchFeatureRequestBuilder forFlagNames(String... flagNames);
 }

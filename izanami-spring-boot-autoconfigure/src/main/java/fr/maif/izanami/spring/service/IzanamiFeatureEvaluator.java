@@ -26,6 +26,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+import static fr.maif.izanami.spring.service.IzanamiEvaluationHelper.computeOutcome;
+
 import static java.util.Collections.unmodifiableMap;
 
 /**
@@ -46,11 +48,6 @@ final class IzanamiFeatureEvaluator {
     private final String context;
 
     private record ResultWithMetadata(IzanamiResult.Result result, Map<String, String> metadata) {}
-
-    /**
-     * Holds the computed value, source, and reason for a feature evaluation.
-     */
-    private record EvaluationOutcome<T>(T value, FlagValueSource source, String reason) {}
 
     IzanamiFeatureEvaluator(@Nullable IzanamiClient client, ObjectMapper objectMapper, FlagConfig flagConfig,
                             SingleFeatureRequest request, String user, String context) {
@@ -133,7 +130,7 @@ final class IzanamiFeatureEvaluator {
         log.debug("Evaluating flag {} as number with details", flagConfig.key());
         return evaluateWithDetails(
             IzanamiResult.Result::numberValue,
-            () -> toBigDecimal(flagConfig.defaultValue()),
+            () -> IzanamiEvaluationHelper.toBigDecimal(flagConfig.defaultValue()),
             Objects::isNull  // null means disabled for number features
         );
     }
@@ -146,13 +143,7 @@ final class IzanamiFeatureEvaluator {
      * Retrieve the raw feature result with metadata asynchronously.
      */
     private CompletableFuture<ResultWithMetadata> featureResultWithMetadata() {
-        Map<String, String> metadata = new LinkedHashMap<>();
-        metadata.put(FlagMetadataKeys.FLAG_CONFIG_KEY, flagConfig.key());
-        metadata.put(FlagMetadataKeys.FLAG_CONFIG_NAME, flagConfig.name());
-        metadata.put(FlagMetadataKeys.FLAG_CONFIG_DESCRIPTION, flagConfig.description());
-        metadata.put(FlagMetadataKeys.FLAG_CONFIG_VALUE_TYPE, flagConfig.valueType().name());
-        metadata.put(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE, IzanamiServiceImpl.stringifyDefaultValue(objectMapper, flagConfig));
-        metadata.put(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY, flagConfig.errorStrategy().name());
+        Map<String, String> metadata = IzanamiEvaluationHelper.buildBaseMetadata(flagConfig, objectMapper);
         try {
             return evaluateFeatureResult()
                 .handle((result, error) -> {
@@ -225,7 +216,7 @@ final class IzanamiFeatureEvaluator {
             IzanamiResult.Result result = resultWithMetadata.result();
             T rawValue = valueExtractor.apply(result);
 
-            EvaluationOutcome<T> outcome = computeOutcome(result, rawValue, disabledValueResolver, isDisabledCheck);
+            IzanamiEvaluationHelper.EvaluationOutcome<T> outcome = computeOutcome(result, rawValue, disabledValueResolver, isDisabledCheck);
 
             metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, outcome.source().name());
             metadata.put(FlagMetadataKeys.FLAG_EVALUATION_REASON, outcome.reason());
@@ -239,51 +230,5 @@ final class IzanamiFeatureEvaluator {
             }
             return new ResultValueWithDetails<>(outcome.value(), unmodifiableMap(metadata));
         });
-    }
-
-    /**
-     * Computes the evaluation outcome (value, source, reason) based on the Izanami result.
-     * <p>
-     * For disabled non-boolean features, Izanami returns null (Success with NullValue).
-     * In this case, the configured defaultValue is applied if available.
-     *
-     * @see <a href="https://github.com/MAIF/izanami-java-client/blob/v2.3.7/src/main/java/fr/maif/features/values/NullValue.java">NullValue</a>
-     */
-    private <T> EvaluationOutcome<T> computeOutcome(
-            IzanamiResult.Result result,
-            T rawValue,
-            Supplier<T> disabledValueResolver,
-            Predicate<T> isDisabledCheck
-    ) {
-        if (result instanceof IzanamiResult.Success) {
-            if (isDisabledCheck.test(rawValue)) {
-                // Feature is disabled - apply default value if configured
-                T resolvedValue = disabledValueResolver.get();
-                return new EvaluationOutcome<>(
-                    resolvedValue != null ? resolvedValue : rawValue,
-                    resolvedValue != null ? FlagValueSource.APPLICATION_ERROR_STRATEGY : FlagValueSource.IZANAMI,
-                    "DISABLED"
-                );
-            }
-            return new EvaluationOutcome<>(rawValue, FlagValueSource.IZANAMI, "ORIGIN_OR_CACHE");
-        }
-        // Error case - value comes from Izanami's error strategy
-        return new EvaluationOutcome<>(rawValue, FlagValueSource.IZANAMI_ERROR_STRATEGY, "ERROR");
-    }
-
-    /**
-     * Converts a value to BigDecimal. Returns null if the input is null or not a number.
-     */
-    private static BigDecimal toBigDecimal(Object value) {
-        if (value == null) {
-            return null;
-        }
-        if (value instanceof BigDecimal bd) {
-            return bd;
-        }
-        if (value instanceof Number) {
-            return new BigDecimal(value.toString());
-        }
-        return null;
     }
 }

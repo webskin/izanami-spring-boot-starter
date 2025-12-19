@@ -197,6 +197,64 @@ BigDecimal rate = izanamiService.forFlagName("discount-rate")
     .join();
 ```
 
+### Batch Evaluation
+
+OpenFeature evaluates flags one at a time. For batch evaluation of multiple flags in a single request, use `IzanamiService.forFlagKeys()` or `forFlagNames()`:
+
+```java
+import fr.maif.izanami.spring.service.api.IzanamiService;
+import fr.maif.izanami.spring.service.api.BatchResult;
+
+// Batch evaluation by keys (UUIDs)
+BatchResult result = izanamiService.forFlagKeys(
+        "a4c0d04f-69ac-41aa-a6e4-febcee541d51",
+        "b5d1e15f-7abd-42bb-b7f5-0cdef6652e62",
+        "c6e2f26f-8bce-43cc-c8f6-1def07763f73")
+    .withUser("user-123")
+    .withContext("production")
+    .values()
+    .join();
+
+Boolean turboEnabled = result.booleanValue("a4c0d04f-69ac-41aa-a6e4-febcee541d51");
+String codename = result.stringValue("b5d1e15f-7abd-42bb-b7f5-0cdef6652e62");
+BigDecimal powerLevel = result.numberValue("c6e2f26f-8bce-43cc-c8f6-1def07763f73");
+
+// Batch evaluation by names (results are accessible by name)
+BatchResult byName = izanamiService.forFlagNames("turbo-mode", "secret-codename")
+    .withUser("user-123")
+    .values()
+    .join();
+
+Boolean enabled = byName.booleanValue("turbo-mode");
+String secret = byName.stringValue("secret-codename");
+
+// With details
+ResultValueWithDetails<Boolean> details = result.booleanValueDetails("a4c0d04f-...");
+String source = details.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE);
+```
+
+**BatchResult methods:**
+
+| Method | Description |
+|--------|-------------|
+| `booleanValue(id)` | Get boolean value by flag key/name |
+| `stringValue(id)` | Get string value by flag key/name |
+| `numberValue(id)` | Get BigDecimal value by flag key/name |
+| `booleanValueDetails(id)` | Get boolean with metadata |
+| `stringValueDetails(id)` | Get string with metadata |
+| `numberValueDetails(id)` | Get number with metadata |
+| `flagIdentifiers()` | Get all flag identifiers in result |
+| `hasFlag(id)` | Check if flag is in result |
+
+**Builder options:**
+
+| Method | Description |
+|--------|-------------|
+| `withUser(user)` | Set user identifier for all flags |
+| `withContext(context)` | Set evaluation context for all flags |
+| `ignoreCache(true)` | Bypass cache for this request |
+| `values()` | Execute and return `CompletableFuture<BatchResult>` |
+
 ### Simple Usage with ExtendedOpenFeatureClient
 
 In OpenFeature, the **targeting key** identifies the entity (user) being evaluated. Additional context is passed via the `context` attribute in `EvaluationContext`.
@@ -377,24 +435,6 @@ boolean enabled = client.getBooleanValue("my-flag", false);
 izanamiService.forFlagName("my-flag")
     .booleanValue()
     .thenAccept(enabled -> { /* handle async */ });
-```
-
-### No Batch Evaluation
-
-OpenFeature evaluates flags one at a time. For batch evaluation of multiple flags in a single request, use `IzanamiClient` directly via `unwrapClient()`:
-
-```java
-import fr.maif.IzanamiClient;
-import fr.maif.requests.FeatureRequest;
-
-izanamiService.unwrapClient().ifPresent(client -> {
-    // Evaluate multiple flags in a single request
-    client.featureValues(FeatureRequest.newFeatureRequest()
-            .withFeatures("flag-1", "flag-2", "flag-3"))
-        .thenAccept(results -> {
-            // Process all results
-        });
-});
 ```
 
 ### Optional explicit opt-in

@@ -10,6 +10,8 @@ import fr.maif.features.values.BooleanCastStrategy;
 import fr.maif.izanami.spring.autoconfigure.IzanamiProperties;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
+import fr.maif.izanami.spring.service.api.BatchFeatureRequestBuilder;
+import fr.maif.izanami.spring.service.api.BatchResult;
 import fr.maif.izanami.spring.service.api.FlagNotFoundException;
 import fr.maif.izanami.spring.service.api.ResultValueWithDetails;
 import fr.maif.requests.IzanamiConnectionInformation;
@@ -21,6 +23,8 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.lang.Nullable;
 
 import java.math.BigDecimal;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -240,6 +244,58 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
     }
 
     // =====================================================================
+    // Batch Fluent API entry points
+    // =====================================================================
+
+    /**
+     * Start building a batch feature request for multiple flag keys (UUIDs).
+     *
+     * @param flagKeys the flag keys (UUIDs) as configured in Izanami
+     * @return a builder for configuring and executing the batch feature request
+     * @throws FlagNotFoundException if any flag key is not found in configuration
+     */
+    @Override
+    public BatchFeatureRequestBuilder forFlagKeys(String... flagKeys) {
+        log.debug("Building batch feature request for {} keys", flagKeys.length);
+
+        Map<String, FlagConfig> configs = new LinkedHashMap<>();
+        Map<String, String> identifierToKey = new LinkedHashMap<>();
+
+        for (String key : flagKeys) {
+            FlagConfig config = flagConfigService.getFlagConfigByKey(key)
+                .orElseThrow(() -> new FlagNotFoundException(key, FlagNotFoundException.IdentifierType.KEY));
+            configs.put(key, config);
+            identifierToKey.put(key, key);  // Keys map to themselves
+        }
+
+        return new BatchFeatureRequestBuilderImpl(this, configs, identifierToKey);
+    }
+
+    /**
+     * Start building a batch feature request for multiple flag names.
+     *
+     * @param flagNames the flag names as configured in openfeature.flags
+     * @return a builder for configuring and executing the batch feature request
+     * @throws FlagNotFoundException if any flag name is not found in configuration
+     */
+    @Override
+    public BatchFeatureRequestBuilder forFlagNames(String... flagNames) {
+        log.debug("Building batch feature request for {} names", flagNames.length);
+
+        Map<String, FlagConfig> configs = new LinkedHashMap<>();
+        Map<String, String> identifierToKey = new LinkedHashMap<>();
+
+        for (String name : flagNames) {
+            FlagConfig config = flagConfigService.getFlagConfigByName(name)
+                .orElseThrow(() -> new FlagNotFoundException(name, FlagNotFoundException.IdentifierType.NAME));
+            configs.put(config.key(), config);
+            identifierToKey.put(name, config.key());  // Names map to keys
+        }
+
+        return new BatchFeatureRequestBuilderImpl(this, configs, identifierToKey);
+    }
+
+    // =====================================================================
     // Feature Request Builder
     // =====================================================================
 
@@ -335,6 +391,65 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
                 request = request.withContext(context);
             }
             return request;
+        }
+    }
+
+    // =====================================================================
+    // Batch Feature Request Builder
+    // =====================================================================
+
+    /**
+     * Fluent builder for configuring and executing batch feature flag evaluations.
+     * <p>
+     * Use {@link #forFlagKeys(String...)} or {@link #forFlagNames(String...)} to obtain an instance.
+     */
+    public static final class BatchFeatureRequestBuilderImpl implements BatchFeatureRequestBuilder {
+        private final IzanamiServiceImpl service;
+        private final Map<String, FlagConfig> flagConfigs;
+        private final Map<String, String> identifierToKey;
+        private String user;
+        private String context;
+        private boolean ignoreCache;
+
+        private BatchFeatureRequestBuilderImpl(
+                IzanamiServiceImpl service,
+                Map<String, FlagConfig> flagConfigs,
+                Map<String, String> identifierToKey) {
+            this.service = service;
+            this.flagConfigs = flagConfigs;
+            this.identifierToKey = identifierToKey;
+        }
+
+        @Override
+        public BatchFeatureRequestBuilder withUser(@Nullable String user) {
+            this.user = user;
+            return this;
+        }
+
+        @Override
+        public BatchFeatureRequestBuilder withContext(@Nullable String context) {
+            this.context = context;
+            return this;
+        }
+
+        @Override
+        public BatchFeatureRequestBuilder ignoreCache(boolean ignoreCache) {
+            this.ignoreCache = ignoreCache;
+            return this;
+        }
+
+        @Override
+        public CompletableFuture<BatchResult> values() {
+            IzanamiBatchFeatureEvaluator evaluator = new IzanamiBatchFeatureEvaluator(
+                service.clientRef.get(),  // May be null - evaluator handles gracefully
+                service.objectMapper,
+                flagConfigs,
+                identifierToKey,
+                user,
+                context,
+                ignoreCache
+            );
+            return evaluator.evaluate().thenApply(r -> r);
         }
     }
 
