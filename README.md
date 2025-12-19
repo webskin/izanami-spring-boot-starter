@@ -303,7 +303,7 @@ import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
 Map<String, Value> attributes = Map.of("context", new Value("production"));
 EvaluationContext ctx = new ImmutableContext("user-123", attributes);
 
-FlagEvaluationDetails<Boolean> details = client.getBooleanDetails("turbo-mode", ctx);
+FlagEvaluationDetails<Boolean> details = client.getBooleanDetailsByName("turbo-mode", ctx);
 
 Boolean value = details.getValue();
 String reason = details.getReason();        // e.g., "DISABLED", "ORIGIN_OR_CACHE"
