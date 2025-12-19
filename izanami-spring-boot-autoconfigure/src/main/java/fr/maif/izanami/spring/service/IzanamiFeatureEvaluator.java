@@ -73,50 +73,27 @@ final class IzanamiFeatureEvaluator {
      * Evaluate the feature flag as a boolean.
      *
      * @return a future containing the boolean value
-     * @throws IzanamiClientNotAvailableException if the Izanami client is not available
      */
     CompletableFuture<Boolean> booleanValue() {
-        log.debug("Evaluating flag {} as boolean", flagConfig.key());
-        return requireClient().booleanValue(request)
-            .whenComplete((result, error) -> {
-                if (error == null) {
-                    log.debug("Evaluated flag {} as boolean = {}", flagConfig.key(), result);
-                }
-            });
+        return booleanValueDetails().thenApply(ResultValueWithDetails::value);
     }
 
     /**
      * Evaluate the feature flag as a string.
      *
      * @return a future containing the string value
-     * @throws IzanamiClientNotAvailableException if the Izanami client is not available
      */
     CompletableFuture<String> stringValue() {
-        log.debug("Evaluating flag {} as string", flagConfig.key());
-        return requireClient().stringValue(request)
-            .thenApply(value -> applyDefaultIfDisabled(value, flagConfig))
-            .whenComplete((result, error) -> {
-                if (error == null) {
-                    log.debug("Evaluated flag {} as string = {}", flagConfig.key(), result);
-                }
-            });
+        return stringValueDetails().thenApply(ResultValueWithDetails::value);
     }
 
     /**
      * Evaluate the feature flag as a number.
      *
      * @return a future containing the number value as BigDecimal
-     * @throws IzanamiClientNotAvailableException if the Izanami client is not available
      */
     CompletableFuture<BigDecimal> numberValue() {
-        log.debug("Evaluating flag {} as number", flagConfig.key());
-        return requireClient().numberValue(request)
-            .thenApply(value -> applyDefaultIfDisabled(value, flagConfig))
-            .whenComplete((result, error) -> {
-                if (error == null) {
-                    log.debug("Evaluated flag {} as number = {}", flagConfig.key(), result);
-                }
-            });
+        return numberValueDetails().thenApply(ResultValueWithDetails::value);
     }
 
     /**
@@ -292,32 +269,6 @@ final class IzanamiFeatureEvaluator {
         }
         // Error case - value comes from Izanami's error strategy
         return new EvaluationOutcome<>(rawValue, FlagValueSource.IZANAMI_ERROR_STRATEGY, "ERROR");
-    }
-
-    /**
-     * Apply default value if the feature is disabled (returns null) and DEFAULT_VALUE strategy is configured.
-     */
-    private String applyDefaultIfDisabled(String value, FlagConfig flagConfig) {
-        if (value == null && flagConfig.defaultValue() != null
-                && flagConfig.errorStrategy() == ErrorStrategy.DEFAULT_VALUE) {
-            String defaultValue = flagConfig.defaultValue().toString();
-            log.warn("Flag {} evaluated using application default value (feature disabled), value={}", flagConfig.key(), defaultValue);
-            return defaultValue;
-        }
-        return value;
-    }
-
-    /**
-     * Apply default value if the feature is disabled (returns null) and DEFAULT_VALUE strategy is configured.
-     */
-    private BigDecimal applyDefaultIfDisabled(BigDecimal value, FlagConfig flagConfig) {
-        if (value == null && flagConfig.defaultValue() != null
-                && flagConfig.errorStrategy() == ErrorStrategy.DEFAULT_VALUE) {
-            BigDecimal defaultValue = toBigDecimal(flagConfig.defaultValue());
-            log.warn("Flag {} evaluated using application default value (feature disabled), value={}", flagConfig.key(), defaultValue);
-            return defaultValue;
-        }
-        return value;
     }
 
     /**

@@ -6,16 +6,17 @@ import dev.openfeature.sdk.FlagValueType;
 import fr.maif.FeatureClientErrorStrategy;
 import fr.maif.IzanamiClient;
 import fr.maif.features.results.IzanamiResult;
+import fr.maif.features.values.BooleanCastStrategy;
+import fr.maif.features.values.FeatureValue;
 import fr.maif.izanami.spring.autoconfigure.IzanamiProperties;
+import fr.maif.requests.FeatureRequest;
 import fr.maif.izanami.spring.openfeature.ErrorStrategy;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
 import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
 import fr.maif.izanami.spring.openfeature.FlagValueSource;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
 import fr.maif.izanami.spring.service.api.FlagNotFoundException;
-import fr.maif.izanami.spring.service.api.IzanamiClientNotAvailableException;
 import fr.maif.izanami.spring.service.api.ResultValueWithDetails;
-import fr.maif.requests.SingleFeatureRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -146,6 +147,81 @@ class IzanamiServiceImplTest {
     private IzanamiServiceImpl createServiceWithMockFactory(IzanamiProperties properties) {
         when(mockFactory.create(any(), any(), any(), any())).thenReturn(mockClient);
         return new IzanamiServiceImpl(properties, flagConfigService, objectMapper, mockFactory);
+    }
+
+    /**
+     * Creates a mock IzanamiResult with a Success containing the given FeatureValue.
+     * Uses reflection to set the final results field.
+     */
+    private IzanamiResult createMockSuccessResult(FeatureValue featureValue) {
+        IzanamiResult.Success success = new IzanamiResult.Success(featureValue);
+        IzanamiResult result = mock(IzanamiResult.class);
+        // Use when() to mock the field access since results is a public final field
+        // IzanamiResult.results is accessed as r.results.values().iterator().next()
+        try {
+            java.lang.reflect.Field resultsField = IzanamiResult.class.getDeclaredField("results");
+            resultsField.setAccessible(true);
+            resultsField.set(result, Map.of("feature", success));
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to set results field", e);
+        }
+        return result;
+    }
+
+    /**
+     * Creates a mock FeatureValue that returns the given boolean.
+     */
+    private FeatureValue createBooleanFeatureValue(boolean value) {
+        FeatureValue featureValue = mock(FeatureValue.class);
+        when(featureValue.booleanValue(any(BooleanCastStrategy.class))).thenReturn(value);
+        return featureValue;
+    }
+
+    /**
+     * Creates a mock FeatureValue that returns the given string.
+     */
+    private FeatureValue createStringFeatureValue(String value) {
+        FeatureValue featureValue = mock(FeatureValue.class);
+        when(featureValue.stringValue()).thenReturn(value);
+        when(featureValue.booleanValue(any(BooleanCastStrategy.class))).thenReturn(value != null);
+        return featureValue;
+    }
+
+    /**
+     * Creates a mock FeatureValue that returns the given number.
+     */
+    private FeatureValue createNumberFeatureValue(BigDecimal value) {
+        FeatureValue featureValue = mock(FeatureValue.class);
+        when(featureValue.numberValue()).thenReturn(value);
+        when(featureValue.booleanValue(any(BooleanCastStrategy.class))).thenReturn(value != null && value.compareTo(BigDecimal.ZERO) != 0);
+        return featureValue;
+    }
+
+    /**
+     * Mocks client.featureValues() to return a success result with the given boolean value.
+     */
+    private void mockFeatureValuesReturnsBoolean(boolean value) {
+        IzanamiResult result = createMockSuccessResult(createBooleanFeatureValue(value));
+        when(mockClient.featureValues(any(FeatureRequest.class)))
+            .thenReturn(CompletableFuture.completedFuture(result));
+    }
+
+    /**
+     * Mocks client.featureValues() to return a success result with the given string value.
+     */
+    private void mockFeatureValuesReturnsString(String value) {
+        IzanamiResult result = createMockSuccessResult(createStringFeatureValue(value));
+        when(mockClient.featureValues(any(FeatureRequest.class)))
+            .thenReturn(CompletableFuture.completedFuture(result));
+    }
+
+    /**
+     * Mocks client.featureValues() to return a success result with the given number value.
+     */
+    private void mockFeatureValuesReturnsNumber(BigDecimal value) {
+        IzanamiResult result = createMockSuccessResult(createNumberFeatureValue(value));
+        when(mockClient.featureValues(any(FeatureRequest.class)))
+            .thenReturn(CompletableFuture.completedFuture(result));
     }
 
     // =====================================================================
@@ -453,86 +529,106 @@ class IzanamiServiceImplTest {
 
         @Test
         void booleanValue_delegatesToClient() {
-            when(mockClient.booleanValue(any(SingleFeatureRequest.class)))
-                .thenReturn(CompletableFuture.completedFuture(true));
+            mockFeatureValuesReturnsBoolean(true);
 
             Boolean result = service.forFlagKey("uuid-123").booleanValue().join();
 
             assertThat(result).isTrue();
-            verify(mockClient).booleanValue(any(SingleFeatureRequest.class));
+            verify(mockClient).featureValues(any(FeatureRequest.class));
         }
 
         @Test
         void stringValue_delegatesToClient() {
             FlagConfig stringConfig = testDefaultStringFlagConfig("uuid-string", "string-flag", "default");
             when(flagConfigService.getFlagConfigByKey("uuid-string")).thenReturn(Optional.of(stringConfig));
-            when(mockClient.stringValue(any(SingleFeatureRequest.class)))
-                .thenReturn(CompletableFuture.completedFuture("test-value"));
+            mockFeatureValuesReturnsString("test-value");
 
             String result = service.forFlagKey("uuid-string").stringValue().join();
 
             assertThat(result).isEqualTo("test-value");
-            verify(mockClient).stringValue(any(SingleFeatureRequest.class));
+            verify(mockClient).featureValues(any(FeatureRequest.class));
         }
 
         @Test
         void numberValue_delegatesToClient() {
             FlagConfig numberConfig = testDefaultIntegerFlagConfig("uuid-number", "number-flag", BigDecimal.ZERO);
             when(flagConfigService.getFlagConfigByKey("uuid-number")).thenReturn(Optional.of(numberConfig));
-            when(mockClient.numberValue(any(SingleFeatureRequest.class)))
-                .thenReturn(CompletableFuture.completedFuture(new BigDecimal("42.5")));
+            mockFeatureValuesReturnsNumber(new BigDecimal("42.5"));
 
             BigDecimal result = service.forFlagKey("uuid-number").numberValue().join();
 
             assertThat(result).isEqualByComparingTo(new BigDecimal("42.5"));
-            verify(mockClient).numberValue(any(SingleFeatureRequest.class));
+            verify(mockClient).featureValues(any(FeatureRequest.class));
         }
 
         @Test
-        void booleanValue_whenClientNull_throwsIzanamiClientNotAvailableException() {
+        void booleanValue_whenClientNull_andDefaultStrategy_returnsDefaultValue() {
+            // With DEFAULT_VALUE strategy and null client, returns the configured default value
             IzanamiServiceImpl inactiveService = new IzanamiServiceImpl(
                 blankUrlProperties(), flagConfigService, objectMapper, mockFactory
             );
             inactiveService.afterPropertiesSet();
             when(flagConfigService.getFlagConfigByKey("uuid-123")).thenReturn(Optional.of(config));
 
-            assertThatThrownBy(() -> inactiveService.forFlagKey("uuid-123").booleanValue())
-                .isInstanceOf(IzanamiClientNotAvailableException.class);
+            Boolean result = inactiveService.forFlagKey("uuid-123").booleanValue().join();
+
+            // Default value is false (from testDefaultBooleanFlagConfig)
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        void booleanValue_whenClientNull_andFailStrategy_throwsException() {
+            // With FAIL strategy and null client, throws exception
+            FlagConfig failConfig = new FlagConfig(
+                "uuid-fail",
+                "fail-flag",
+                "Test flag description",
+                FlagValueType.BOOLEAN,
+                ErrorStrategy.FAIL,
+                FeatureClientErrorStrategy.failStrategy(),
+                false,
+                null
+            );
+            when(flagConfigService.getFlagConfigByKey("uuid-fail")).thenReturn(Optional.of(failConfig));
+
+            IzanamiServiceImpl inactiveService = new IzanamiServiceImpl(
+                blankUrlProperties(), flagConfigService, objectMapper, mockFactory
+            );
+            inactiveService.afterPropertiesSet();
+
+            CompletableFuture<Boolean> future = inactiveService.forFlagKey("uuid-fail").booleanValue();
+
+            assertThat(future).isCompletedExceptionally();
         }
 
         @Test
         void withUser_includesUserInEvaluation() {
-            ArgumentCaptor<SingleFeatureRequest> requestCaptor = ArgumentCaptor.forClass(SingleFeatureRequest.class);
-            when(mockClient.booleanValue(requestCaptor.capture()))
-                .thenReturn(CompletableFuture.completedFuture(true));
+            mockFeatureValuesReturnsBoolean(true);
 
             service.forFlagKey("uuid-123")
                 .withUser("user-456")
                 .booleanValue()
                 .join();
 
-            // The request was captured - verifies it was called
-            verify(mockClient).booleanValue(any(SingleFeatureRequest.class));
+            // Verifies featureValues was called (user is passed in the request)
+            verify(mockClient).featureValues(any(FeatureRequest.class));
         }
 
         @Test
         void withContext_includesContextInEvaluation() {
-            ArgumentCaptor<SingleFeatureRequest> requestCaptor = ArgumentCaptor.forClass(SingleFeatureRequest.class);
-            when(mockClient.booleanValue(requestCaptor.capture()))
-                .thenReturn(CompletableFuture.completedFuture(true));
+            mockFeatureValuesReturnsBoolean(true);
 
             service.forFlagKey("uuid-123")
                 .withContext("production")
                 .booleanValue()
                 .join();
 
-            verify(mockClient).booleanValue(any(SingleFeatureRequest.class));
+            verify(mockClient).featureValues(any(FeatureRequest.class));
         }
 
         @Test
         void chainingUserAndContext_works() {
-            when(mockClient.booleanValue(any(SingleFeatureRequest.class)))
-                .thenReturn(CompletableFuture.completedFuture(true));
+            mockFeatureValuesReturnsBoolean(true);
 
             Boolean result = service.forFlagKey("uuid-123")
                 .withUser("user-789")
@@ -563,12 +659,12 @@ class IzanamiServiceImplTest {
         void booleanValue_inactiveFeature_returnsFalse() {
             FlagConfig config = testDefaultBooleanFlagConfig("uuid-inactive-bool", "inactive-bool", true);
             when(flagConfigService.getFlagConfigByKey("uuid-inactive-bool")).thenReturn(Optional.of(config));
-            // Izanami client returns false for disabled boolean features
-            when(mockClient.booleanValue(any(SingleFeatureRequest.class)))
-                .thenReturn(CompletableFuture.completedFuture(false));
+            // Izanami returns false for disabled boolean features
+            mockFeatureValuesReturnsBoolean(false);
 
             Boolean result = service.forFlagKey("uuid-inactive-bool").booleanValue().join();
 
+            // For boolean features, false means disabled - returns false (not the default)
             assertThat(result).isFalse();
         }
 
@@ -576,9 +672,8 @@ class IzanamiServiceImplTest {
         void stringValue_inactiveFeature_returnsDefaultValue() {
             FlagConfig config = testDefaultStringFlagConfig("uuid-inactive-string", "inactive-string", "fallback-value");
             when(flagConfigService.getFlagConfigByKey("uuid-inactive-string")).thenReturn(Optional.of(config));
-            // Izanami client returns null for disabled string features
-            when(mockClient.stringValue(any(SingleFeatureRequest.class)))
-                .thenReturn(CompletableFuture.completedFuture(null));
+            // Izanami returns null for disabled string features
+            mockFeatureValuesReturnsString(null);
 
             String result = service.forFlagKey("uuid-inactive-string").stringValue().join();
 
@@ -590,19 +685,14 @@ class IzanamiServiceImplTest {
         void numberValue_inactiveFeature_returnsDefaultValue() {
             FlagConfig config = testDefaultIntegerFlagConfig("uuid-inactive-number", "inactive-number", new BigDecimal("999"));
             when(flagConfigService.getFlagConfigByKey("uuid-inactive-number")).thenReturn(Optional.of(config));
-            // Izanami client returns null for disabled number features
-            when(mockClient.numberValue(any(SingleFeatureRequest.class)))
-                .thenReturn(CompletableFuture.completedFuture(null));
+            // Izanami returns null for disabled number features
+            mockFeatureValuesReturnsNumber(null);
 
             BigDecimal result = service.forFlagKey("uuid-inactive-number").numberValue().join();
 
             // Disabled non-boolean features return the defaultValue when configured
             assertThat(result).isEqualByComparingTo(new BigDecimal("999"));
         }
-
-        // Note: *WithDetails tests for inactive features are covered by integration tests
-        // (IzanamiServiceIT) since mocking featureValues() is complex due to the FeatureResponse wrapper.
-        // The key behavior tested here (defaultValue application) is covered by stringValue/numberValue tests.
     }
 
     // =====================================================================
@@ -628,7 +718,7 @@ class IzanamiServiceImplTest {
 
             // Mock client to throw an exception (simulating server error)
             when(mockFactory.create(any(), any(), any(), any())).thenReturn(mockClient);
-            when(mockClient.stringValue(any(SingleFeatureRequest.class)))
+            when(mockClient.featureValues(any(FeatureRequest.class)))
                 .thenReturn(CompletableFuture.failedFuture(new RuntimeException("Server error")));
 
             IzanamiServiceImpl service = new IzanamiServiceImpl(validProperties(), flagConfigService, objectMapper, mockFactory);
@@ -640,7 +730,8 @@ class IzanamiServiceImplTest {
         }
 
         @Test
-        void stringValue_withNullValueStrategy_returnsNullOnError() {
+        void stringValue_withNullValueStrategy_returnsNullWhenDisabled() {
+            // NULL_VALUE strategy: don't configure a default value, so disabled features return null
             FlagConfig nullConfig = new FlagConfig(
                 "uuid-null",
                 "null-flag",
@@ -648,21 +739,19 @@ class IzanamiServiceImplTest {
                 FlagValueType.STRING,
                 ErrorStrategy.NULL_VALUE,
                 FeatureClientErrorStrategy.nullValueStrategy(),
-                "default-value",
+                null,  // No default value configured
                 null
             );
             when(flagConfigService.getFlagConfigByKey("uuid-null")).thenReturn(Optional.of(nullConfig));
 
-            when(mockFactory.create(any(), any(), any(), any())).thenReturn(mockClient);
-            // The null value strategy returns null when there's an error
-            when(mockClient.stringValue(any(SingleFeatureRequest.class)))
-                .thenReturn(CompletableFuture.completedFuture(null));
-
-            IzanamiServiceImpl service = new IzanamiServiceImpl(validProperties(), flagConfigService, objectMapper, mockFactory);
+            IzanamiServiceImpl service = createServiceWithMockFactory(validProperties());
             service.afterPropertiesSet();
+            // Izanami returns null for disabled string features
+            mockFeatureValuesReturnsString(null);
 
             String result = service.forFlagKey("uuid-null").stringValue().join();
 
+            // Without a default value, disabled features return null
             assertThat(result).isNull();
         }
 
@@ -687,13 +776,10 @@ class IzanamiServiceImplTest {
             );
             when(flagConfigService.getFlagConfigByKey("uuid-callback")).thenReturn(Optional.of(callbackConfig));
 
-            when(mockFactory.create(any(), any(), any(), any())).thenReturn(mockClient);
-            // Simulate the callback strategy returning the fallback value
-            when(mockClient.stringValue(any(SingleFeatureRequest.class)))
-                .thenReturn(CompletableFuture.completedFuture("callback-fallback-value"));
-
-            IzanamiServiceImpl service = new IzanamiServiceImpl(validProperties(), flagConfigService, objectMapper, mockFactory);
+            IzanamiServiceImpl service = createServiceWithMockFactory(validProperties());
             service.afterPropertiesSet();
+            // Mock featureValues to return the callback value
+            mockFeatureValuesReturnsString("callback-fallback-value");
 
             String result = service.forFlagKey("uuid-callback").stringValue().join();
 
