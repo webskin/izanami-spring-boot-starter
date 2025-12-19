@@ -362,7 +362,7 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
          * @return a future containing an optional with the result and metadata if available
          * @throws IzanamiClientNotAvailableException if the Izanami client is not available
          */
-        public CompletableFuture<ResultWithMetadata> featureResultWithMetadata() {
+        private CompletableFuture<ResultWithMetadata> featureResultWithMetadata() {
             Map<String, String> metadata = new LinkedHashMap<>();
             metadata.put(FlagMetadataKeys.FLAG_CONFIG_KEY, flagConfig.key());
             metadata.put(FlagMetadataKeys.FLAG_CONFIG_NAME, flagConfig.name());
