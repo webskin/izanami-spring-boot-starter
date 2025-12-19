@@ -34,8 +34,8 @@ import static java.util.Collections.unmodifiableMap;
  * This class is package-private and not part of the public API.
  * Use {@link fr.maif.izanami.spring.service.api.FeatureRequestBuilder} to access evaluation methods.
  */
-final class FeatureEvaluator {
-    private static final Logger log = LoggerFactory.getLogger(FeatureEvaluator.class);
+final class IzanamiFeatureEvaluator {
+    private static final Logger log = LoggerFactory.getLogger(IzanamiFeatureEvaluator.class);
 
     @Nullable
     private final IzanamiClient client;
@@ -52,8 +52,8 @@ final class FeatureEvaluator {
      */
     private record EvaluationOutcome<T>(T value, FlagValueSource source, String reason) {}
 
-    FeatureEvaluator(@Nullable IzanamiClient client, ObjectMapper objectMapper, FlagConfig flagConfig,
-                     SingleFeatureRequest request, String user, String context) {
+    IzanamiFeatureEvaluator(@Nullable IzanamiClient client, ObjectMapper objectMapper, FlagConfig flagConfig,
+                            SingleFeatureRequest request, String user, String context) {
         this.client = client;
         this.objectMapper = objectMapper;
         this.flagConfig = flagConfig;

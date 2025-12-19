@@ -313,8 +313,8 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
             return createEvaluator().numberValueDetails();
         }
 
-        private FeatureEvaluator createEvaluator() {
-            return new FeatureEvaluator(
+        private IzanamiFeatureEvaluator createEvaluator() {
+            return new IzanamiFeatureEvaluator(
                 service.clientRef.get(),  // May be null - evaluator handles gracefully
                 service.objectMapper,
                 flagConfig,
