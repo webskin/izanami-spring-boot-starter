@@ -843,4 +843,191 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
             };
         }
     }
+
+    // ========== Fluent API with user and context parameters ==========
+
+    @Test
+    void evaluatesFlagWithUserContext() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + TURBO_MODE_ID,
+                "openfeature.flags[0].name=turbo-mode",
+                "openfeature.flags[0].description=Enable turbo mode",
+                "openfeature.flags[0].valueType=boolean",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=false"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                IzanamiService service = context.getBean(IzanamiService.class);
+                Boolean value = service.forFlagKey(TURBO_MODE_ID)
+                    .withUser("test-user-123")
+                    .booleanValue()
+                    .join();
+
+                // The flag value is still true (user context is passed but doesn't affect this simple flag)
+                assertThat(value).isTrue();
+            });
+    }
+
+    @Test
+    void evaluatesFlagWithEnvironmentContext() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + TURBO_MODE_ID,
+                "openfeature.flags[0].name=turbo-mode",
+                "openfeature.flags[0].description=Enable turbo mode",
+                "openfeature.flags[0].valueType=boolean",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=false"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                IzanamiService service = context.getBean(IzanamiService.class);
+                Boolean value = service.forFlagKey(TURBO_MODE_ID)
+                    .withContext("production")
+                    .booleanValue()
+                    .join();
+
+                assertThat(value).isTrue();
+            });
+    }
+
+    @Test
+    void evaluatesFlagWithUserAndContext() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + TURBO_MODE_ID,
+                "openfeature.flags[0].name=turbo-mode",
+                "openfeature.flags[0].description=Enable turbo mode",
+                "openfeature.flags[0].valueType=boolean",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=false"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                IzanamiService service = context.getBean(IzanamiService.class);
+                Boolean value = service.forFlagKey(TURBO_MODE_ID)
+                    .withUser("test-user-456")
+                    .withContext("staging")
+                    .booleanValue()
+                    .join();
+
+                assertThat(value).isTrue();
+            });
+    }
+
+    @Test
+    void evaluatesFlagWithPayload() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + TURBO_MODE_ID,
+                "openfeature.flags[0].name=turbo-mode",
+                "openfeature.flags[0].description=Enable turbo mode",
+                "openfeature.flags[0].valueType=boolean",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=false"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                IzanamiService service = context.getBean(IzanamiService.class);
+                Boolean value = service.forFlagKey(TURBO_MODE_ID)
+                    .withPayload("{\"version\": \"1.0\"}")
+                    .booleanValue()
+                    .join();
+
+                assertThat(value).isTrue();
+            });
+    }
+
+    @Test
+    void evaluatesFlagWithAllBuilderOptions() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
+                "openfeature.flags[0].name=secret-codename",
+                "openfeature.flags[0].description=The secret codename",
+                "openfeature.flags[0].valueType=string",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=classified"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                IzanamiService service = context.getBean(IzanamiService.class);
+                ResultValueWithDetails<String> result = service.forFlagKey(SECRET_CODENAME_ID)
+                    .withUser("test-user")
+                    .withContext("production")
+                    .withPayload("{\"region\": \"EU\"}")
+                    .ignoreCache(true)
+                    .stringValueDetails()
+                    .join();
+
+                assertThat(result.value()).isEqualTo("Operation Thunderbolt");
+                assertThat(result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI");
+            });
+    }
+
+    // ========== Batch API with user and context parameters ==========
+
+    @Test
+    void evaluatesBatchFlagsWithUserContext() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + TURBO_MODE_ID,
+                "openfeature.flags[0].name=turbo-mode",
+                "openfeature.flags[0].valueType=boolean",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=false",
+                "openfeature.flags[1].key=" + SECRET_CODENAME_ID,
+                "openfeature.flags[1].name=secret-codename",
+                "openfeature.flags[1].valueType=string",
+                "openfeature.flags[1].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[1].defaultValue=default"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                IzanamiService service = context.getBean(IzanamiService.class);
+                var result = service.forFlagKeys(TURBO_MODE_ID, SECRET_CODENAME_ID)
+                    .withUser("batch-test-user")
+                    .withContext("testing")
+                    .values()
+                    .join();
+
+                assertThat(result.booleanValue(TURBO_MODE_ID)).isTrue();
+                assertThat(result.stringValue(SECRET_CODENAME_ID)).isEqualTo("Operation Thunderbolt");
+            });
+    }
+
+    @Test
+    void evaluatesBatchFlagsWithIgnoreCache() {
+        contextRunner
+            .withPropertyValues(withFlagConfig(
+                "openfeature.flags[0].key=" + TURBO_MODE_ID,
+                "openfeature.flags[0].name=turbo-mode",
+                "openfeature.flags[0].valueType=boolean",
+                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags[0].defaultValue=false"
+            ))
+            .run(context -> {
+                waitForIzanami(context);
+
+                IzanamiService service = context.getBean(IzanamiService.class);
+                var result = service.forFlagKeys(TURBO_MODE_ID)
+                    .ignoreCache(true)
+                    .values()
+                    .join();
+
+                // Should still return the correct value when ignoring cache
+                assertThat(result.booleanValue(TURBO_MODE_ID)).isTrue();
+                assertThat(result.booleanValueDetails(TURBO_MODE_ID).metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                    .isEqualTo("IZANAMI");
+            });
+    }
 }
