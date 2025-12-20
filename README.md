@@ -7,6 +7,10 @@ Spring Boot starter for Izanami feature flags, providing `IzanamiService` (fluen
 - `izanami-spring-boot-autoconfigure`: auto-configuration + implementation
 - `izanami-spring-boot-starter`: thin starter bringing transitive dependencies
 
+## Docs
+
+- `RELEASE.md`: release secrets and Maven Central setup
+
 ## Maven coordinates
 
 **Starter (recommended)**
@@ -663,6 +667,7 @@ GitHub Actions workflow: `.github/workflows/ci.yml`
 ## Releasing
 
 Releases are automated via GitHub Actions (`.github/workflows/release.yml`).
+See `RELEASE.md` for detailed secret setup and Maven Central prerequisites.
 
 ### Release Process
 
