@@ -45,3 +45,29 @@ Notes
 
 - The workflow is triggered by tags like `v1.2.3` or `v1.2.3-rc1`.
 - Make sure your GPG key is trusted and not expired.
+
+Generate a GPG key on Ubuntu
+----------------------------
+
+1. Install GnuPG (if needed):
+   `sudo apt-get update && sudo apt-get install -y gnupg`
+
+2. Generate a new key:
+   `gpg --full-generate-key`
+   - Type: `ECC (sign and encrypt)`
+   - Curve: `ed25519`
+   - Set a strong passphrase
+   - Use the email you will publish with
+
+3. List the key id:
+   `gpg --list-secret-keys --keyid-format=long`
+   Example: `sec   ed25519/ABCDEF1234567890`
+
+4. Export the private key for GitHub:
+   `gpg --export-secret-keys --armor ABCDEF1234567890`
+   Copy the full block into the `GPG_PRIVATE_KEY` secret.
+
+5. Add the passphrase to `GPG_PASSPHRASE` in GitHub secrets.
+
+Optional: publish the public key:
+`gpg --keyserver hkps://keys.openpgp.org --send-keys ABCDEF1234567890`
