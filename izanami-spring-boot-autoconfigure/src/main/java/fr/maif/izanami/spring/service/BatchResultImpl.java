@@ -13,6 +13,8 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static java.util.Collections.unmodifiableMap;
 
@@ -23,6 +25,8 @@ import static java.util.Collections.unmodifiableMap;
  * This class is package-private and not part of the public API.
  */
 final class BatchResultImpl implements BatchResult {
+
+    private static final Logger log = LoggerFactory.getLogger(BatchResultImpl.class);
 
     private final Map<String, BatchResultEntry> entries;
 
@@ -63,9 +67,9 @@ final class BatchResultImpl implements BatchResult {
     @Override
     public ResultValueWithDetails<Boolean> booleanValueDetails(String flagId) {
         BatchResultEntry entry = entries.get(flagId);
-        // Unknown flag id (not requested or not configured) -> no entry, return empty result.
+        // Unknown flag id (not requested or not configured) -> treat as FLAG_NOT_FOUND.
         if (entry == null) {
-            return new ResultValueWithDetails<>(null, Map.of());
+            return unknownFlagResult(flagId, false);
         }
         // Handle FLAG_NOT_FOUND entries (no result or flagConfig)
         // baseMetadata already includes FLAG_VALUE_SOURCE and FLAG_EVALUATION_REASON from IzanamiBatchFeatureEvaluator
@@ -84,9 +88,9 @@ final class BatchResultImpl implements BatchResult {
     @Override
     public ResultValueWithDetails<String> stringValueDetails(String flagId) {
         BatchResultEntry entry = entries.get(flagId);
-        // Unknown flag id (not requested or not configured) -> no entry, return empty result.
+        // Unknown flag id (not requested or not configured) -> treat as FLAG_NOT_FOUND.
         if (entry == null) {
-            return new ResultValueWithDetails<>(null, Map.of());
+            return unknownFlagResult(flagId, "");
         }
         // Handle FLAG_NOT_FOUND entries (no result or flagConfig)
         if (entry.result() == null) {
@@ -104,9 +108,9 @@ final class BatchResultImpl implements BatchResult {
     @Override
     public ResultValueWithDetails<BigDecimal> numberValueDetails(String flagId) {
         BatchResultEntry entry = entries.get(flagId);
-        // Unknown flag id (not requested or not configured) -> no entry, return empty result.
+        // Unknown flag id (not requested or not configured) -> treat as FLAG_NOT_FOUND.
         if (entry == null) {
-            return new ResultValueWithDetails<>(null, Map.of());
+            return unknownFlagResult(flagId, BigDecimal.ZERO);
         }
         // Handle FLAG_NOT_FOUND entries (no result or flagConfig)
         if (entry.result() == null) {
@@ -156,6 +160,14 @@ final class BatchResultImpl implements BatchResult {
             disabledValueResolver,
             isDisabledCheck,
             entry.flagConfig().key()
+        );
+    }
+
+    private <T> ResultValueWithDetails<T> unknownFlagResult(String flagId, T defaultValue) {
+        log.warn("Flag '{}' not found in batch result, returning default values", flagId);
+        return new ResultValueWithDetails<>(
+            defaultValue,
+            unmodifiableMap(IzanamiEvaluationHelper.buildFlagNotFoundMetadata(flagId))
         );
     }
 }

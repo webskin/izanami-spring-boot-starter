@@ -46,32 +46,19 @@ final class IzanamiBatchFeatureEvaluator {
     @Nullable
     private final FeatureClientErrorStrategy<?> errorStrategyOverride;
 
-    IzanamiBatchFeatureEvaluator(
-            @Nullable IzanamiClient client,
-            ObjectMapper objectMapper,
-            Map<String, FlagConfig> flagConfigs,
-            Map<String, String> identifierToKey,
-            Set<String> notFoundIdentifiers,
-            @Nullable String user,
-            @Nullable String context,
-            boolean ignoreCache,
-            @Nullable Duration callTimeout,
-            @Nullable String payload,
-            BooleanCastStrategy booleanCastStrategy,
-            @Nullable FeatureClientErrorStrategy<?> errorStrategyOverride
-    ) {
-        this.client = client;
-        this.objectMapper = objectMapper;
-        this.flagConfigs = flagConfigs;
-        this.identifierToKey = identifierToKey;
-        this.notFoundIdentifiers = notFoundIdentifiers;
-        this.user = user;
-        this.context = context;
-        this.ignoreCache = ignoreCache;
-        this.callTimeout = callTimeout;
-        this.payload = payload;
-        this.booleanCastStrategy = booleanCastStrategy;
-        this.errorStrategyOverride = errorStrategyOverride;
+    IzanamiBatchFeatureEvaluator(BatchEvaluationParams params) {
+        this.client = params.client();
+        this.objectMapper = params.objectMapper();
+        this.flagConfigs = params.flagConfigs();
+        this.identifierToKey = params.identifierToKey();
+        this.notFoundIdentifiers = params.notFoundIdentifiers();
+        this.user = params.user();
+        this.context = params.context();
+        this.ignoreCache = params.ignoreCache();
+        this.callTimeout = params.callTimeout();
+        this.payload = params.payload();
+        this.booleanCastStrategy = params.booleanCastStrategy();
+        this.errorStrategyOverride = params.errorStrategyOverride();
     }
 
     /**

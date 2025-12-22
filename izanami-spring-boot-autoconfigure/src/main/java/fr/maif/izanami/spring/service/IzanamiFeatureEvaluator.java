@@ -49,28 +49,17 @@ final class IzanamiFeatureEvaluator {
 
     private record ResultWithMetadata(IzanamiResult.Result result, Map<String, String> metadata) {}
 
-    IzanamiFeatureEvaluator(
-            @Nullable IzanamiClient client,
-            ObjectMapper objectMapper,
-            FlagConfig flagConfig,
-            String user,
-            String context,
-            boolean ignoreCache,
-            @Nullable Duration callTimeout,
-            @Nullable String payload,
-            BooleanCastStrategy booleanCastStrategy,
-            FeatureClientErrorStrategy<?> effectiveErrorStrategy
-    ) {
-        this.client = client;
-        this.objectMapper = objectMapper;
-        this.flagConfig = flagConfig;
-        this.user = user;
-        this.context = context;
-        this.ignoreCache = ignoreCache;
-        this.callTimeout = callTimeout;
-        this.payload = payload;
-        this.booleanCastStrategy = booleanCastStrategy;
-        this.effectiveErrorStrategy = effectiveErrorStrategy;
+    IzanamiFeatureEvaluator(FeatureEvaluationParams params) {
+        this.client = params.client();
+        this.objectMapper = params.objectMapper();
+        this.flagConfig = params.flagConfig();
+        this.user = params.user();
+        this.context = params.context();
+        this.ignoreCache = params.ignoreCache();
+        this.callTimeout = params.callTimeout();
+        this.payload = params.payload();
+        this.booleanCastStrategy = params.booleanCastStrategy();
+        this.effectiveErrorStrategy = params.effectiveErrorStrategy();
     }
 
     /**

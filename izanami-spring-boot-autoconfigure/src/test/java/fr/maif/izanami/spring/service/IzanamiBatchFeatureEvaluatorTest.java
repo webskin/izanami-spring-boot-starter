@@ -15,6 +15,7 @@ import fr.maif.requests.FeatureRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.lang.Nullable;
 
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
@@ -84,6 +85,36 @@ class IzanamiBatchFeatureEvaluatorTest {
         return featureValue;
     }
 
+    private IzanamiBatchFeatureEvaluator buildEvaluator(
+        @Nullable IzanamiClient client,
+        Map<String, FlagConfig> flagConfigs,
+        Map<String, String> identifierToKey,
+        Set<String> notFoundIdentifiers,
+        @Nullable String user,
+        @Nullable String context,
+        boolean ignoreCache,
+        @Nullable Duration callTimeout,
+        @Nullable String payload,
+        BooleanCastStrategy booleanCastStrategy,
+        @Nullable FeatureClientErrorStrategy<?> errorStrategyOverride
+    ) {
+        BatchEvaluationParams params = BatchEvaluationParams.builder()
+            .client(client)
+            .objectMapper(objectMapper)
+            .flagConfigs(flagConfigs)
+            .identifierToKey(identifierToKey)
+            .notFoundIdentifiers(notFoundIdentifiers)
+            .user(user)
+            .context(context)
+            .ignoreCache(ignoreCache)
+            .callTimeout(callTimeout)
+            .payload(payload)
+            .booleanCastStrategy(booleanCastStrategy)
+            .errorStrategyOverride(errorStrategyOverride)
+            .build();
+        return new IzanamiBatchFeatureEvaluator(params);
+    }
+
     @Nested
     class EvaluateWithNoConfiguredFlags {
 
@@ -91,8 +122,8 @@ class IzanamiBatchFeatureEvaluatorTest {
         void returnsNotFoundResultsOnly() {
             Set<String> notFoundIdentifiers = Set.of("unknown-1", "unknown-2");
 
-            IzanamiBatchFeatureEvaluator evaluator = new IzanamiBatchFeatureEvaluator(
-                null, objectMapper,
+            IzanamiBatchFeatureEvaluator evaluator = buildEvaluator(
+                null,
                 Map.of(),                  // empty flagConfigs
                 Map.of(),                  // empty identifierToKey
                 notFoundIdentifiers,
@@ -112,8 +143,8 @@ class IzanamiBatchFeatureEvaluatorTest {
         void notFoundFlagsHaveCorrectMetadata() {
             Set<String> notFoundIdentifiers = Set.of("missing-flag");
 
-            IzanamiBatchFeatureEvaluator evaluator = new IzanamiBatchFeatureEvaluator(
-                null, objectMapper,
+            IzanamiBatchFeatureEvaluator evaluator = buildEvaluator(
+                null,
                 Map.of(),
                 Map.of(),
                 notFoundIdentifiers,
@@ -139,9 +170,8 @@ class IzanamiBatchFeatureEvaluatorTest {
             Map<String, FlagConfig> flagConfigs = Map.of("uuid-1", config);
             Map<String, String> identifierToKey = Map.of("flag-1", "uuid-1");
 
-            IzanamiBatchFeatureEvaluator evaluator = new IzanamiBatchFeatureEvaluator(
+            IzanamiBatchFeatureEvaluator evaluator = buildEvaluator(
                 null,  // client is null
-                objectMapper,
                 flagConfigs,
                 identifierToKey,
                 Set.of(),
@@ -172,9 +202,8 @@ class IzanamiBatchFeatureEvaluatorTest {
             identifierToKey.put("flag-1", "uuid-1");
             identifierToKey.put("flag-2", "uuid-2");
 
-            IzanamiBatchFeatureEvaluator evaluator = new IzanamiBatchFeatureEvaluator(
+            IzanamiBatchFeatureEvaluator evaluator = buildEvaluator(
                 null,
-                objectMapper,
                 flagConfigs,
                 identifierToKey,
                 Set.of(),
@@ -210,8 +239,8 @@ class IzanamiBatchFeatureEvaluatorTest {
             when(client.featureValues(any(FeatureRequest.class)))
                 .thenReturn(CompletableFuture.completedFuture(izanamiResult));
 
-            IzanamiBatchFeatureEvaluator evaluator = new IzanamiBatchFeatureEvaluator(
-                client, objectMapper,
+            IzanamiBatchFeatureEvaluator evaluator = buildEvaluator(
+                client,
                 flagConfigs, identifierToKey, Set.of(),
                 null, null, false, null, null,
                 BooleanCastStrategy.LAX, null
@@ -238,8 +267,8 @@ class IzanamiBatchFeatureEvaluatorTest {
             when(client.featureValues(any(FeatureRequest.class)))
                 .thenReturn(CompletableFuture.completedFuture(izanamiResult));
 
-            IzanamiBatchFeatureEvaluator evaluator = new IzanamiBatchFeatureEvaluator(
-                client, objectMapper,
+            IzanamiBatchFeatureEvaluator evaluator = buildEvaluator(
+                client,
                 flagConfigs, identifierToKey, Set.of(),
                 null, null, false, null, null,
                 BooleanCastStrategy.LAX, null
@@ -272,8 +301,8 @@ class IzanamiBatchFeatureEvaluatorTest {
             when(client.featureValues(any(FeatureRequest.class)))
                 .thenReturn(failedFuture);
 
-            IzanamiBatchFeatureEvaluator evaluator = new IzanamiBatchFeatureEvaluator(
-                client, objectMapper,
+            IzanamiBatchFeatureEvaluator evaluator = buildEvaluator(
+                client,
                 flagConfigs, identifierToKey, Set.of(),
                 null, null, false, null, null,
                 BooleanCastStrategy.LAX, null
@@ -310,8 +339,8 @@ class IzanamiBatchFeatureEvaluatorTest {
             FeatureClientErrorStrategy<?> override =
                 FeatureClientErrorStrategy.defaultValueStrategy(true, "override", BigDecimal.TEN);
 
-            IzanamiBatchFeatureEvaluator evaluator = new IzanamiBatchFeatureEvaluator(
-                client, objectMapper,
+            IzanamiBatchFeatureEvaluator evaluator = buildEvaluator(
+                client,
                 flagConfigs, identifierToKey, Set.of(),
                 null, null, false, null, null,
                 BooleanCastStrategy.LAX, override
@@ -341,8 +370,8 @@ class IzanamiBatchFeatureEvaluatorTest {
             when(client.featureValues(any(FeatureRequest.class)))
                 .thenReturn(CompletableFuture.completedFuture(izanamiResult));
 
-            IzanamiBatchFeatureEvaluator evaluator = new IzanamiBatchFeatureEvaluator(
-                client, objectMapper,
+            IzanamiBatchFeatureEvaluator evaluator = buildEvaluator(
+                client,
                 flagConfigs, identifierToKey, Set.of(),
                 "test-user",         // user
                 "production",        // context
@@ -377,8 +406,8 @@ class IzanamiBatchFeatureEvaluatorTest {
             when(client.featureValues(any(FeatureRequest.class)))
                 .thenReturn(CompletableFuture.completedFuture(izanamiResult));
 
-            IzanamiBatchFeatureEvaluator evaluator = new IzanamiBatchFeatureEvaluator(
-                client, objectMapper,
+            IzanamiBatchFeatureEvaluator evaluator = buildEvaluator(
+                client,
                 flagConfigs, identifierToKey, notFoundIdentifiers,
                 null, null, false, null, null,
                 BooleanCastStrategy.LAX, null
@@ -427,8 +456,8 @@ class IzanamiBatchFeatureEvaluatorTest {
             when(client.featureValues(any(FeatureRequest.class)))
                 .thenReturn(CompletableFuture.completedFuture(izanamiResult));
 
-            IzanamiBatchFeatureEvaluator evaluator = new IzanamiBatchFeatureEvaluator(
-                client, objectMapper,
+            IzanamiBatchFeatureEvaluator evaluator = buildEvaluator(
+                client,
                 flagConfigs, identifierToKey, Set.of(),
                 null, null, false, null, null,
                 BooleanCastStrategy.LAX, null

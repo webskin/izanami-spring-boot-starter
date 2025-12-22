@@ -30,7 +30,7 @@ public interface BatchResult {
      * Get boolean value for a flag by its identifier.
      *
      * @param flagId the flag key (if requested by keys) or name (if requested by names)
-     * @return the boolean value, or null if flag not found in result
+     * @return the boolean value, or {@code false} if flag not found in result
      */
     Boolean booleanValue(String flagId);
 
@@ -38,7 +38,7 @@ public interface BatchResult {
      * Get string value for a flag by its identifier.
      *
      * @param flagId the flag key (if requested by keys) or name (if requested by names)
-     * @return the string value, or null if flag not found in result
+     * @return the string value, or {@code ""} if flag not found in result
      */
     String stringValue(String flagId);
 
@@ -46,7 +46,7 @@ public interface BatchResult {
      * Get number value for a flag by its identifier.
      *
      * @param flagId the flag key (if requested by keys) or name (if requested by names)
-     * @return the number value as BigDecimal, or null if flag not found in result
+     * @return the number value as BigDecimal, or {@code BigDecimal.ZERO} if flag not found in result
      */
     BigDecimal numberValue(String flagId);
 
@@ -54,7 +54,7 @@ public interface BatchResult {
      * Get boolean value with evaluation details.
      *
      * @param flagId the flag key (if requested by keys) or name (if requested by names)
-     * @return the result with value and metadata, or empty result if flag not found
+     * @return the result with value and metadata, with FLAG_NOT_FOUND metadata if flag not found
      */
     ResultValueWithDetails<Boolean> booleanValueDetails(String flagId);
 
@@ -62,7 +62,7 @@ public interface BatchResult {
      * Get string value with evaluation details.
      *
      * @param flagId the flag key (if requested by keys) or name (if requested by names)
-     * @return the result with value and metadata, or empty result if flag not found
+     * @return the result with value and metadata, with FLAG_NOT_FOUND metadata if flag not found
      */
     ResultValueWithDetails<String> stringValueDetails(String flagId);
 
@@ -70,7 +70,7 @@ public interface BatchResult {
      * Get number value with evaluation details.
      *
      * @param flagId the flag key (if requested by keys) or name (if requested by names)
-     * @return the result with value and metadata, or empty result if flag not found
+     * @return the result with value and metadata, with FLAG_NOT_FOUND metadata if flag not found
      */
     ResultValueWithDetails<BigDecimal> numberValueDetails(String flagId);
 

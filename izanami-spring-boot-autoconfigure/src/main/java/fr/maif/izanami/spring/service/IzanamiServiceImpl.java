@@ -218,7 +218,7 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
         if (flagConfig.isPresent()) {
             return new FeatureRequestBuilder(this, flagConfig.get());
         }
-        log.debug("Flag key '{}' not found in configuration", flagKey);
+        log.warn("Flag key '{}' not found in configuration", flagKey);
         return new FeatureRequestBuilder(this, flagKey);
     }
 
@@ -247,7 +247,7 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
         if (flagConfig.isPresent()) {
             return new FeatureRequestBuilder(this, flagConfig.get());
         }
-        log.debug("Flag name '{}' not found in configuration", flagName);
+        log.warn("Flag name '{}' not found in configuration", flagName);
         return new FeatureRequestBuilder(this, flagName);
     }
 
@@ -279,7 +279,7 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
                 configs.put(key, config.get());
                 identifierToKey.put(key, key);  // Keys map to themselves
             } else {
-                log.debug("Flag key '{}' not found in configuration", key);
+                log.warn("Flag key '{}' not found in configuration", key);
                 notFoundIdentifiers.add(key);
             }
         }
@@ -311,7 +311,7 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
                 configs.put(config.get().key(), config.get());
                 identifierToKey.put(name, config.get().key());  // Names map to keys
             } else {
-                log.debug("Flag name '{}' not found in configuration", name);
+                log.warn("Flag name '{}' not found in configuration", name);
                 notFoundIdentifiers.add(name);
             }
         }
@@ -445,18 +445,20 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
             FeatureClientErrorStrategy<?> effectiveErrorStrategy =
                 IzanamiEvaluationHelper.computeEffectiveErrorStrategy(errorStrategy, fc.clientErrorStrategy());
 
-            return new IzanamiFeatureEvaluator(
-                service.clientRef.get(),  // May be null - evaluator handles gracefully
-                service.objectMapper,
-                fc,
-                user,
-                context,
-                ignoreCache,
-                callTimeout,
-                payload,
-                booleanCastStrategy,
-                effectiveErrorStrategy
-            );
+            FeatureEvaluationParams params = FeatureEvaluationParams.builder()
+                .client(service.clientRef.get())
+                .objectMapper(service.objectMapper)
+                .flagConfig(fc)
+                .user(user)
+                .context(context)
+                .ignoreCache(ignoreCache)
+                .callTimeout(callTimeout)
+                .payload(payload)
+                .booleanCastStrategy(booleanCastStrategy)
+                .effectiveErrorStrategy(effectiveErrorStrategy)
+                .build();
+
+            return new IzanamiFeatureEvaluator(params);
         }
     }
 
@@ -537,20 +539,21 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
 
         @Override
         public CompletableFuture<BatchResult> values() {
-            IzanamiBatchFeatureEvaluator evaluator = new IzanamiBatchFeatureEvaluator(
-                service.clientRef.get(),  // May be null - evaluator handles gracefully
-                service.objectMapper,
-                flagConfigs,
-                identifierToKey,
-                notFoundIdentifiers,
-                user,
-                context,
-                ignoreCache,
-                callTimeout,
-                payload,
-                booleanCastStrategy,
-                errorStrategy
-            );
+            BatchEvaluationParams params = BatchEvaluationParams.builder()
+                .client(service.clientRef.get())
+                .objectMapper(service.objectMapper)
+                .flagConfigs(flagConfigs)
+                .identifierToKey(identifierToKey)
+                .notFoundIdentifiers(notFoundIdentifiers)
+                .user(user)
+                .context(context)
+                .ignoreCache(ignoreCache)
+                .callTimeout(callTimeout)
+                .payload(payload)
+                .booleanCastStrategy(booleanCastStrategy)
+                .errorStrategyOverride(errorStrategy)
+                .build();
+            IzanamiBatchFeatureEvaluator evaluator = new IzanamiBatchFeatureEvaluator(params);
             // Cast to BatchResult for API compatibility (BatchResultImpl implements BatchResult)
             return evaluator.evaluate().thenApply(result -> result);
         }

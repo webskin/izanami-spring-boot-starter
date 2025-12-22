@@ -601,7 +601,7 @@ class IzanamiServiceBatchTest {
         }
 
         @Test
-        void booleanValue_forNonExistentFlag_returnsNull() {
+        void booleanValue_forNonExistentFlag_returnsDefault() {
             FlagConfig config1 = testDefaultBooleanFlagConfig("uuid-1", "flag-1", false);
 
             when(flagConfigService.getFlagConfigByKey("uuid-1")).thenReturn(Optional.of(config1));
@@ -619,7 +619,7 @@ class IzanamiServiceBatchTest {
                 .values()
                 .join();
 
-            assertThat(result.booleanValue("non-existent")).isNull();
+            assertThat(result.booleanValue("non-existent")).isFalse();
         }
     }
 

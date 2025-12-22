@@ -85,6 +85,67 @@ class IzanamiServiceBatchIT extends BaseIzanamiIT {
                         .isEqualTo("ORIGIN_OR_CACHE");
                 });
         }
+
+        @Test
+        void unknownFlagIdReturnsFlagNotFoundDefaults() {
+            contextRunner
+                .withPropertyValues(withFlagConfig(
+                    "openfeature.flags[0].key=" + TURBO_MODE_ID,
+                    "openfeature.flags[0].name=turbo-mode",
+                    "openfeature.flags[0].valueType=boolean",
+                    "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                    "openfeature.flags[0].defaultValue=false"
+                ))
+                .run(context -> {
+                    waitForIzanami(context);
+                    IzanamiService service = context.getBean(IzanamiService.class);
+
+                    BatchResult result = service.forFlagKeys(TURBO_MODE_ID)
+                        .values()
+                        .join();
+
+                    assertThat(result.booleanValue("unknown-flag")).isFalse();
+                    assertThat(result.stringValue("unknown-flag")).isEqualTo("");
+                    assertThat(result.numberValue("unknown-flag")).isEqualTo(BigDecimal.ZERO);
+
+                    ResultValueWithDetails<Boolean> details = result.booleanValueDetails("unknown-flag");
+                    assertThat(details.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                        .isEqualTo(FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
+                    assertThat(details.metadata().get(FlagMetadataKeys.FLAG_EVALUATION_REASON))
+                        .isEqualTo("FLAG_NOT_FOUND");
+                });
+        }
+
+        @Test
+        void unknownFlagKeyReturnsFlagNotFoundDefaults() {
+            contextRunner
+                .withPropertyValues(withFlagConfig(
+                    "openfeature.flags[0].key=" + TURBO_MODE_ID,
+                    "openfeature.flags[0].name=turbo-mode",
+                    "openfeature.flags[0].valueType=boolean",
+                    "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
+                    "openfeature.flags[0].defaultValue=false"
+                ))
+                .run(context -> {
+                    waitForIzanami(context);
+                    IzanamiService service = context.getBean(IzanamiService.class);
+
+                    BatchResult result = service.forFlagKeys(TURBO_MODE_ID, "missing-flag-key")
+                        .values()
+                        .join();
+
+                    assertThat(result.booleanValue("missing-flag-key")).isFalse();
+                    assertThat(result.stringValue("missing-flag-key")).isEqualTo("");
+                    assertThat(result.numberValue("missing-flag-key")).isEqualTo(BigDecimal.ZERO);
+
+                    ResultValueWithDetails<Boolean> details = result.booleanValueDetails("missing-flag-key");
+                    assertThat(details.value()).isFalse();
+                    assertThat(details.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                        .isEqualTo(FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
+                    assertThat(details.metadata().get(FlagMetadataKeys.FLAG_EVALUATION_REASON))
+                        .isEqualTo("FLAG_NOT_FOUND");
+                });
+        }
     }
 
     @Nested

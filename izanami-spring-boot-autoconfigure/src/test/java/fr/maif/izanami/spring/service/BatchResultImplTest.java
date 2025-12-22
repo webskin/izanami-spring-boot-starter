@@ -79,10 +79,10 @@ class BatchResultImplTest {
         }
 
         @Test
-        void booleanValue_whenEntryNotExists_returnsNull() {
+        void booleanValue_whenEntryNotExists_returnsDefault() {
             BatchResultImpl result = new BatchResultImpl(Map.of());
 
-            assertThat(result.booleanValue("unknown")).isNull();
+            assertThat(result.booleanValue("unknown")).isFalse();
         }
 
         @Test
@@ -103,13 +103,16 @@ class BatchResultImplTest {
         }
 
         @Test
-        void booleanValueDetails_whenEntryNotExists_returnsNullWithEmptyMetadata() {
+        void booleanValueDetails_whenEntryNotExists_returnsFlagNotFoundMetadata() {
             BatchResultImpl result = new BatchResultImpl(Map.of());
 
             ResultValueWithDetails<Boolean> details = result.booleanValueDetails("unknown");
 
-            assertThat(details.value()).isNull();
-            assertThat(details.metadata()).isEmpty();
+            assertThat(details.value()).isFalse();
+            assertThat(details.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
+                .isEqualTo("APPLICATION_ERROR_STRATEGY");
+            assertThat(details.metadata().get(FlagMetadataKeys.FLAG_EVALUATION_REASON))
+                .isEqualTo("FLAG_NOT_FOUND");
         }
     }
 
@@ -130,10 +133,10 @@ class BatchResultImplTest {
         }
 
         @Test
-        void stringValue_whenEntryNotExists_returnsNull() {
+        void stringValue_whenEntryNotExists_returnsDefault() {
             BatchResultImpl result = new BatchResultImpl(Map.of());
 
-            assertThat(result.stringValue("unknown")).isNull();
+            assertThat(result.stringValue("unknown")).isEqualTo("");
         }
 
         @Test
@@ -186,10 +189,10 @@ class BatchResultImplTest {
         }
 
         @Test
-        void numberValue_whenEntryNotExists_returnsNull() {
+        void numberValue_whenEntryNotExists_returnsDefault() {
             BatchResultImpl result = new BatchResultImpl(Map.of());
 
-            assertThat(result.numberValue("unknown")).isNull();
+            assertThat(result.numberValue("unknown")).isEqualByComparingTo(BigDecimal.ZERO);
         }
 
         @Test
