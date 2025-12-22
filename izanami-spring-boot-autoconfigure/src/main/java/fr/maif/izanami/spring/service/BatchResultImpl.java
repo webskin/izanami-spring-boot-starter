@@ -63,6 +63,7 @@ final class BatchResultImpl implements BatchResult {
     @Override
     public ResultValueWithDetails<Boolean> booleanValueDetails(String flagId) {
         BatchResultEntry entry = entries.get(flagId);
+        // Unknown flag id (not requested or not configured) -> no entry, return empty result.
         if (entry == null) {
             return new ResultValueWithDetails<>(null, Map.of());
         }
@@ -83,6 +84,7 @@ final class BatchResultImpl implements BatchResult {
     @Override
     public ResultValueWithDetails<String> stringValueDetails(String flagId) {
         BatchResultEntry entry = entries.get(flagId);
+        // Unknown flag id (not requested or not configured) -> no entry, return empty result.
         if (entry == null) {
             return new ResultValueWithDetails<>(null, Map.of());
         }
@@ -102,6 +104,7 @@ final class BatchResultImpl implements BatchResult {
     @Override
     public ResultValueWithDetails<BigDecimal> numberValueDetails(String flagId) {
         BatchResultEntry entry = entries.get(flagId);
+        // Unknown flag id (not requested or not configured) -> no entry, return empty result.
         if (entry == null) {
             return new ResultValueWithDetails<>(null, Map.of());
         }
