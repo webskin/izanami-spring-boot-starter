@@ -184,9 +184,10 @@ class IzanamiAutoConfigurationTest {
                 .run(context -> {
                     FlagConfigService configService = context.getBean(FlagConfigService.class);
                     var config = configService.getFlagConfigByName("critical-feature");
-                    assertThat(config).isPresent();
-                    assertThat(config.get().errorStrategy()).isEqualTo(ErrorStrategy.FAIL);
-                    assertThat(config.get().clientErrorStrategy()).isInstanceOf(FeatureClientErrorStrategy.FailStrategy.class);
+                    assertThat(config).hasValueSatisfying(c -> {
+                        assertThat(c.errorStrategy()).isEqualTo(ErrorStrategy.FAIL);
+                        assertThat(c.clientErrorStrategy()).isInstanceOf(FeatureClientErrorStrategy.FailStrategy.class);
+                    });
                 });
         }
 
@@ -202,8 +203,8 @@ class IzanamiAutoConfigurationTest {
                 .run(context -> {
                     FlagConfigService configService = context.getBean(FlagConfigService.class);
                     var config = configService.getFlagConfigByName("max-retries");
-                    assertThat(config).isPresent();
-                    assertThat(config.get().valueType()).isEqualTo(FlagValueType.INTEGER);
+                    assertThat(config).hasValueSatisfying(c ->
+                        assertThat(c.valueType()).isEqualTo(FlagValueType.INTEGER));
                 });
         }
 
@@ -219,8 +220,8 @@ class IzanamiAutoConfigurationTest {
                 .run(context -> {
                     FlagConfigService configService = context.getBean(FlagConfigService.class);
                     var config = configService.getFlagConfigByName("rate-limit");
-                    assertThat(config).isPresent();
-                    assertThat(config.get().valueType()).isEqualTo(FlagValueType.DOUBLE);
+                    assertThat(config).hasValueSatisfying(c ->
+                        assertThat(c.valueType()).isEqualTo(FlagValueType.DOUBLE));
                 });
         }
 
@@ -275,10 +276,11 @@ class IzanamiAutoConfigurationTest {
             contextRunner
                 .run(context -> {
                     // OpenFeature beans are created when Izanami is enabled (default)
-                    assertThat(context).hasSingleBean(OpenFeatureAPI.class);
-                    assertThat(context).hasSingleBean(IzanamiFeatureProvider.class);
-                    assertThat(context).hasSingleBean(ExtendedOpenFeatureClient.class);
-                    assertThat(context).hasSingleBean(Client.class);
+                    assertThat(context)
+                        .hasSingleBean(OpenFeatureAPI.class)
+                        .hasSingleBean(IzanamiFeatureProvider.class)
+                        .hasSingleBean(ExtendedOpenFeatureClient.class)
+                        .hasSingleBean(Client.class);
                 });
         }
 

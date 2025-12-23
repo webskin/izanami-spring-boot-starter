@@ -916,12 +916,13 @@ class IzanamiServiceImplTest {
                 .join();
 
             Map<String, String> metadata = result.metadata();
-            assertThat(metadata.get(FlagMetadataKeys.FLAG_CONFIG_KEY)).isEqualTo("uuid-detailed");
-            assertThat(metadata.get(FlagMetadataKeys.FLAG_CONFIG_NAME)).isEqualTo("detailed-flag");
-            assertThat(metadata.get(FlagMetadataKeys.FLAG_CONFIG_DESCRIPTION)).isEqualTo("A detailed description");
-            assertThat(metadata.get(FlagMetadataKeys.FLAG_CONFIG_VALUE_TYPE)).isEqualTo("STRING");
-            assertThat(metadata.get(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE)).isEqualTo("default-string-value");
-            assertThat(metadata.get(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY)).isEqualTo("DEFAULT_VALUE");
+            assertThat(metadata)
+                .containsEntry(FlagMetadataKeys.FLAG_CONFIG_KEY, "uuid-detailed")
+                .containsEntry(FlagMetadataKeys.FLAG_CONFIG_NAME, "detailed-flag")
+                .containsEntry(FlagMetadataKeys.FLAG_CONFIG_DESCRIPTION, "A detailed description")
+                .containsEntry(FlagMetadataKeys.FLAG_CONFIG_VALUE_TYPE, "STRING")
+                .containsEntry(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE, "default-string-value")
+                .containsEntry(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY, "DEFAULT_VALUE");
         }
 
         @Test
@@ -1111,14 +1112,15 @@ class IzanamiServiceImplTest {
                 .join();
 
             Map<String, String> metadata = result.metadata();
-            assertThat(metadata.get(FlagMetadataKeys.FLAG_CONFIG_KEY)).isEqualTo("uuid-detailed");
-            assertThat(metadata.get(FlagMetadataKeys.FLAG_CONFIG_NAME)).isEqualTo("detailed-flag");
-            assertThat(metadata.get(FlagMetadataKeys.FLAG_CONFIG_DESCRIPTION)).isEqualTo("A detailed description");
-            assertThat(metadata.get(FlagMetadataKeys.FLAG_CONFIG_VALUE_TYPE)).isEqualTo("BOOLEAN");
-            assertThat(metadata.get(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE)).isEqualTo("true");
-            assertThat(metadata.get(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY)).isEqualTo("DEFAULT_VALUE");
-            assertThat(metadata.get(FlagMetadataKeys.FLAG_VALUE_SOURCE)).isEqualTo("IZANAMI_ERROR_STRATEGY");
-            assertThat(metadata.get(FlagMetadataKeys.FLAG_EVALUATION_REASON)).isEqualTo("ERROR");
+            assertThat(metadata)
+                .containsEntry(FlagMetadataKeys.FLAG_CONFIG_KEY, "uuid-detailed")
+                .containsEntry(FlagMetadataKeys.FLAG_CONFIG_NAME, "detailed-flag")
+                .containsEntry(FlagMetadataKeys.FLAG_CONFIG_DESCRIPTION, "A detailed description")
+                .containsEntry(FlagMetadataKeys.FLAG_CONFIG_VALUE_TYPE, "BOOLEAN")
+                .containsEntry(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE, "true")
+                .containsEntry(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY, "DEFAULT_VALUE")
+                .containsEntry(FlagMetadataKeys.FLAG_VALUE_SOURCE, "IZANAMI_ERROR_STRATEGY")
+                .containsEntry(FlagMetadataKeys.FLAG_EVALUATION_REASON, "ERROR");
         }
     }
 

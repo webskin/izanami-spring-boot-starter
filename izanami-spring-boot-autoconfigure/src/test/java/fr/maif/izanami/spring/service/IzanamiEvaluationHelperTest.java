@@ -113,12 +113,13 @@ class IzanamiEvaluationHelperTest {
 
             Map<String, String> metadata = IzanamiEvaluationHelper.buildBaseMetadata(config, objectMapper);
 
-            assertThat(metadata.get(FlagMetadataKeys.FLAG_CONFIG_KEY)).isEqualTo("uuid-123");
-            assertThat(metadata.get(FlagMetadataKeys.FLAG_CONFIG_NAME)).isEqualTo("my-feature");
-            assertThat(metadata.get(FlagMetadataKeys.FLAG_CONFIG_DESCRIPTION)).isEqualTo("Test description");
-            assertThat(metadata.get(FlagMetadataKeys.FLAG_CONFIG_VALUE_TYPE)).isEqualTo("BOOLEAN");
-            assertThat(metadata.get(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY)).isEqualTo("DEFAULT_VALUE");
-            assertThat(metadata.get(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE)).isEqualTo("true");
+            assertThat(metadata)
+                .containsEntry(FlagMetadataKeys.FLAG_CONFIG_KEY, "uuid-123")
+                .containsEntry(FlagMetadataKeys.FLAG_CONFIG_NAME, "my-feature")
+                .containsEntry(FlagMetadataKeys.FLAG_CONFIG_DESCRIPTION, "Test description")
+                .containsEntry(FlagMetadataKeys.FLAG_CONFIG_VALUE_TYPE, "BOOLEAN")
+                .containsEntry(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY, "DEFAULT_VALUE")
+                .containsEntry(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE, "true");
         }
 
         @Test
@@ -167,10 +168,10 @@ class IzanamiEvaluationHelperTest {
         void buildFlagNotFoundMetadata_setsCorrectReasonAndSource() {
             Map<String, String> metadata = IzanamiEvaluationHelper.buildFlagNotFoundMetadata("missing-flag");
 
-            assertThat(metadata.get(FlagMetadataKeys.FLAG_CONFIG_KEY)).isEqualTo("missing-flag");
-            assertThat(metadata.get(FlagMetadataKeys.FLAG_VALUE_SOURCE))
-                .isEqualTo(FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
-            assertThat(metadata.get(FlagMetadataKeys.FLAG_EVALUATION_REASON)).isEqualTo("FLAG_NOT_FOUND");
+            assertThat(metadata)
+                .containsEntry(FlagMetadataKeys.FLAG_CONFIG_KEY, "missing-flag")
+                .containsEntry(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.APPLICATION_ERROR_STRATEGY.name())
+                .containsEntry(FlagMetadataKeys.FLAG_EVALUATION_REASON, "FLAG_NOT_FOUND");
         }
     }
 
