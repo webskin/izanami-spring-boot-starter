@@ -21,6 +21,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -261,8 +262,8 @@ class IzanamiFeatureProviderTest {
 
         @Test
         void initialize_doesNothing() {
-            // Should not throw
-            provider.initialize(emptyContext());
+            assertThatCode(() -> provider.initialize(emptyContext()))
+                .doesNotThrowAnyException();
         }
 
         @Test
@@ -280,8 +281,8 @@ class IzanamiFeatureProviderTest {
         void shutdown_whenClientUnavailable_doesNothing() {
             when(izanamiService.unwrapClient()).thenReturn(Optional.empty());
 
-            // Should not throw
-            provider.shutdown();
+            assertThatCode(() -> provider.shutdown())
+                .doesNotThrowAnyException();
         }
 
         @Test

@@ -2,6 +2,7 @@ package fr.maif.izanami.spring.service;
 
 import fr.maif.FeatureClientErrorStrategy;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
+
 import java.util.Objects;
 
 /**

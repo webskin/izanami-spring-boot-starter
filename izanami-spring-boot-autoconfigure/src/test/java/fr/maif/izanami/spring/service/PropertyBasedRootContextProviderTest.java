@@ -3,8 +3,6 @@ package fr.maif.izanami.spring.service;
 import fr.maif.izanami.spring.autoconfigure.IzanamiProperties;
 import org.junit.jupiter.api.Test;
 
-import java.util.Optional;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 class PropertyBasedRootContextProviderTest {

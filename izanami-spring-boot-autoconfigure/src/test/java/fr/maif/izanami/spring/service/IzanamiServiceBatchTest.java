@@ -13,17 +13,12 @@ import fr.maif.izanami.spring.openfeature.FlagConfig;
 import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
 import fr.maif.izanami.spring.openfeature.FlagValueSource;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
-import fr.maif.izanami.spring.service.api.BatchResult;
-import fr.maif.izanami.spring.service.api.ResultValueWithDetails;
+import fr.maif.izanami.spring.service.api.*;
 import fr.maif.requests.FeatureRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-
-import fr.maif.izanami.spring.service.api.RootContextProvider;
-import fr.maif.izanami.spring.service.api.SubContextResolver;
-import fr.maif.izanami.spring.service.api.UserProvider;
 import org.springframework.beans.factory.ObjectProvider;
 
 import java.math.BigDecimal;

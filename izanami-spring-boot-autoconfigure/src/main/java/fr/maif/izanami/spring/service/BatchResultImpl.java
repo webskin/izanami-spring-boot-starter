@@ -5,6 +5,8 @@ import fr.maif.features.values.BooleanCastStrategy;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
 import fr.maif.izanami.spring.service.api.BatchResult;
 import fr.maif.izanami.spring.service.api.ResultValueWithDetails;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.util.Map;
@@ -13,8 +15,6 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static java.util.Collections.unmodifiableMap;
 
