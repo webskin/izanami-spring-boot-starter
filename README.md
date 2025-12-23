@@ -43,11 +43,11 @@ Recommended configuration with SSE-based real-time updates:
 
 ```yaml
 izanami:
-  enabled: true
   base-url: ${IZANAMI_BASE_URL:http://localhost:9999}
   api-path: ${IZANAMI_API_PATH:/api}
   client-id: ${IZANAMI_CLIENT_ID:}
   client-secret: ${IZANAMI_CLIENT_SECRET:}
+  root-context: ${IZANAMI_ROOT_CONTEXT:}  # Optional default context (e.g., BUILD)
   cache:
     enabled: true
     refresh-interval: 5m
@@ -127,89 +127,116 @@ openfeature:
       callbackBean: "myErrorCallback"
 ```
 
-### Per-Request Error Strategy Override
+### Default Context Resolution
 
-You can override the configured error strategy on a per-request basis using `withErrorStrategy()`. This is useful when a specific request needs different error handling (e.g., fail-fast for critical operations):
+When evaluating feature flags, you can provide a context path (e.g., `BUILD/mobile`) that Izanami uses for context-based targeting. The starter supports automatic context resolution when you don't explicitly call `withContext()`.
 
-```java
-import fr.maif.FeatureClientErrorStrategy;
+#### Property-based Root Context
 
-// Single flag: Override to FAIL for a critical operation
-try {
-    Boolean value = izanamiService.forFlagKey("feature-uuid")
-        .withErrorStrategy(FeatureClientErrorStrategy.failStrategy())
-        .booleanValue()
-        .join();  // Throws CompletionException if error occurs
-} catch (CompletionException e) {
-    // Handle error - evaluation failed
-}
-
-// Batch: Per-request override applies to all flags in batch
-BatchResult result = izanamiService.forFlagKeys("uuid-1", "uuid-2")
-    .withErrorStrategy(FeatureClientErrorStrategy.failStrategy())
-    .values()
-    .join();  // Succeeds even if individual flags have errors
-
-// Exception thrown when accessing value for flag with FAIL + error
-try {
-    Boolean value = result.booleanValue("uuid-1");  // May throw RuntimeException
-} catch (RuntimeException e) {
-    // Handle individual flag error
-}
-```
-
-**Override hierarchy:**
-
-1. Per-request override (via `withErrorStrategy()`) - highest priority
-2. FlagConfig default (from `openfeature.flags` configuration)
-3. Application default (for flags not in configuration)
-
-### Custom Configuration Prefix
-
-If you need to nest the configuration under a custom prefix (e.g., `organisation.izanami` instead of `izanami`), define your own beans with `@Primary`:
-
-```java
-import fr.maif.izanami.spring.autoconfigure.IzanamiProperties;
-import fr.maif.izanami.spring.openfeature.FlagsProperties;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
-
-@Configuration
-public class CustomIzanamiConfig {
-
-    @Bean
-    @Primary
-    @ConfigurationProperties(prefix = "organisation.izanami")
-    public IzanamiProperties izanamiProperties() {
-        return new IzanamiProperties();
-    }
-
-    @Bean
-    @Primary
-    @ConfigurationProperties(prefix = "organisation.openfeature")
-    public FlagsProperties flagsProperties() {
-        return new FlagsProperties();
-    }
-}
-```
-
-Then configure your YAML under the custom prefix:
+Set a default root context via configuration:
 
 ```yaml
-organisation:
-  izanami:
-    base-url: ${IZANAMI_BASE_URL:http://localhost:9999}
-    client-id: ${IZANAMI_CLIENT_ID:}
-    client-secret: ${IZANAMI_CLIENT_SECRET:}
-  openfeature:
-    flags:
-      turbo-mode:
-        key: "a4c0d04f-69ac-41aa-a6e4-febcee541d51"
-        valueType: "boolean"
-        defaultValue: false
+izanami:
+  root-context: BUILD
 ```
+
+With this configuration, all evaluations without an explicit `withContext()` call will use `BUILD` as the context:
+
+```java
+// Without root-context property: no context sent
+// With root-context: BUILD -> context = "BUILD"
+izanamiService.forFlagName("my-feature").booleanValue().join();
+```
+
+#### Custom RootContextProvider
+
+For dynamic root context (e.g., based on environment or tenant), implement `RootContextProvider`:
+
+```java
+import fr.maif.izanami.spring.service.api.RootContextProvider;
+import org.springframework.stereotype.Component;
+
+@Component
+public class EnvironmentRootContextProvider implements RootContextProvider {
+
+    @Value("${app.environment:DEV}")
+    private String environment;
+
+    @Override
+    public Optional<String> root() {
+        return Optional.of(environment);  // Returns "DEV", "STAGING", or "PROD"
+    }
+}
+```
+
+> **Note**: A custom `RootContextProvider` bean takes precedence over the `izanami.root-context` property.
+
+#### Request-Scoped SubContextResolver
+
+For per-request sub-context (e.g., mobile detection, user tier), implement `SubContextResolver` as a request-scoped bean:
+
+```java
+import fr.maif.izanami.spring.service.api.SubContextResolver;
+import org.springframework.stereotype.Component;
+import org.springframework.web.context.annotation.RequestScope;
+
+@Component
+@RequestScope
+public class MobileSubContextResolver implements SubContextResolver {
+
+    private final HttpServletRequest request;
+
+    public MobileSubContextResolver(HttpServletRequest request) {
+        this.request = request;
+    }
+
+    @Override
+    public Optional<String> subContext() {
+        String userAgent = request.getHeader("User-Agent");
+        if (userAgent != null && userAgent.contains("Mobi")) {
+            return Optional.of("mobile");
+        }
+        return Optional.empty();
+    }
+}
+```
+
+The sub-context can also be a nested path for more granular targeting:
+
+```java
+@Override
+public Optional<String> subContext() {
+    // Returns paths like "mobile/android", "mobile/ios", or "desktop"
+    return Optional.of(detectPlatform() + "/" + detectOS());
+}
+```
+
+#### Context Resolution Order
+
+1. **Explicit context**: `withContext("EXPLICIT")` always takes precedence
+2. **Sub + Root**: If both are present, combined as `ROOT/sub` (e.g., `BUILD/mobile`)
+3. **Root only**: If only root is present (e.g., `BUILD`)
+4. **Sub only**: If only sub-context is present (used as full path, logs a warning)
+5. **No context**: If neither is configured, no context is sent
+
+```java
+// Explicit context always wins
+izanamiService.forFlagName("my-feature")
+    .withContext("OVERRIDE")  // Uses "OVERRIDE", ignores providers
+    .booleanValue().join();
+
+// Without explicit context, uses resolved context
+// With root=BUILD and sub=mobile -> context = "BUILD/mobile"
+izanamiService.forFlagName("my-feature")
+    .booleanValue().join();
+```
+
+#### Normalization
+
+Context paths are automatically normalized:
+- Whitespace is trimmed
+- Leading/trailing slashes are removed
+- Multiple adjacent slashes are collapsed
 
 ## Usage
 
@@ -436,6 +463,91 @@ client.ifPresent(c -> {
 ```
 
 > **Note**: The client may be absent if Izanami is not configured or failed to initialize. Always handle the `Optional` appropriately.
+
+
+### Per-Request Error Strategy Override
+
+You can override the configured error strategy on a per-request basis using `withErrorStrategy()`. This is useful when a specific request needs different error handling (e.g., fail-fast for critical operations):
+
+```java
+import fr.maif.FeatureClientErrorStrategy;
+
+// Single flag: Override to FAIL for a critical operation
+try {
+    Boolean value = izanamiService.forFlagKey("feature-uuid")
+        .withErrorStrategy(FeatureClientErrorStrategy.failStrategy())
+        .booleanValue()
+        .join();  // Throws CompletionException if error occurs
+} catch (CompletionException e) {
+    // Handle error - evaluation failed
+}
+
+// Batch: Per-request override applies to all flags in batch
+BatchResult result = izanamiService.forFlagKeys("uuid-1", "uuid-2")
+    .withErrorStrategy(FeatureClientErrorStrategy.failStrategy())
+    .values()
+    .join();  // Succeeds even if individual flags have errors
+
+// Exception thrown when accessing value for flag with FAIL + error
+try {
+    Boolean value = result.booleanValue("uuid-1");  // May throw RuntimeException
+} catch (RuntimeException e) {
+    // Handle individual flag error
+}
+```
+
+**Override hierarchy:**
+
+1. Per-request override (via `withErrorStrategy()`) - highest priority
+2. FlagConfig default (from `openfeature.flags` configuration)
+3. Application default (for flags not in configuration)
+
+### Custom Configuration Prefix
+
+If you need to nest the configuration under a custom prefix (e.g., `organisation.izanami` instead of `izanami`), define your own beans with `@Primary`:
+
+```java
+import fr.maif.izanami.spring.autoconfigure.IzanamiProperties;
+import fr.maif.izanami.spring.openfeature.FlagsProperties;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+
+@Configuration
+public class CustomIzanamiConfig {
+
+    @Bean
+    @Primary
+    @ConfigurationProperties(prefix = "organisation.izanami")
+    public IzanamiProperties izanamiProperties() {
+        return new IzanamiProperties();
+    }
+
+    @Bean
+    @Primary
+    @ConfigurationProperties(prefix = "organisation.openfeature")
+    public FlagsProperties flagsProperties() {
+        return new FlagsProperties();
+    }
+}
+```
+
+Then configure your YAML under the custom prefix:
+
+```yaml
+organisation:
+  izanami:
+    base-url: ${IZANAMI_BASE_URL:http://localhost:9999}
+    client-id: ${IZANAMI_CLIENT_ID:}
+    client-secret: ${IZANAMI_CLIENT_SECRET:}
+  openfeature:
+    flags:
+      turbo-mode:
+        key: "a4c0d04f-69ac-41aa-a6e4-febcee541d51"
+        valueType: "boolean"
+        defaultValue: false
+```
 
 ## Important: Error Strategy Limitations
 

@@ -21,6 +21,10 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import fr.maif.izanami.spring.service.api.RootContextProvider;
+import fr.maif.izanami.spring.service.api.SubContextResolver;
+import org.springframework.beans.factory.ObjectProvider;
+
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.List;
@@ -120,9 +124,21 @@ class IzanamiServiceBatchTest {
         );
     }
 
+    /**
+     * Creates a no-op CompositeContextResolver that returns empty (no default context).
+     */
+    @SuppressWarnings("unchecked")
+    private static CompositeContextResolver noOpContextResolver() {
+        ObjectProvider<RootContextProvider> rootProvider = mock(ObjectProvider.class);
+        ObjectProvider<SubContextResolver> subResolver = mock(ObjectProvider.class);
+        when(rootProvider.getIfAvailable()).thenReturn(null);
+        when(subResolver.getIfAvailable()).thenReturn(null);
+        return new CompositeContextResolver(rootProvider, subResolver);
+    }
+
     private IzanamiServiceImpl createServiceWithMockFactory(IzanamiProperties properties) {
         when(mockFactory.create(any(), any(), any(), any())).thenReturn(mockClient);
-        return new IzanamiServiceImpl(properties, flagConfigService, objectMapper, mockFactory);
+        return new IzanamiServiceImpl(properties, flagConfigService, objectMapper, noOpContextResolver(), mockFactory);
     }
 
     private IzanamiResult createMockSuccessResult(Map<String, FeatureValue> featureValues) {
@@ -353,7 +369,7 @@ class IzanamiServiceBatchTest {
             when(flagConfigService.getFlagConfigByKey("uuid-2")).thenReturn(Optional.of(config2));
 
             // Create service without initializing client (blank URL)
-            IzanamiServiceImpl service = new IzanamiServiceImpl(blankUrlProperties(), flagConfigService, objectMapper);
+            IzanamiServiceImpl service = new IzanamiServiceImpl(blankUrlProperties(), flagConfigService, objectMapper, noOpContextResolver());
             service.afterPropertiesSet();
 
             BatchResult result = service.forFlagKeys("uuid-1", "uuid-2")
@@ -372,7 +388,7 @@ class IzanamiServiceBatchTest {
             when(flagConfigService.getFlagConfigByKey("uuid-1")).thenReturn(Optional.of(config1));
 
             // Create service without initializing client (blank URL)
-            IzanamiServiceImpl service = new IzanamiServiceImpl(blankUrlProperties(), flagConfigService, objectMapper);
+            IzanamiServiceImpl service = new IzanamiServiceImpl(blankUrlProperties(), flagConfigService, objectMapper, noOpContextResolver());
             service.afterPropertiesSet();
 
             BatchResult result = service.forFlagKeys("uuid-1")
@@ -674,7 +690,7 @@ class IzanamiServiceBatchTest {
             when(flagConfigService.getFlagConfigByKey("uuid-1")).thenReturn(Optional.of(config1));
 
             // Create service without initializing client (blank URL) to simulate error
-            IzanamiServiceImpl service = new IzanamiServiceImpl(blankUrlProperties(), flagConfigService, objectMapper);
+            IzanamiServiceImpl service = new IzanamiServiceImpl(blankUrlProperties(), flagConfigService, objectMapper, noOpContextResolver());
             service.afterPropertiesSet();
 
             BatchResult result = service.forFlagKeys("uuid-1")
@@ -694,7 +710,7 @@ class IzanamiServiceBatchTest {
             when(flagConfigService.getFlagConfigByKey("uuid-1")).thenReturn(Optional.of(config1));
 
             // Create service without initializing client (blank URL) to simulate error
-            IzanamiServiceImpl service = new IzanamiServiceImpl(blankUrlProperties(), flagConfigService, objectMapper);
+            IzanamiServiceImpl service = new IzanamiServiceImpl(blankUrlProperties(), flagConfigService, objectMapper, noOpContextResolver());
             service.afterPropertiesSet();
 
             BatchResult result = service.forFlagKeys("uuid-1")
@@ -714,7 +730,7 @@ class IzanamiServiceBatchTest {
             when(flagConfigService.getFlagConfigByKey("uuid-1")).thenReturn(Optional.of(config1));
 
             // Create service without initializing client (blank URL) to simulate error
-            IzanamiServiceImpl service = new IzanamiServiceImpl(blankUrlProperties(), flagConfigService, objectMapper);
+            IzanamiServiceImpl service = new IzanamiServiceImpl(blankUrlProperties(), flagConfigService, objectMapper, noOpContextResolver());
             service.afterPropertiesSet();
 
             BatchResult result = service.forFlagKeys("uuid-1")
@@ -734,7 +750,7 @@ class IzanamiServiceBatchTest {
             when(flagConfigService.getFlagConfigByKey("uuid-1")).thenReturn(Optional.of(config1));
 
             // Create service without initializing client (blank URL) to simulate error
-            IzanamiServiceImpl service = new IzanamiServiceImpl(blankUrlProperties(), flagConfigService, objectMapper);
+            IzanamiServiceImpl service = new IzanamiServiceImpl(blankUrlProperties(), flagConfigService, objectMapper, noOpContextResolver());
             service.afterPropertiesSet();
 
             // Override with FAIL strategy per-request

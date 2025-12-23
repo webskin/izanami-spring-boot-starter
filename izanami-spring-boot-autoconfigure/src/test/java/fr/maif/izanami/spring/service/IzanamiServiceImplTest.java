@@ -15,11 +15,15 @@ import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
 import fr.maif.izanami.spring.openfeature.FlagValueSource;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
 import fr.maif.izanami.spring.service.api.ResultValueWithDetails;
+import fr.maif.izanami.spring.service.api.RootContextProvider;
+import fr.maif.izanami.spring.service.api.SubContextResolver;
 import fr.maif.requests.FeatureRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+
+import org.springframework.beans.factory.ObjectProvider;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -142,9 +146,21 @@ class IzanamiServiceImplTest {
         );
     }
 
+    /**
+     * Creates a no-op CompositeContextResolver that returns empty (no default context).
+     */
+    @SuppressWarnings("unchecked")
+    private static CompositeContextResolver noOpContextResolver() {
+        ObjectProvider<RootContextProvider> rootProvider = mock(ObjectProvider.class);
+        ObjectProvider<SubContextResolver> subResolver = mock(ObjectProvider.class);
+        when(rootProvider.getIfAvailable()).thenReturn(null);
+        when(subResolver.getIfAvailable()).thenReturn(null);
+        return new CompositeContextResolver(rootProvider, subResolver);
+    }
+
     private IzanamiServiceImpl createServiceWithMockFactory(IzanamiProperties properties) {
         when(mockFactory.create(any(), any(), any(), any())).thenReturn(mockClient);
-        return new IzanamiServiceImpl(properties, flagConfigService, objectMapper, mockFactory);
+        return new IzanamiServiceImpl(properties, flagConfigService, objectMapper, noOpContextResolver(), mockFactory);
     }
 
     /**
@@ -232,7 +248,7 @@ class IzanamiServiceImplTest {
         @Test
         void afterPropertiesSet_withBlankUrl_remainsInactive() {
             IzanamiServiceImpl service = new IzanamiServiceImpl(
-                blankUrlProperties(), flagConfigService, objectMapper, mockFactory
+                blankUrlProperties(), flagConfigService, objectMapper, noOpContextResolver(), mockFactory
             );
 
             service.afterPropertiesSet();
@@ -250,7 +266,7 @@ class IzanamiServiceImplTest {
             blankProps.setClientId("client-id");
             blankProps.setClientSecret("client-secret");
             IzanamiServiceImpl service = new IzanamiServiceImpl(
-                blankProps, flagConfigService, objectMapper, mockFactory
+                blankProps, flagConfigService, objectMapper, noOpContextResolver(), mockFactory
             );
 
             service.afterPropertiesSet();
@@ -262,7 +278,7 @@ class IzanamiServiceImplTest {
         @Test
         void afterPropertiesSet_withBlankClientId_remainsInactive() {
             IzanamiServiceImpl service = new IzanamiServiceImpl(
-                blankCredentialsProperties("", "test-secret"), flagConfigService, objectMapper, mockFactory
+                blankCredentialsProperties("", "test-secret"), flagConfigService, objectMapper, noOpContextResolver(), mockFactory
             );
 
             service.afterPropertiesSet();
@@ -274,7 +290,7 @@ class IzanamiServiceImplTest {
         @Test
         void afterPropertiesSet_withBlankClientSecret_remainsInactive() {
             IzanamiServiceImpl service = new IzanamiServiceImpl(
-                blankCredentialsProperties("test-client", ""), flagConfigService, objectMapper, mockFactory
+                blankCredentialsProperties("test-client", ""), flagConfigService, objectMapper, noOpContextResolver(), mockFactory
             );
 
             service.afterPropertiesSet();
@@ -286,7 +302,7 @@ class IzanamiServiceImplTest {
         @Test
         void afterPropertiesSet_withNullClientId_remainsInactive() {
             IzanamiServiceImpl service = new IzanamiServiceImpl(
-                blankCredentialsProperties(null, "test-secret"), flagConfigService, objectMapper, mockFactory
+                blankCredentialsProperties(null, "test-secret"), flagConfigService, objectMapper, noOpContextResolver(), mockFactory
             );
 
             service.afterPropertiesSet();
@@ -315,7 +331,7 @@ class IzanamiServiceImplTest {
             ArgumentCaptor<Set<String>> preloadCaptor = ArgumentCaptor.forClass(Set.class);
             when(mockFactory.create(any(), any(), any(), preloadCaptor.capture())).thenReturn(mockClient);
 
-            IzanamiServiceImpl service = new IzanamiServiceImpl(validProperties(), flagConfigService, objectMapper, mockFactory);
+            IzanamiServiceImpl service = new IzanamiServiceImpl(validProperties(), flagConfigService, objectMapper, noOpContextResolver(), mockFactory);
             service.afterPropertiesSet();
 
             assertThat(preloadCaptor.getValue()).containsExactlyInAnyOrder("uuid-1", "uuid-2");
@@ -326,7 +342,7 @@ class IzanamiServiceImplTest {
             when(mockFactory.create(any(), any(), any(), any()))
                 .thenThrow(new RuntimeException("Connection failed"));
 
-            IzanamiServiceImpl service = new IzanamiServiceImpl(validProperties(), flagConfigService, objectMapper, mockFactory);
+            IzanamiServiceImpl service = new IzanamiServiceImpl(validProperties(), flagConfigService, objectMapper, noOpContextResolver(), mockFactory);
 
             // Should not throw
             service.afterPropertiesSet();
@@ -345,7 +361,7 @@ class IzanamiServiceImplTest {
         @Test
         void isConnected_whenClientNull_returnsFalse() {
             IzanamiServiceImpl service = new IzanamiServiceImpl(
-                blankUrlProperties(), flagConfigService, objectMapper, mockFactory
+                blankUrlProperties(), flagConfigService, objectMapper, noOpContextResolver(), mockFactory
             );
             service.afterPropertiesSet();
 
@@ -370,7 +386,7 @@ class IzanamiServiceImplTest {
             when(mockClient.isLoaded()).thenReturn(failedFuture);
             when(mockFactory.create(any(), any(), any(), any())).thenReturn(mockClient);
 
-            IzanamiServiceImpl service = new IzanamiServiceImpl(validProperties(), flagConfigService, objectMapper, mockFactory);
+            IzanamiServiceImpl service = new IzanamiServiceImpl(validProperties(), flagConfigService, objectMapper, noOpContextResolver(), mockFactory);
             service.afterPropertiesSet();
 
             // Wait for the isLoaded future to complete (exceptionally)
@@ -382,7 +398,7 @@ class IzanamiServiceImplTest {
         @Test
         void whenLoaded_returnsCompletedFuture_whenClientNull() {
             IzanamiServiceImpl service = new IzanamiServiceImpl(
-                blankUrlProperties(), flagConfigService, objectMapper, mockFactory
+                blankUrlProperties(), flagConfigService, objectMapper, noOpContextResolver(), mockFactory
             );
             service.afterPropertiesSet();
 
@@ -397,7 +413,7 @@ class IzanamiServiceImplTest {
             when(mockClient.isLoaded()).thenReturn(clientFuture);
             when(mockFactory.create(any(), any(), any(), any())).thenReturn(mockClient);
 
-            IzanamiServiceImpl service = new IzanamiServiceImpl(validProperties(), flagConfigService, objectMapper, mockFactory);
+            IzanamiServiceImpl service = new IzanamiServiceImpl(validProperties(), flagConfigService, objectMapper, noOpContextResolver(), mockFactory);
             service.afterPropertiesSet();
 
             CompletableFuture<Void> loaded = service.whenLoaded();
@@ -420,7 +436,7 @@ class IzanamiServiceImplTest {
         @Test
         void unwrapClient_whenClientNull_returnsEmpty() {
             IzanamiServiceImpl service = new IzanamiServiceImpl(
-                blankUrlProperties(), flagConfigService, objectMapper, mockFactory
+                blankUrlProperties(), flagConfigService, objectMapper, noOpContextResolver(), mockFactory
             );
             service.afterPropertiesSet();
 
@@ -569,7 +585,7 @@ class IzanamiServiceImplTest {
         void booleanValue_whenClientNull_andDefaultStrategy_returnsDefaultValue() {
             // With DEFAULT_VALUE strategy and null client, returns the configured default value
             IzanamiServiceImpl inactiveService = new IzanamiServiceImpl(
-                blankUrlProperties(), flagConfigService, objectMapper, mockFactory
+                blankUrlProperties(), flagConfigService, objectMapper, noOpContextResolver(), mockFactory
             );
             inactiveService.afterPropertiesSet();
             when(flagConfigService.getFlagConfigByKey("uuid-123")).thenReturn(Optional.of(config));
@@ -596,7 +612,7 @@ class IzanamiServiceImplTest {
             when(flagConfigService.getFlagConfigByKey("uuid-fail")).thenReturn(Optional.of(failConfig));
 
             IzanamiServiceImpl inactiveService = new IzanamiServiceImpl(
-                blankUrlProperties(), flagConfigService, objectMapper, mockFactory
+                blankUrlProperties(), flagConfigService, objectMapper, noOpContextResolver(), mockFactory
             );
             inactiveService.afterPropertiesSet();
 
@@ -725,7 +741,7 @@ class IzanamiServiceImplTest {
             when(mockClient.featureValues(any(FeatureRequest.class)))
                 .thenReturn(CompletableFuture.failedFuture(new RuntimeException("Server error")));
 
-            IzanamiServiceImpl service = new IzanamiServiceImpl(validProperties(), flagConfigService, objectMapper, mockFactory);
+            IzanamiServiceImpl service = new IzanamiServiceImpl(validProperties(), flagConfigService, objectMapper, noOpContextResolver(), mockFactory);
             service.afterPropertiesSet();
 
             CompletableFuture<String> future = service.forFlagKey("uuid-fail").stringValue();
@@ -813,7 +829,7 @@ class IzanamiServiceImplTest {
             when(flagConfigService.getFlagConfigByKey("uuid-fail")).thenReturn(Optional.of(failConfig));
 
             IzanamiServiceImpl inactiveService = new IzanamiServiceImpl(
-                blankUrlProperties(), flagConfigService, objectMapper, mockFactory
+                blankUrlProperties(), flagConfigService, objectMapper, noOpContextResolver(), mockFactory
             );
             inactiveService.afterPropertiesSet();
 
@@ -829,7 +845,7 @@ class IzanamiServiceImplTest {
             when(flagConfigService.getFlagConfigByKey("uuid-123")).thenReturn(Optional.of(config));
 
             IzanamiServiceImpl inactiveService = new IzanamiServiceImpl(
-                blankUrlProperties(), flagConfigService, objectMapper, mockFactory
+                blankUrlProperties(), flagConfigService, objectMapper, noOpContextResolver(), mockFactory
             );
             inactiveService.afterPropertiesSet();
 
@@ -847,7 +863,7 @@ class IzanamiServiceImplTest {
             when(flagConfigService.getFlagConfigByKey("uuid-123")).thenReturn(Optional.of(config));
 
             IzanamiServiceImpl inactiveService = new IzanamiServiceImpl(
-                blankUrlProperties(), flagConfigService, objectMapper, mockFactory
+                blankUrlProperties(), flagConfigService, objectMapper, noOpContextResolver(), mockFactory
             );
             inactiveService.afterPropertiesSet();
 
@@ -880,7 +896,7 @@ class IzanamiServiceImplTest {
             when(flagConfigService.getFlagConfigByKey("uuid-detailed")).thenReturn(Optional.of(detailedConfig));
 
             IzanamiServiceImpl inactiveService = new IzanamiServiceImpl(
-                blankUrlProperties(), flagConfigService, objectMapper, mockFactory
+                blankUrlProperties(), flagConfigService, objectMapper, noOpContextResolver(), mockFactory
             );
             inactiveService.afterPropertiesSet();
 
@@ -912,7 +928,7 @@ class IzanamiServiceImplTest {
             when(flagConfigService.getFlagConfigByKey("uuid-fail")).thenReturn(Optional.of(failConfig));
 
             IzanamiServiceImpl inactiveService = new IzanamiServiceImpl(
-                blankUrlProperties(), flagConfigService, objectMapper, mockFactory
+                blankUrlProperties(), flagConfigService, objectMapper, noOpContextResolver(), mockFactory
             );
             inactiveService.afterPropertiesSet();
 
@@ -937,7 +953,7 @@ class IzanamiServiceImplTest {
             when(flagConfigService.getFlagConfigByKey("uuid-fail")).thenReturn(Optional.of(failConfig));
 
             IzanamiServiceImpl inactiveService = new IzanamiServiceImpl(
-                blankUrlProperties(), flagConfigService, objectMapper, mockFactory
+                blankUrlProperties(), flagConfigService, objectMapper, noOpContextResolver(), mockFactory
             );
             inactiveService.afterPropertiesSet();
 
@@ -962,7 +978,7 @@ class IzanamiServiceImplTest {
             when(flagConfigService.getFlagConfigByKey("uuid-fail")).thenReturn(Optional.of(failConfig));
 
             IzanamiServiceImpl inactiveService = new IzanamiServiceImpl(
-                blankUrlProperties(), flagConfigService, objectMapper, mockFactory
+                blankUrlProperties(), flagConfigService, objectMapper, noOpContextResolver(), mockFactory
             );
             inactiveService.afterPropertiesSet();
 
@@ -978,7 +994,7 @@ class IzanamiServiceImplTest {
             when(flagConfigService.getFlagConfigByKey("uuid-123")).thenReturn(Optional.of(config));
 
             IzanamiServiceImpl inactiveService = new IzanamiServiceImpl(
-                blankUrlProperties(), flagConfigService, objectMapper, mockFactory
+                blankUrlProperties(), flagConfigService, objectMapper, noOpContextResolver(), mockFactory
             );
             inactiveService.afterPropertiesSet();
 
@@ -999,7 +1015,7 @@ class IzanamiServiceImplTest {
             when(flagConfigService.getFlagConfigByKey("uuid-string")).thenReturn(Optional.of(config));
 
             IzanamiServiceImpl inactiveService = new IzanamiServiceImpl(
-                blankUrlProperties(), flagConfigService, objectMapper, mockFactory
+                blankUrlProperties(), flagConfigService, objectMapper, noOpContextResolver(), mockFactory
             );
             inactiveService.afterPropertiesSet();
 
@@ -1020,7 +1036,7 @@ class IzanamiServiceImplTest {
             when(flagConfigService.getFlagConfigByKey("uuid-number")).thenReturn(Optional.of(config));
 
             IzanamiServiceImpl inactiveService = new IzanamiServiceImpl(
-                blankUrlProperties(), flagConfigService, objectMapper, mockFactory
+                blankUrlProperties(), flagConfigService, objectMapper, noOpContextResolver(), mockFactory
             );
             inactiveService.afterPropertiesSet();
 
@@ -1041,7 +1057,7 @@ class IzanamiServiceImplTest {
             when(flagConfigService.getFlagConfigByKey("uuid-123")).thenReturn(Optional.of(config));
 
             IzanamiServiceImpl inactiveService = new IzanamiServiceImpl(
-                blankUrlProperties(), flagConfigService, objectMapper, mockFactory
+                blankUrlProperties(), flagConfigService, objectMapper, noOpContextResolver(), mockFactory
             );
             inactiveService.afterPropertiesSet();
 
@@ -1075,7 +1091,7 @@ class IzanamiServiceImplTest {
             when(flagConfigService.getFlagConfigByKey("uuid-detailed")).thenReturn(Optional.of(detailedConfig));
 
             IzanamiServiceImpl inactiveService = new IzanamiServiceImpl(
-                blankUrlProperties(), flagConfigService, objectMapper, mockFactory
+                blankUrlProperties(), flagConfigService, objectMapper, noOpContextResolver(), mockFactory
             );
             inactiveService.afterPropertiesSet();
 
@@ -1190,7 +1206,7 @@ class IzanamiServiceImplTest {
         @Test
         void destroy_whenClientNull_doesNothing() {
             IzanamiServiceImpl service = new IzanamiServiceImpl(
-                blankUrlProperties(), flagConfigService, objectMapper, mockFactory
+                blankUrlProperties(), flagConfigService, objectMapper, noOpContextResolver(), mockFactory
             );
             service.afterPropertiesSet();
 

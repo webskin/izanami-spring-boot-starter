@@ -9,8 +9,11 @@ import fr.maif.izanami.spring.openfeature.api.ErrorStrategyFactory;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
 import fr.maif.izanami.spring.openfeature.internal.ErrorStrategyFactoryImpl;
 import fr.maif.izanami.spring.openfeature.internal.FlagConfigServiceImpl;
+import fr.maif.izanami.spring.service.CompositeContextResolver;
 import fr.maif.izanami.spring.service.IzanamiServiceImpl;
 import fr.maif.izanami.spring.service.api.IzanamiService;
+import fr.maif.izanami.spring.service.api.RootContextProvider;
+import fr.maif.izanami.spring.service.api.SubContextResolver;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
@@ -154,16 +157,51 @@ public class IzanamiAutoConfiguration {
     }
 
     /**
+     * Create the default property-based RootContextProvider when no custom bean is present.
+     *
+     * @param properties Izanami properties containing root-context
+     * @return a {@link RootContextProvider} reading from properties
+     */
+    @Bean
+    @ConditionalOnMissingBean(RootContextProvider.class)
+    RootContextProvider rootContextProvider(IzanamiProperties properties) {
+        return new fr.maif.izanami.spring.service.PropertyBasedRootContextProvider(properties);
+    }
+
+    /**
+     * Create the composite context resolver.
+     * <p>
+     * Uses ObjectProvider to safely handle optional and request-scoped beans.
+     *
+     * @param rootContextProvider provider for root context (optional, will use property-based default)
+     * @param subContextResolver  resolver for sub-context (optional, typically request-scoped)
+     * @return a {@link CompositeContextResolver}
+     */
+    @Bean
+    CompositeContextResolver compositeContextResolver(
+            ObjectProvider<RootContextProvider> rootContextProvider,
+            ObjectProvider<SubContextResolver> subContextResolver
+    ) {
+        return new CompositeContextResolver(rootContextProvider, subContextResolver);
+    }
+
+    /**
      * Create the Izanami service.
      *
      * @param properties        Izanami properties
      * @param flagConfigService flag configuration service (used to preload ids)
      * @param objectMapper      Jackson ObjectMapper for JSON serialization
+     * @param contextResolver   composite context resolver for default context resolution
      * @return an {@link IzanamiService}
      */
     @Bean
     @ConditionalOnMissingBean
-    public IzanamiService izanamiService(IzanamiProperties properties, FlagConfigService flagConfigService, ObjectMapper objectMapper) {
-        return new IzanamiServiceImpl(properties, flagConfigService, objectMapper);
+    public IzanamiService izanamiService(
+            IzanamiProperties properties,
+            FlagConfigService flagConfigService,
+            ObjectMapper objectMapper,
+            CompositeContextResolver contextResolver
+    ) {
+        return new IzanamiServiceImpl(properties, flagConfigService, objectMapper, contextResolver);
     }
 }

@@ -18,6 +18,7 @@ public class IzanamiProperties {
     private String apiPath = "/api";
     private String clientId;
     private String clientSecret;
+    private String rootContext;
     private Cache cache = new Cache();
 
     public String getBaseUrl() {
@@ -50,6 +51,14 @@ public class IzanamiProperties {
 
     public void setClientSecret(String clientSecret) {
         this.clientSecret = clientSecret;
+    }
+
+    public String getRootContext() {
+        return rootContext;
+    }
+
+    public void setRootContext(String rootContext) {
+        this.rootContext = rootContext;
     }
 
     public Cache getCache() {

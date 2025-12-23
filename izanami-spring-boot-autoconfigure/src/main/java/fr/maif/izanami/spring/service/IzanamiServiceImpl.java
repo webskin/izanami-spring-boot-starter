@@ -46,6 +46,7 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
     private final IzanamiProperties properties;
     private final FlagConfigService flagConfigService;
     private final ObjectMapper objectMapper;
+    private final CompositeContextResolver contextResolver;
     private final IzanamiClientFactory clientFactory;
 
     private final AtomicReference<IzanamiClient> clientRef = new AtomicReference<>();
@@ -58,19 +59,23 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
      * @param properties        Izanami properties
      * @param flagConfigService flag configuration service providing IDs to preload
      * @param objectMapper      Jackson ObjectMapper for JSON serialization
+     * @param contextResolver   composite context resolver for default context resolution
      */
-    public IzanamiServiceImpl(IzanamiProperties properties, FlagConfigService flagConfigService, ObjectMapper objectMapper) {
-        this(properties, flagConfigService, objectMapper, IzanamiClientFactory.DEFAULT);
+    public IzanamiServiceImpl(IzanamiProperties properties, FlagConfigService flagConfigService,
+                              ObjectMapper objectMapper, CompositeContextResolver contextResolver) {
+        this(properties, flagConfigService, objectMapper, contextResolver, IzanamiClientFactory.DEFAULT);
     }
 
     /**
      * Package-private constructor for testing with a custom client factory.
      */
     IzanamiServiceImpl(IzanamiProperties properties, FlagConfigService flagConfigService,
-                       ObjectMapper objectMapper, IzanamiClientFactory clientFactory) {
+                       ObjectMapper objectMapper, CompositeContextResolver contextResolver,
+                       IzanamiClientFactory clientFactory) {
         this.properties = properties;
         this.flagConfigService = flagConfigService;
         this.objectMapper = objectMapper;
+        this.contextResolver = contextResolver;
         this.clientFactory = clientFactory;
     }
 
@@ -445,12 +450,15 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
             FeatureClientErrorStrategy<?> effectiveErrorStrategy =
                 IzanamiEvaluationHelper.computeEffectiveErrorStrategy(errorStrategy, fc.clientErrorStrategy());
 
+            // Resolve context using composite resolver
+            String resolvedContext = service.contextResolver.resolve(context).orElse(null);
+
             FeatureEvaluationParams params = FeatureEvaluationParams.builder()
                 .client(service.clientRef.get())
                 .objectMapper(service.objectMapper)
                 .flagConfig(fc)
                 .user(user)
-                .context(context)
+                .context(resolvedContext)
                 .ignoreCache(ignoreCache)
                 .callTimeout(callTimeout)
                 .payload(payload)
@@ -539,6 +547,9 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
 
         @Override
         public CompletableFuture<BatchResult> values() {
+            // Resolve context using composite resolver
+            String resolvedContext = service.contextResolver.resolve(context).orElse(null);
+
             BatchEvaluationParams params = BatchEvaluationParams.builder()
                 .client(service.clientRef.get())
                 .objectMapper(service.objectMapper)
@@ -546,7 +557,7 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
                 .identifierToKey(identifierToKey)
                 .notFoundIdentifiers(notFoundIdentifiers)
                 .user(user)
-                .context(context)
+                .context(resolvedContext)
                 .ignoreCache(ignoreCache)
                 .callTimeout(callTimeout)
                 .payload(payload)
