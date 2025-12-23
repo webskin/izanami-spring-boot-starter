@@ -116,6 +116,6 @@ public final class CompositeContextResolver {
         return context
             .trim()
             .replaceAll("/+", "/")  // Collapse multiple slashes
-            .replaceAll("^/|/$", "");  // Remove leading/trailing slashes
+            .replaceAll("(^/)|(/$)", "");  // Remove leading/trailing slashes
     }
 }
