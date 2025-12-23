@@ -18,6 +18,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.ConfigurationPropertiesBinding;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -33,8 +34,23 @@ import org.springframework.core.convert.converter.Converter;
 @ConditionalOnClass(IzanamiClient.class)
 @ConditionalOnProperty(name = "izanami.enabled", havingValue = "true", matchIfMissing = true)
 @AutoConfigureAfter(JacksonAutoConfiguration.class)
-@EnableConfigurationProperties({IzanamiProperties.class, FlagsProperties.class})
+@EnableConfigurationProperties(IzanamiProperties.class)
 public class IzanamiAutoConfiguration {
+
+    /**
+     * Create the default FlagsProperties bound to the {@code openfeature} prefix.
+     * <p>
+     * Applications can override this by defining their own {@code @Primary} bean
+     * with a custom {@code @ConfigurationProperties} prefix.
+     *
+     * @return a FlagsProperties bound to {@code openfeature}
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConfigurationProperties(prefix = "openfeature")
+    public FlagsProperties flagsProperties() {
+        return new FlagsProperties();
+    }
 
     /**
      * Create a default ObjectMapper if none is provided.
@@ -50,7 +66,7 @@ public class IzanamiAutoConfiguration {
     }
 
     /**
-     * Register the converter used to bind {@code openfeature.flags[*].valueType}.
+     * Register the converter used to bind {@code openfeature.flags.<name>.valueType}.
      *
      * @return a String to {@link FlagValueType} converter
      */
@@ -61,7 +77,7 @@ public class IzanamiAutoConfiguration {
     }
 
     /**
-     * Register the converter used to bind {@code openfeature.flags[*].errorStrategy}.
+     * Register the converter used to bind {@code openfeature.flags.<name>.errorStrategy}.
      *
      * @return a String to {@link ErrorStrategy} converter
      */
@@ -72,7 +88,7 @@ public class IzanamiAutoConfiguration {
     }
 
     /**
-     * Bind scalar YAML values to {@code openfeature.flags[*].defaultValue}.
+     * Bind scalar YAML values to {@code openfeature.flags.<name>.defaultValue}.
      * <p>
      * YAML scalar values are represented as a single-entry map under a reserved key, and later interpreted based on
      * {@code valueType}.
@@ -86,7 +102,7 @@ public class IzanamiAutoConfiguration {
     }
 
     /**
-     * Bind scalar YAML booleans to {@code openfeature.flags[*].defaultValue}.
+     * Bind scalar YAML booleans to {@code openfeature.flags.<name>.defaultValue}.
      *
      * @return a boolean-to-map converter
      */
@@ -97,7 +113,7 @@ public class IzanamiAutoConfiguration {
     }
 
     /**
-     * Bind scalar YAML numbers to {@code openfeature.flags[*].defaultValue}.
+     * Bind scalar YAML numbers to {@code openfeature.flags.<name>.defaultValue}.
      *
      * @return a number-to-map converter
      */

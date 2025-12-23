@@ -29,12 +29,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void evaluatesBooleanFlagFromServer() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + TURBO_MODE_ID,
-                "openfeature.flags[0].name=turbo-mode",
-                "openfeature.flags[0].description=Enable turbo mode",
-                "openfeature.flags[0].valueType=boolean",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=false"
+                "openfeature.flags.turbo-mode.key=" + TURBO_MODE_ID,
+                                "openfeature.flags.turbo-mode.description=Enable turbo mode",
+                "openfeature.flags.turbo-mode.valueType=boolean",
+                "openfeature.flags.turbo-mode.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.turbo-mode.defaultValue=false"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -50,12 +49,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void evaluatesStringFlagFromServer() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
-                "openfeature.flags[0].name=secret-codename",
-                "openfeature.flags[0].description=The secret codename",
-                "openfeature.flags[0].valueType=string",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=classified"
+                "openfeature.flags.secret-codename.key=" + SECRET_CODENAME_ID,
+                                "openfeature.flags.secret-codename.description=The secret codename",
+                "openfeature.flags.secret-codename.valueType=string",
+                "openfeature.flags.secret-codename.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.secret-codename.defaultValue=classified"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -71,12 +69,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void evaluatesJsonStringFlagFromServer() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + JSON_CONFIG_ID,
-                "openfeature.flags[0].name=json-config",
-                "openfeature.flags[0].description=Configuration stored as JSON string",
-                "openfeature.flags[0].valueType=string",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue={}"
+                "openfeature.flags.json-config.key=" + JSON_CONFIG_ID,
+                                "openfeature.flags.json-config.description=Configuration stored as JSON string",
+                "openfeature.flags.json-config.valueType=string",
+                "openfeature.flags.json-config.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.json-config.defaultValue={}"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -99,12 +96,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void evaluatesIntegerFlagFromServer() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + MAX_POWER_LEVEL_ID,
-                "openfeature.flags[0].name=max-power-level",
-                "openfeature.flags[0].description=Maximum power level",
-                "openfeature.flags[0].valueType=integer",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=100"
+                "openfeature.flags.max-power-level.key=" + MAX_POWER_LEVEL_ID,
+                                "openfeature.flags.max-power-level.description=Maximum power level",
+                "openfeature.flags.max-power-level.valueType=integer",
+                "openfeature.flags.max-power-level.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.max-power-level.defaultValue=100"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -120,12 +116,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void evaluatesDoubleFlagFromServer() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + DISCOUNT_RATE_ID,
-                "openfeature.flags[0].name=discount-rate",
-                "openfeature.flags[0].description=Current discount rate",
-                "openfeature.flags[0].valueType=double",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=0.0"
+                "openfeature.flags.discount-rate.key=" + DISCOUNT_RATE_ID,
+                                "openfeature.flags.discount-rate.description=Current discount rate",
+                "openfeature.flags.discount-rate.valueType=double",
+                "openfeature.flags.discount-rate.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.discount-rate.defaultValue=0.0"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -143,12 +138,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void evaluatesBooleanFlagByName() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + TURBO_MODE_ID,
-                "openfeature.flags[0].name=turbo-mode",
-                "openfeature.flags[0].description=Enable turbo mode",
-                "openfeature.flags[0].valueType=boolean",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=false"
+                "openfeature.flags.turbo-mode.key=" + TURBO_MODE_ID,
+                                "openfeature.flags.turbo-mode.description=Enable turbo mode",
+                "openfeature.flags.turbo-mode.valueType=boolean",
+                "openfeature.flags.turbo-mode.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.turbo-mode.defaultValue=false"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -164,12 +158,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void evaluatesStringFlagByName() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
-                "openfeature.flags[0].name=secret-codename",
-                "openfeature.flags[0].description=The secret codename",
-                "openfeature.flags[0].valueType=string",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=classified"
+                "openfeature.flags.secret-codename.key=" + SECRET_CODENAME_ID,
+                                "openfeature.flags.secret-codename.description=The secret codename",
+                "openfeature.flags.secret-codename.valueType=string",
+                "openfeature.flags.secret-codename.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.secret-codename.defaultValue=classified"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -185,12 +178,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void evaluatesIntegerFlagByName() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + MAX_POWER_LEVEL_ID,
-                "openfeature.flags[0].name=max-power-level",
-                "openfeature.flags[0].description=Maximum power level",
-                "openfeature.flags[0].valueType=integer",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=100"
+                "openfeature.flags.max-power-level.key=" + MAX_POWER_LEVEL_ID,
+                                "openfeature.flags.max-power-level.description=Maximum power level",
+                "openfeature.flags.max-power-level.valueType=integer",
+                "openfeature.flags.max-power-level.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.max-power-level.defaultValue=100"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -206,12 +198,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void evaluatesDoubleFlagByName() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + DISCOUNT_RATE_ID,
-                "openfeature.flags[0].name=discount-rate",
-                "openfeature.flags[0].description=Current discount rate",
-                "openfeature.flags[0].valueType=double",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=0.0"
+                "openfeature.flags.discount-rate.key=" + DISCOUNT_RATE_ID,
+                                "openfeature.flags.discount-rate.description=Current discount rate",
+                "openfeature.flags.discount-rate.valueType=double",
+                "openfeature.flags.discount-rate.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.discount-rate.defaultValue=0.0"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -229,12 +220,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void returnsBooleanDefaultWhenServerUnavailable() {
         contextRunner
             .withPropertyValues(withUnavailableServerAndFlagConfig(
-                "openfeature.flags[0].key=" + TURBO_MODE_ID,
-                "openfeature.flags[0].name=turbo-mode",
-                "openfeature.flags[0].description=Enable turbo mode",
-                "openfeature.flags[0].valueType=boolean",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=false"
+                "openfeature.flags.turbo-mode.key=" + TURBO_MODE_ID,
+                                "openfeature.flags.turbo-mode.description=Enable turbo mode",
+                "openfeature.flags.turbo-mode.valueType=boolean",
+                "openfeature.flags.turbo-mode.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.turbo-mode.defaultValue=false"
             ))
             .run(context -> {
                 IzanamiService service = context.getBean(IzanamiService.class);
@@ -248,12 +238,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void returnsStringDefaultWhenServerUnavailable() {
         contextRunner
             .withPropertyValues(withUnavailableServerAndFlagConfig(
-                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
-                "openfeature.flags[0].name=secret-codename",
-                "openfeature.flags[0].description=The secret codename",
-                "openfeature.flags[0].valueType=string",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=classified"
+                "openfeature.flags.secret-codename.key=" + SECRET_CODENAME_ID,
+                                "openfeature.flags.secret-codename.description=The secret codename",
+                "openfeature.flags.secret-codename.valueType=string",
+                "openfeature.flags.secret-codename.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.secret-codename.defaultValue=classified"
             ))
             .run(context -> {
                 IzanamiService service = context.getBean(IzanamiService.class);
@@ -267,12 +256,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void returnsIntegerDefaultWhenServerUnavailable() {
         contextRunner
             .withPropertyValues(withUnavailableServerAndFlagConfig(
-                "openfeature.flags[0].key=" + MAX_POWER_LEVEL_ID,
-                "openfeature.flags[0].name=max-power-level",
-                "openfeature.flags[0].description=Maximum power level",
-                "openfeature.flags[0].valueType=integer",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=100"
+                "openfeature.flags.max-power-level.key=" + MAX_POWER_LEVEL_ID,
+                                "openfeature.flags.max-power-level.description=Maximum power level",
+                "openfeature.flags.max-power-level.valueType=integer",
+                "openfeature.flags.max-power-level.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.max-power-level.defaultValue=100"
             ))
             .run(context -> {
                 IzanamiService service = context.getBean(IzanamiService.class);
@@ -286,12 +274,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void returnsDoubleDefaultWhenServerUnavailable() {
         contextRunner
             .withPropertyValues(withUnavailableServerAndFlagConfig(
-                "openfeature.flags[0].key=" + DISCOUNT_RATE_ID,
-                "openfeature.flags[0].name=discount-rate",
-                "openfeature.flags[0].description=Current discount rate",
-                "openfeature.flags[0].valueType=double",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=0.0"
+                "openfeature.flags.discount-rate.key=" + DISCOUNT_RATE_ID,
+                                "openfeature.flags.discount-rate.description=Current discount rate",
+                "openfeature.flags.discount-rate.valueType=double",
+                "openfeature.flags.discount-rate.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.discount-rate.defaultValue=0.0"
             ))
             .run(context -> {
                 IzanamiService service = context.getBean(IzanamiService.class);
@@ -306,12 +293,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void evaluatesDoubleResultValueWithDetailsFromServer() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + DISCOUNT_RATE_ID,
-                "openfeature.flags[0].name=discount-rate",
-                "openfeature.flags[0].description=Current discount rate",
-                "openfeature.flags[0].valueType=double",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=0.0"
+                "openfeature.flags.discount-rate.key=" + DISCOUNT_RATE_ID,
+                                "openfeature.flags.discount-rate.description=Current discount rate",
+                "openfeature.flags.discount-rate.valueType=double",
+                "openfeature.flags.discount-rate.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.discount-rate.defaultValue=0.0"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -333,12 +319,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void returnsDefaultWhenFlagDoesNotExistOnServer() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + NON_EXISTENT_FLAG_ID,
-                "openfeature.flags[0].name=non-existent-flag",
-                "openfeature.flags[0].description=A flag that does not exist on the server",
-                "openfeature.flags[0].valueType=boolean",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=true"
+                "openfeature.flags.non-existent-flag.key=" + NON_EXISTENT_FLAG_ID,
+                                "openfeature.flags.non-existent-flag.description=A flag that does not exist on the server",
+                "openfeature.flags.non-existent-flag.valueType=boolean",
+                "openfeature.flags.non-existent-flag.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.non-existent-flag.defaultValue=true"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -358,12 +343,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void forFlagKey_notConfigured_returnsDefaultsWithFlagNotFound() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + TURBO_MODE_ID,
-                "openfeature.flags[0].name=turbo-mode",
-                "openfeature.flags[0].description=Enable turbo mode",
-                "openfeature.flags[0].valueType=boolean",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=false"
+                "openfeature.flags.turbo-mode.key=" + TURBO_MODE_ID,
+                                "openfeature.flags.turbo-mode.description=Enable turbo mode",
+                "openfeature.flags.turbo-mode.valueType=boolean",
+                "openfeature.flags.turbo-mode.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.turbo-mode.defaultValue=false"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -384,12 +368,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void forFlagName_notConfigured_returnsDefaultsWithFlagNotFound() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + TURBO_MODE_ID,
-                "openfeature.flags[0].name=turbo-mode",
-                "openfeature.flags[0].description=Enable turbo mode",
-                "openfeature.flags[0].valueType=boolean",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=false"
+                "openfeature.flags.turbo-mode.key=" + TURBO_MODE_ID,
+                                "openfeature.flags.turbo-mode.description=Enable turbo mode",
+                "openfeature.flags.turbo-mode.valueType=boolean",
+                "openfeature.flags.turbo-mode.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.turbo-mode.defaultValue=false"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -410,12 +393,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void forFlagKeys_withMissingFlag_includesMissingWithFlagNotFound() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + TURBO_MODE_ID,
-                "openfeature.flags[0].name=turbo-mode",
-                "openfeature.flags[0].description=Enable turbo mode",
-                "openfeature.flags[0].valueType=boolean",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=false"
+                "openfeature.flags.turbo-mode.key=" + TURBO_MODE_ID,
+                                "openfeature.flags.turbo-mode.description=Enable turbo mode",
+                "openfeature.flags.turbo-mode.valueType=boolean",
+                "openfeature.flags.turbo-mode.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.turbo-mode.defaultValue=false"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -444,12 +426,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void forFlagNames_withMissingFlag_includesMissingWithFlagNotFound() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
-                "openfeature.flags[0].name=secret-codename",
-                "openfeature.flags[0].description=The secret codename",
-                "openfeature.flags[0].valueType=string",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=classified"
+                "openfeature.flags.secret-codename.key=" + SECRET_CODENAME_ID,
+                                "openfeature.flags.secret-codename.description=The secret codename",
+                "openfeature.flags.secret-codename.valueType=string",
+                "openfeature.flags.secret-codename.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.secret-codename.defaultValue=classified"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -480,11 +461,10 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void throwsWhenServerUnavailableWithFailStrategy() {
         contextRunner
             .withPropertyValues(withUnavailableServerAndFlagConfig(
-                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
-                "openfeature.flags[0].name=secret-codename",
-                "openfeature.flags[0].description=The secret codename",
-                "openfeature.flags[0].valueType=string",
-                "openfeature.flags[0].errorStrategy=FAIL"
+                "openfeature.flags.secret-codename.key=" + SECRET_CODENAME_ID,
+                                "openfeature.flags.secret-codename.description=The secret codename",
+                "openfeature.flags.secret-codename.valueType=string",
+                "openfeature.flags.secret-codename.errorStrategy=FAIL"
             ))
             .run(context -> {
                 IzanamiService service = context.getBean(IzanamiService.class);
@@ -498,11 +478,10 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void returnsNullWhenServerUnavailableWithNullValueStrategy() {
         contextRunner
             .withPropertyValues(withUnavailableServerAndFlagConfig(
-                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
-                "openfeature.flags[0].name=secret-codename",
-                "openfeature.flags[0].description=The secret codename",
-                "openfeature.flags[0].valueType=string",
-                "openfeature.flags[0].errorStrategy=NULL_VALUE"
+                "openfeature.flags.secret-codename.key=" + SECRET_CODENAME_ID,
+                                "openfeature.flags.secret-codename.description=The secret codename",
+                "openfeature.flags.secret-codename.valueType=string",
+                "openfeature.flags.secret-codename.errorStrategy=NULL_VALUE"
             ))
             .run(context -> {
                 IzanamiService service = context.getBean(IzanamiService.class);
@@ -517,12 +496,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
         contextRunner
             .withUserConfiguration(TestCallbackConfiguration.class)
             .withPropertyValues(withUnavailableServerAndFlagConfig(
-                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
-                "openfeature.flags[0].name=secret-codename",
-                "openfeature.flags[0].description=The secret codename",
-                "openfeature.flags[0].valueType=string",
-                "openfeature.flags[0].errorStrategy=CALLBACK",
-                "openfeature.flags[0].callbackBean=testErrorCallback"
+                "openfeature.flags.secret-codename.key=" + SECRET_CODENAME_ID,
+                                "openfeature.flags.secret-codename.description=The secret codename",
+                "openfeature.flags.secret-codename.valueType=string",
+                "openfeature.flags.secret-codename.errorStrategy=CALLBACK",
+                "openfeature.flags.secret-codename.callbackBean=testErrorCallback"
             ))
             .run(context -> {
                 IzanamiService service = context.getBean(IzanamiService.class);
@@ -538,12 +516,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void evaluatesInactiveBooleanFlagAsFalse() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + INACTIVE_BOOL_ID,
-                "openfeature.flags[0].name=inactive-bool",
-                "openfeature.flags[0].description=Disabled boolean feature",
-                "openfeature.flags[0].valueType=boolean",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=true"
+                "openfeature.flags.inactive-bool.key=" + INACTIVE_BOOL_ID,
+                                "openfeature.flags.inactive-bool.description=Disabled boolean feature",
+                "openfeature.flags.inactive-bool.valueType=boolean",
+                "openfeature.flags.inactive-bool.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.inactive-bool.defaultValue=true"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -560,12 +537,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void evaluatesInactiveStringFlagReturnsDefaultValue() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + INACTIVE_STRING_ID,
-                "openfeature.flags[0].name=inactive-string",
-                "openfeature.flags[0].description=Disabled string feature",
-                "openfeature.flags[0].valueType=string",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=fallback"
+                "openfeature.flags.inactive-string.key=" + INACTIVE_STRING_ID,
+                                "openfeature.flags.inactive-string.description=Disabled string feature",
+                "openfeature.flags.inactive-string.valueType=string",
+                "openfeature.flags.inactive-string.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.inactive-string.defaultValue=fallback"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -582,12 +558,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void evaluatesInactiveNumberFlagReturnsDefaultValue() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + INACTIVE_NUMBER_ID,
-                "openfeature.flags[0].name=inactive-number",
-                "openfeature.flags[0].description=Disabled number feature",
-                "openfeature.flags[0].valueType=integer",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=999"
+                "openfeature.flags.inactive-number.key=" + INACTIVE_NUMBER_ID,
+                                "openfeature.flags.inactive-number.description=Disabled number feature",
+                "openfeature.flags.inactive-number.valueType=integer",
+                "openfeature.flags.inactive-number.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.inactive-number.defaultValue=999"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -606,12 +581,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void booleanValueDetails_activeFeature_returnsValueWithIzanamiSourceAndUnknownReason() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + TURBO_MODE_ID,
-                "openfeature.flags[0].name=turbo-mode",
-                "openfeature.flags[0].description=Enable turbo mode",
-                "openfeature.flags[0].valueType=boolean",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=false"
+                "openfeature.flags.turbo-mode.key=" + TURBO_MODE_ID,
+                                "openfeature.flags.turbo-mode.description=Enable turbo mode",
+                "openfeature.flags.turbo-mode.valueType=boolean",
+                "openfeature.flags.turbo-mode.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.turbo-mode.defaultValue=false"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -631,12 +605,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void stringValueDetails_activeFeature_returnsValueWithIzanamiSourceAndUnknownReason() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
-                "openfeature.flags[0].name=secret-codename",
-                "openfeature.flags[0].description=The secret codename",
-                "openfeature.flags[0].valueType=string",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=classified"
+                "openfeature.flags.secret-codename.key=" + SECRET_CODENAME_ID,
+                                "openfeature.flags.secret-codename.description=The secret codename",
+                "openfeature.flags.secret-codename.valueType=string",
+                "openfeature.flags.secret-codename.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.secret-codename.defaultValue=classified"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -656,12 +629,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void numberValueDetails_activeFeature_returnsValueWithIzanamiSourceAndUnknownReason() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + MAX_POWER_LEVEL_ID,
-                "openfeature.flags[0].name=max-power-level",
-                "openfeature.flags[0].description=Maximum power level",
-                "openfeature.flags[0].valueType=integer",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=100"
+                "openfeature.flags.max-power-level.key=" + MAX_POWER_LEVEL_ID,
+                                "openfeature.flags.max-power-level.description=Maximum power level",
+                "openfeature.flags.max-power-level.valueType=integer",
+                "openfeature.flags.max-power-level.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.max-power-level.defaultValue=100"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -683,12 +655,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void booleanValueDetails_inactiveFeature_returnsFalseWithIzanamiSourceAndDisabledReason() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + INACTIVE_BOOL_ID,
-                "openfeature.flags[0].name=inactive-bool",
-                "openfeature.flags[0].description=Disabled boolean feature",
-                "openfeature.flags[0].valueType=boolean",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=true"
+                "openfeature.flags.inactive-bool.key=" + INACTIVE_BOOL_ID,
+                                "openfeature.flags.inactive-bool.description=Disabled boolean feature",
+                "openfeature.flags.inactive-bool.valueType=boolean",
+                "openfeature.flags.inactive-bool.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.inactive-bool.defaultValue=true"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -709,12 +680,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void stringValueDetails_inactiveFeature_returnsDefaultValueWithAppErrorStrategySourceAndDisabledReason() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + INACTIVE_STRING_ID,
-                "openfeature.flags[0].name=inactive-string",
-                "openfeature.flags[0].description=Disabled string feature",
-                "openfeature.flags[0].valueType=string",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=fallback"
+                "openfeature.flags.inactive-string.key=" + INACTIVE_STRING_ID,
+                                "openfeature.flags.inactive-string.description=Disabled string feature",
+                "openfeature.flags.inactive-string.valueType=string",
+                "openfeature.flags.inactive-string.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.inactive-string.defaultValue=fallback"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -735,12 +705,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void numberValueDetails_inactiveFeature_returnsDefaultValueWithAppErrorStrategySourceAndDisabledReason() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + INACTIVE_NUMBER_ID,
-                "openfeature.flags[0].name=inactive-number",
-                "openfeature.flags[0].description=Disabled number feature",
-                "openfeature.flags[0].valueType=integer",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=999"
+                "openfeature.flags.inactive-number.key=" + INACTIVE_NUMBER_ID,
+                                "openfeature.flags.inactive-number.description=Disabled number feature",
+                "openfeature.flags.inactive-number.valueType=integer",
+                "openfeature.flags.inactive-number.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.inactive-number.defaultValue=999"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -763,12 +732,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void booleanValueDetails_serverUnavailable_returnsDefaultWithErrorStrategySourceAndErrorReason() {
         contextRunner
             .withPropertyValues(withUnavailableServerAndFlagConfig(
-                "openfeature.flags[0].key=" + TURBO_MODE_ID,
-                "openfeature.flags[0].name=turbo-mode",
-                "openfeature.flags[0].description=Enable turbo mode",
-                "openfeature.flags[0].valueType=boolean",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=false"
+                "openfeature.flags.turbo-mode.key=" + TURBO_MODE_ID,
+                                "openfeature.flags.turbo-mode.description=Enable turbo mode",
+                "openfeature.flags.turbo-mode.valueType=boolean",
+                "openfeature.flags.turbo-mode.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.turbo-mode.defaultValue=false"
             ))
             .run(context -> {
                 IzanamiService service = context.getBean(IzanamiService.class);
@@ -786,12 +754,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void stringValueDetails_serverUnavailable_returnsDefaultWithErrorStrategySourceAndErrorReason() {
         contextRunner
             .withPropertyValues(withUnavailableServerAndFlagConfig(
-                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
-                "openfeature.flags[0].name=secret-codename",
-                "openfeature.flags[0].description=The secret codename",
-                "openfeature.flags[0].valueType=string",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=classified"
+                "openfeature.flags.secret-codename.key=" + SECRET_CODENAME_ID,
+                                "openfeature.flags.secret-codename.description=The secret codename",
+                "openfeature.flags.secret-codename.valueType=string",
+                "openfeature.flags.secret-codename.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.secret-codename.defaultValue=classified"
             ))
             .run(context -> {
                 IzanamiService service = context.getBean(IzanamiService.class);
@@ -809,12 +776,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void numberValueDetails_serverUnavailable_returnsDefaultWithErrorStrategySourceAndErrorReason() {
         contextRunner
             .withPropertyValues(withUnavailableServerAndFlagConfig(
-                "openfeature.flags[0].key=" + MAX_POWER_LEVEL_ID,
-                "openfeature.flags[0].name=max-power-level",
-                "openfeature.flags[0].description=Maximum power level",
-                "openfeature.flags[0].valueType=integer",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=100"
+                "openfeature.flags.max-power-level.key=" + MAX_POWER_LEVEL_ID,
+                                "openfeature.flags.max-power-level.description=Maximum power level",
+                "openfeature.flags.max-power-level.valueType=integer",
+                "openfeature.flags.max-power-level.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.max-power-level.defaultValue=100"
             ))
             .run(context -> {
                 IzanamiService service = context.getBean(IzanamiService.class);
@@ -850,12 +816,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void evaluatesFlagWithUserContext() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + TURBO_MODE_ID,
-                "openfeature.flags[0].name=turbo-mode",
-                "openfeature.flags[0].description=Enable turbo mode",
-                "openfeature.flags[0].valueType=boolean",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=false"
+                "openfeature.flags.turbo-mode.key=" + TURBO_MODE_ID,
+                                "openfeature.flags.turbo-mode.description=Enable turbo mode",
+                "openfeature.flags.turbo-mode.valueType=boolean",
+                "openfeature.flags.turbo-mode.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.turbo-mode.defaultValue=false"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -875,12 +840,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void evaluatesFlagWithEnvironmentContext() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + TURBO_MODE_ID,
-                "openfeature.flags[0].name=turbo-mode",
-                "openfeature.flags[0].description=Enable turbo mode",
-                "openfeature.flags[0].valueType=boolean",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=false"
+                "openfeature.flags.turbo-mode.key=" + TURBO_MODE_ID,
+                                "openfeature.flags.turbo-mode.description=Enable turbo mode",
+                "openfeature.flags.turbo-mode.valueType=boolean",
+                "openfeature.flags.turbo-mode.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.turbo-mode.defaultValue=false"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -899,12 +863,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void evaluatesFlagWithUserAndContext() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + TURBO_MODE_ID,
-                "openfeature.flags[0].name=turbo-mode",
-                "openfeature.flags[0].description=Enable turbo mode",
-                "openfeature.flags[0].valueType=boolean",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=false"
+                "openfeature.flags.turbo-mode.key=" + TURBO_MODE_ID,
+                                "openfeature.flags.turbo-mode.description=Enable turbo mode",
+                "openfeature.flags.turbo-mode.valueType=boolean",
+                "openfeature.flags.turbo-mode.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.turbo-mode.defaultValue=false"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -924,12 +887,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void evaluatesFlagWithPayload() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + TURBO_MODE_ID,
-                "openfeature.flags[0].name=turbo-mode",
-                "openfeature.flags[0].description=Enable turbo mode",
-                "openfeature.flags[0].valueType=boolean",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=false"
+                "openfeature.flags.turbo-mode.key=" + TURBO_MODE_ID,
+                                "openfeature.flags.turbo-mode.description=Enable turbo mode",
+                "openfeature.flags.turbo-mode.valueType=boolean",
+                "openfeature.flags.turbo-mode.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.turbo-mode.defaultValue=false"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -948,12 +910,11 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void evaluatesFlagWithAllBuilderOptions() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
-                "openfeature.flags[0].name=secret-codename",
-                "openfeature.flags[0].description=The secret codename",
-                "openfeature.flags[0].valueType=string",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=classified"
+                "openfeature.flags.secret-codename.key=" + SECRET_CODENAME_ID,
+                                "openfeature.flags.secret-codename.description=The secret codename",
+                "openfeature.flags.secret-codename.valueType=string",
+                "openfeature.flags.secret-codename.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.secret-codename.defaultValue=classified"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -979,16 +940,14 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void evaluatesBatchFlagsWithUserContext() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + TURBO_MODE_ID,
-                "openfeature.flags[0].name=turbo-mode",
-                "openfeature.flags[0].valueType=boolean",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=false",
-                "openfeature.flags[1].key=" + SECRET_CODENAME_ID,
-                "openfeature.flags[1].name=secret-codename",
-                "openfeature.flags[1].valueType=string",
-                "openfeature.flags[1].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[1].defaultValue=default"
+                "openfeature.flags.turbo-mode.key=" + TURBO_MODE_ID,
+                                "openfeature.flags.turbo-mode.valueType=boolean",
+                "openfeature.flags.turbo-mode.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.turbo-mode.defaultValue=false",
+                "openfeature.flags.secret-codename.key=" + SECRET_CODENAME_ID,
+                                "openfeature.flags.secret-codename.valueType=string",
+                "openfeature.flags.secret-codename.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.secret-codename.defaultValue=default"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -1009,11 +968,10 @@ class IzanamiServiceImplIT extends BaseIzanamiIT {
     void evaluatesBatchFlagsWithIgnoreCache() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + TURBO_MODE_ID,
-                "openfeature.flags[0].name=turbo-mode",
-                "openfeature.flags[0].valueType=boolean",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=false"
+                "openfeature.flags.turbo-mode.key=" + TURBO_MODE_ID,
+                                "openfeature.flags.turbo-mode.valueType=boolean",
+                "openfeature.flags.turbo-mode.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.turbo-mode.defaultValue=false"
             ))
             .run(context -> {
                 waitForIzanami(context);

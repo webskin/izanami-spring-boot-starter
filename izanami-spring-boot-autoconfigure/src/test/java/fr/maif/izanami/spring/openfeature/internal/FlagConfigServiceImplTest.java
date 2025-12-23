@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
-import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -58,13 +58,20 @@ class FlagConfigServiceImplTest {
 
     private FlagConfigServiceImpl createService(RawFlagConfig... configs) {
         FlagsProperties props = new FlagsProperties();
-        props.setFlags(Arrays.asList(configs));
+        Map<String, RawFlagConfig> flags = new LinkedHashMap<>();
+        for (RawFlagConfig config : Arrays.asList(configs)) {
+            String name = config == null ? null : config.getName();
+            if (name != null && !name.isBlank()) {
+                flags.put(name, config);
+            }
+        }
+        props.setFlags(flags);
         return new FlagConfigServiceImpl(props, errorStrategyFactory);
     }
 
-    private FlagConfigServiceImpl createService(List<RawFlagConfig> configs) {
+    private FlagConfigServiceImpl createService(Map<String, RawFlagConfig> flags) {
         FlagsProperties props = new FlagsProperties();
-        props.setFlags(configs);
+        props.setFlags(flags);
         return new FlagConfigServiceImpl(props, errorStrategyFactory);
     }
 
@@ -183,26 +190,15 @@ class FlagConfigServiceImplTest {
     }
 
     @Test
-    void throwsWhenNameIsNull() {
+    void derivesNameFromMapKey() {
         RawFlagConfig raw = new RawFlagConfig();
         raw.setKey("key-1");
         raw.setValueType(FlagValueType.BOOLEAN);
 
-        assertThatThrownBy(() -> createService(raw))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("missing required 'name' property");
-    }
+        FlagConfigServiceImpl service = createService(Map.of("my-flag", raw));
 
-    @Test
-    void throwsWhenNameIsBlank() {
-        RawFlagConfig raw = new RawFlagConfig();
-        raw.setKey("key-1");
-        raw.setName("");
-        raw.setValueType(FlagValueType.BOOLEAN);
-
-        assertThatThrownBy(() -> createService(raw))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("missing required 'name' property");
+        FlagConfig config = service.getFlagConfigByName("my-flag").orElseThrow();
+        assertThat(config.name()).isEqualTo("my-flag");
     }
 
     @Test
@@ -520,7 +516,7 @@ class FlagConfigServiceImplTest {
 
     @Test
     void handlesEmptyFlagsList() {
-        FlagConfigServiceImpl service = createService(List.of());
+        FlagConfigServiceImpl service = createService(Map.of());
 
         assertThat(service.getAllFlagConfigs()).isEmpty();
         assertThat(service.getFlagConfigByName("any")).isEmpty();

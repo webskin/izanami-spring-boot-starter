@@ -89,7 +89,7 @@ public interface IzanamiService {
     /**
      * Start building a feature request for the given flag key (UUID).
      * <p>
-     * The flag key is the Izanami feature UUID as configured in the {@code openfeature.flags[].key} property.
+     * The flag key is the Izanami feature UUID as configured in the {@code openfeature.flags.<name>.key} property.
      * <p>
      * If the flag key is not found in configuration, the returned builder will produce default values
      * ({@code false}, {@code ""}, {@code BigDecimal.ZERO}) with {@code FLAG_NOT_FOUND} evaluation reason.
@@ -110,7 +110,7 @@ public interface IzanamiService {
     /**
      * Start building a feature request for the given flag name.
      * <p>
-     * The flag name is the human-friendly identifier as configured in the {@code openfeature.flags[].name} property.
+     * The flag name is the human-friendly identifier as configured in the {@code openfeature.flags.<name>.name} property.
      * <p>
      * If the flag name is not found in configuration, the returned builder will produce default values
      * ({@code false}, {@code ""}, {@code BigDecimal.ZERO}) with {@code FLAG_NOT_FOUND} evaluation reason.

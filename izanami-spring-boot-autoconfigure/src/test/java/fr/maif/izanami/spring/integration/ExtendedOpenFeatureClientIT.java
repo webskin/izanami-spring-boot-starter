@@ -26,12 +26,11 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
     void evaluatesBooleanFlagFromServer() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + TURBO_MODE_ID,
-                "openfeature.flags[0].name=turbo-mode",
-                "openfeature.flags[0].description=Enable turbo mode",
-                "openfeature.flags[0].valueType=boolean",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=false"
+                "openfeature.flags.turbo-mode.key=" + TURBO_MODE_ID,
+                                "openfeature.flags.turbo-mode.description=Enable turbo mode",
+                "openfeature.flags.turbo-mode.valueType=boolean",
+                "openfeature.flags.turbo-mode.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.turbo-mode.defaultValue=false"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -53,12 +52,11 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
     void evaluatesStringFlagFromServer() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
-                "openfeature.flags[0].name=secret-codename",
-                "openfeature.flags[0].description=The secret codename",
-                "openfeature.flags[0].valueType=string",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=classified"
+                "openfeature.flags.secret-codename.key=" + SECRET_CODENAME_ID,
+                                "openfeature.flags.secret-codename.description=The secret codename",
+                "openfeature.flags.secret-codename.valueType=string",
+                "openfeature.flags.secret-codename.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.secret-codename.defaultValue=classified"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -80,12 +78,11 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
     void evaluatesIntegerFlagFromServer() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + MAX_POWER_LEVEL_ID,
-                "openfeature.flags[0].name=max-power-level",
-                "openfeature.flags[0].description=Maximum power level",
-                "openfeature.flags[0].valueType=integer",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=100"
+                "openfeature.flags.max-power-level.key=" + MAX_POWER_LEVEL_ID,
+                                "openfeature.flags.max-power-level.description=Maximum power level",
+                "openfeature.flags.max-power-level.valueType=integer",
+                "openfeature.flags.max-power-level.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.max-power-level.defaultValue=100"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -107,12 +104,11 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
     void evaluatesDoubleFlagFromServer() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + DISCOUNT_RATE_ID,
-                "openfeature.flags[0].name=discount-rate",
-                "openfeature.flags[0].description=Current discount rate",
-                "openfeature.flags[0].valueType=double",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=0.0"
+                "openfeature.flags.discount-rate.key=" + DISCOUNT_RATE_ID,
+                                "openfeature.flags.discount-rate.description=Current discount rate",
+                "openfeature.flags.discount-rate.valueType=double",
+                "openfeature.flags.discount-rate.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.discount-rate.defaultValue=0.0"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -134,12 +130,11 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
     void evaluatesObjectFlagFromServer() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + JSON_CONFIG_ID,
-                "openfeature.flags[0].name=json-config",
-                "openfeature.flags[0].description=Configuration stored as JSON",
-                "openfeature.flags[0].valueType=object",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue={}"
+                "openfeature.flags.json-config.key=" + JSON_CONFIG_ID,
+                                "openfeature.flags.json-config.description=Configuration stored as JSON",
+                "openfeature.flags.json-config.valueType=object",
+                "openfeature.flags.json-config.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.json-config.defaultValue={}"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -169,12 +164,11 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
     void evaluatesBooleanFlagByName() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + TURBO_MODE_ID,
-                "openfeature.flags[0].name=turbo-mode",
-                "openfeature.flags[0].description=Enable turbo mode",
-                "openfeature.flags[0].valueType=boolean",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=false"
+                "openfeature.flags.turbo-mode.key=" + TURBO_MODE_ID,
+                                "openfeature.flags.turbo-mode.description=Enable turbo mode",
+                "openfeature.flags.turbo-mode.valueType=boolean",
+                "openfeature.flags.turbo-mode.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.turbo-mode.defaultValue=false"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -192,12 +186,11 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
     void evaluatesStringFlagByName() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
-                "openfeature.flags[0].name=secret-codename",
-                "openfeature.flags[0].description=The secret codename",
-                "openfeature.flags[0].valueType=string",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=classified"
+                "openfeature.flags.secret-codename.key=" + SECRET_CODENAME_ID,
+                                "openfeature.flags.secret-codename.description=The secret codename",
+                "openfeature.flags.secret-codename.valueType=string",
+                "openfeature.flags.secret-codename.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.secret-codename.defaultValue=classified"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -215,12 +208,11 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
     void evaluatesIntegerFlagByName() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + MAX_POWER_LEVEL_ID,
-                "openfeature.flags[0].name=max-power-level",
-                "openfeature.flags[0].description=Maximum power level",
-                "openfeature.flags[0].valueType=integer",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=100"
+                "openfeature.flags.max-power-level.key=" + MAX_POWER_LEVEL_ID,
+                                "openfeature.flags.max-power-level.description=Maximum power level",
+                "openfeature.flags.max-power-level.valueType=integer",
+                "openfeature.flags.max-power-level.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.max-power-level.defaultValue=100"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -238,12 +230,11 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
     void evaluatesDoubleFlagByName() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + DISCOUNT_RATE_ID,
-                "openfeature.flags[0].name=discount-rate",
-                "openfeature.flags[0].description=Current discount rate",
-                "openfeature.flags[0].valueType=double",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=0.0"
+                "openfeature.flags.discount-rate.key=" + DISCOUNT_RATE_ID,
+                                "openfeature.flags.discount-rate.description=Current discount rate",
+                "openfeature.flags.discount-rate.valueType=double",
+                "openfeature.flags.discount-rate.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.discount-rate.defaultValue=0.0"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -263,12 +254,11 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
     void returnsBooleanDefaultWhenServerUnavailable() {
         contextRunner
             .withPropertyValues(withUnavailableServerAndFlagConfig(
-                "openfeature.flags[0].key=" + TURBO_MODE_ID,
-                "openfeature.flags[0].name=turbo-mode",
-                "openfeature.flags[0].description=Enable turbo mode",
-                "openfeature.flags[0].valueType=boolean",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=false"
+                "openfeature.flags.turbo-mode.key=" + TURBO_MODE_ID,
+                                "openfeature.flags.turbo-mode.description=Enable turbo mode",
+                "openfeature.flags.turbo-mode.valueType=boolean",
+                "openfeature.flags.turbo-mode.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.turbo-mode.defaultValue=false"
             ))
             .run(context -> {
                 ExtendedOpenFeatureClient client = context.getBean(ExtendedOpenFeatureClient.class);
@@ -284,12 +274,11 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
     void returnsStringDefaultWhenServerUnavailable() {
         contextRunner
             .withPropertyValues(withUnavailableServerAndFlagConfig(
-                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
-                "openfeature.flags[0].name=secret-codename",
-                "openfeature.flags[0].description=The secret codename",
-                "openfeature.flags[0].valueType=string",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=classified"
+                "openfeature.flags.secret-codename.key=" + SECRET_CODENAME_ID,
+                                "openfeature.flags.secret-codename.description=The secret codename",
+                "openfeature.flags.secret-codename.valueType=string",
+                "openfeature.flags.secret-codename.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.secret-codename.defaultValue=classified"
             ))
             .run(context -> {
                 ExtendedOpenFeatureClient client = context.getBean(ExtendedOpenFeatureClient.class);
@@ -305,12 +294,11 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
     void returnsIntegerDefaultWhenServerUnavailable() {
         contextRunner
             .withPropertyValues(withUnavailableServerAndFlagConfig(
-                "openfeature.flags[0].key=" + MAX_POWER_LEVEL_ID,
-                "openfeature.flags[0].name=max-power-level",
-                "openfeature.flags[0].description=Maximum power level",
-                "openfeature.flags[0].valueType=integer",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=100"
+                "openfeature.flags.max-power-level.key=" + MAX_POWER_LEVEL_ID,
+                                "openfeature.flags.max-power-level.description=Maximum power level",
+                "openfeature.flags.max-power-level.valueType=integer",
+                "openfeature.flags.max-power-level.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.max-power-level.defaultValue=100"
             ))
             .run(context -> {
                 ExtendedOpenFeatureClient client = context.getBean(ExtendedOpenFeatureClient.class);
@@ -326,12 +314,11 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
     void returnsDoubleDefaultWhenServerUnavailable() {
         contextRunner
             .withPropertyValues(withUnavailableServerAndFlagConfig(
-                "openfeature.flags[0].key=" + DISCOUNT_RATE_ID,
-                "openfeature.flags[0].name=discount-rate",
-                "openfeature.flags[0].description=Current discount rate",
-                "openfeature.flags[0].valueType=double",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=1.2"
+                "openfeature.flags.discount-rate.key=" + DISCOUNT_RATE_ID,
+                                "openfeature.flags.discount-rate.description=Current discount rate",
+                "openfeature.flags.discount-rate.valueType=double",
+                "openfeature.flags.discount-rate.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.discount-rate.defaultValue=1.2"
             ))
             .run(context -> {
                 ExtendedOpenFeatureClient client = context.getBean(ExtendedOpenFeatureClient.class);
@@ -349,12 +336,11 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
     void returnsCallerDefaultWhenFlagNotConfigured() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + TURBO_MODE_ID,
-                "openfeature.flags[0].name=turbo-mode",
-                "openfeature.flags[0].description=Enable turbo mode",
-                "openfeature.flags[0].valueType=boolean",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=false"
+                "openfeature.flags.turbo-mode.key=" + TURBO_MODE_ID,
+                                "openfeature.flags.turbo-mode.description=Enable turbo mode",
+                "openfeature.flags.turbo-mode.valueType=boolean",
+                "openfeature.flags.turbo-mode.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.turbo-mode.defaultValue=false"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -374,12 +360,11 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
     void returnsCallerDefaultWhenTypeMismatch() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + TURBO_MODE_ID,
-                "openfeature.flags[0].name=turbo-mode",
-                "openfeature.flags[0].description=Enable turbo mode",
-                "openfeature.flags[0].valueType=boolean",  // configured as boolean
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=false"
+                "openfeature.flags.turbo-mode.key=" + TURBO_MODE_ID,
+                                "openfeature.flags.turbo-mode.description=Enable turbo mode",
+                "openfeature.flags.turbo-mode.valueType=boolean",  // configured as boolean
+                "openfeature.flags.turbo-mode.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.turbo-mode.defaultValue=false"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -415,11 +400,10 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
     void returnsCallerDefaultWhenServerUnavailableWithFailStrategy() {
         contextRunner
             .withPropertyValues(withUnavailableServerAndFlagConfig(
-                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
-                "openfeature.flags[0].name=secret-codename",
-                "openfeature.flags[0].description=The secret codename",
-                "openfeature.flags[0].valueType=string",
-                "openfeature.flags[0].errorStrategy=FAIL"
+                "openfeature.flags.secret-codename.key=" + SECRET_CODENAME_ID,
+                                "openfeature.flags.secret-codename.description=The secret codename",
+                "openfeature.flags.secret-codename.valueType=string",
+                "openfeature.flags.secret-codename.errorStrategy=FAIL"
             ))
             .run(context -> {
                 ExtendedOpenFeatureClient client = context.getBean(ExtendedOpenFeatureClient.class);
@@ -437,11 +421,10 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
     void returnsCallerDefaultWhenServerUnavailableWithNullValueStrategy() {
         contextRunner
             .withPropertyValues(withUnavailableServerAndFlagConfig(
-                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
-                "openfeature.flags[0].name=secret-codename",
-                "openfeature.flags[0].description=The secret codename",
-                "openfeature.flags[0].valueType=string",
-                "openfeature.flags[0].errorStrategy=NULL_VALUE"
+                "openfeature.flags.secret-codename.key=" + SECRET_CODENAME_ID,
+                                "openfeature.flags.secret-codename.description=The secret codename",
+                "openfeature.flags.secret-codename.valueType=string",
+                "openfeature.flags.secret-codename.errorStrategy=NULL_VALUE"
             ))
             .run(context -> {
                 ExtendedOpenFeatureClient client = context.getBean(ExtendedOpenFeatureClient.class);
@@ -459,12 +442,11 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
         contextRunner
             .withUserConfiguration(TestCallbackConfiguration.class)
             .withPropertyValues(withUnavailableServerAndFlagConfig(
-                "openfeature.flags[0].key=" + SECRET_CODENAME_ID,
-                "openfeature.flags[0].name=secret-codename",
-                "openfeature.flags[0].description=The secret codename",
-                "openfeature.flags[0].valueType=string",
-                "openfeature.flags[0].errorStrategy=CALLBACK",
-                "openfeature.flags[0].callbackBean=testErrorCallback"
+                "openfeature.flags.secret-codename.key=" + SECRET_CODENAME_ID,
+                                "openfeature.flags.secret-codename.description=The secret codename",
+                "openfeature.flags.secret-codename.valueType=string",
+                "openfeature.flags.secret-codename.errorStrategy=CALLBACK",
+                "openfeature.flags.secret-codename.callbackBean=testErrorCallback"
             ))
             .run(context -> {
                 ExtendedOpenFeatureClient client = context.getBean(ExtendedOpenFeatureClient.class);
@@ -484,12 +466,11 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
     void evaluatesInactiveBooleanFlagAsFalse() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + INACTIVE_BOOL_ID,
-                "openfeature.flags[0].name=inactive-bool",
-                "openfeature.flags[0].description=Disabled boolean feature",
-                "openfeature.flags[0].valueType=boolean",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=true"
+                "openfeature.flags.inactive-bool.key=" + INACTIVE_BOOL_ID,
+                                "openfeature.flags.inactive-bool.description=Disabled boolean feature",
+                "openfeature.flags.inactive-bool.valueType=boolean",
+                "openfeature.flags.inactive-bool.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.inactive-bool.defaultValue=true"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -509,12 +490,11 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
     void evaluatesInactiveStringFlagReturnsDefaultValue() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + INACTIVE_STRING_ID,
-                "openfeature.flags[0].name=inactive-string",
-                "openfeature.flags[0].description=Disabled string feature",
-                "openfeature.flags[0].valueType=string",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=fallback"
+                "openfeature.flags.inactive-string.key=" + INACTIVE_STRING_ID,
+                                "openfeature.flags.inactive-string.description=Disabled string feature",
+                "openfeature.flags.inactive-string.valueType=string",
+                "openfeature.flags.inactive-string.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.inactive-string.defaultValue=fallback"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -534,12 +514,11 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
     void evaluatesInactiveIntegerFlagReturnsDefaultValue() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + INACTIVE_NUMBER_ID,
-                "openfeature.flags[0].name=inactive-number",
-                "openfeature.flags[0].description=Disabled number feature",
-                "openfeature.flags[0].valueType=integer",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=999"
+                "openfeature.flags.inactive-number.key=" + INACTIVE_NUMBER_ID,
+                                "openfeature.flags.inactive-number.description=Disabled number feature",
+                "openfeature.flags.inactive-number.valueType=integer",
+                "openfeature.flags.inactive-number.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.inactive-number.defaultValue=999"
             ))
             .run(context -> {
                 waitForIzanami(context);
@@ -559,12 +538,11 @@ class ExtendedOpenFeatureClientIT extends BaseIzanamiIT {
     void evaluatesInactiveDoubleFlagReturnsDefaultValue() {
         contextRunner
             .withPropertyValues(withFlagConfig(
-                "openfeature.flags[0].key=" + INACTIVE_NUMBER_ID,
-                "openfeature.flags[0].name=inactive-number",
-                "openfeature.flags[0].description=Disabled number feature",
-                "openfeature.flags[0].valueType=double",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue=99.9"
+                "openfeature.flags.inactive-number.key=" + INACTIVE_NUMBER_ID,
+                                "openfeature.flags.inactive-number.description=Disabled number feature",
+                "openfeature.flags.inactive-number.valueType=double",
+                "openfeature.flags.inactive-number.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.inactive-number.defaultValue=99.9"
             ))
             .run(context -> {
                 waitForIzanami(context);

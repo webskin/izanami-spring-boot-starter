@@ -65,33 +65,35 @@ izanami:
 
 ### OpenFeature flags
 
+Flags are configured as a map keyed by flag name. The `key` (UUID) is required; `name` is derived from the map key.
+
 When `defaultValue` is provided, the error strategy defaults to `DEFAULT_VALUE` automatically:
 
 ```yaml
 openfeature:
   flags:
-    - key: "a4c0d04f-69ac-41aa-a6e4-febcee541d51"
-      name: "turbo-mode"
+    turbo-mode:
+      key: "a4c0d04f-69ac-41aa-a6e4-febcee541d51"
       description: "Enable turbo mode for maximum performance"
       valueType: "boolean"
       defaultValue: false
-    - key: "b5d1e15f-7abd-42bb-b7f5-0cdef6652e62"
-      name: "secret-codename"
+    secret-codename:
+      key: "b5d1e15f-7abd-42bb-b7f5-0cdef6652e62"
       description: "The secret codename for this release"
       valueType: "string"
       defaultValue: "classified"
-    - key: "c6e2f26f-8bce-43cc-c8f6-1def07763f73"
-      name: "max-power-level"
+    max-power-level:
+      key: "c6e2f26f-8bce-43cc-c8f6-1def07763f73"
       description: "Maximum power level allowed"
       valueType: "integer"
       defaultValue: 100
-    - key: "d7f3037f-9cdf-44dd-d9f7-2ef008874084"
-      name: "discount-rate"
+    discount-rate:
+      key: "d7f3037f-9cdf-44dd-d9f7-2ef008874084"
       description: "Current discount rate as a decimal"
       valueType: "double"
       defaultValue: 0.0
-    - key: "e8f4148f-0def-55ee-eaf8-3f0109985195"
-      name: "json-config"
+    json-config:
+      key: "e8f4148f-0def-55ee-eaf8-3f0109985195"
       description: "Configuration stored as JSON string"
       valueType: "string"
       defaultValue: "{}"
@@ -106,20 +108,20 @@ openfeature:
 openfeature:
   flags:
     # FAIL strategy - throws exception on error (IzanamiService only)
-    - key: "..."
-      name: "critical-flag"
+    critical-flag:
+      key: "..."
       valueType: "boolean"
       errorStrategy: "FAIL"
 
     # NULL_VALUE strategy - returns null on error (IzanamiService only)
-    - key: "..."
-      name: "optional-flag"
+    optional-flag:
+      key: "..."
       valueType: "string"
       errorStrategy: "NULL_VALUE"
 
     # CALLBACK strategy - invokes custom bean on error
-    - key: "..."
-      name: "fallback-flag"
+    fallback-flag:
+      key: "..."
       valueType: "string"
       errorStrategy: "CALLBACK"
       callbackBean: "myErrorCallback"
@@ -203,8 +205,8 @@ organisation:
     client-secret: ${IZANAMI_CLIENT_SECRET:}
   openfeature:
     flags:
-      - key: "a4c0d04f-69ac-41aa-a6e4-febcee541d51"
-        name: "turbo-mode"
+      turbo-mode:
+        key: "a4c0d04f-69ac-41aa-a6e4-febcee541d51"
         valueType: "boolean"
         defaultValue: false
 ```

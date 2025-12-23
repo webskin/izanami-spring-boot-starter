@@ -39,7 +39,8 @@ public final class FlagConfigServiceImpl implements FlagConfigService {
         Map<String, FlagConfig> byId = new LinkedHashMap<>();
         Map<String, String> nameToIdMap = new LinkedHashMap<>();
 
-        for (RawFlagConfig raw : flagsProperties.getFlags()) {
+        List<RawFlagConfig> rawConfigs = flagsProperties.getFlagConfigs();
+        for (RawFlagConfig raw : rawConfigs) {
             if (raw == null) {
                 continue;
             }
@@ -68,7 +69,7 @@ public final class FlagConfigServiceImpl implements FlagConfigService {
         this.nameToId = Map.copyOf(nameToIdMap);
 
         log.info("Loaded {} flag configurations ({} by name, {} by key)",
-            flagsProperties.getFlags().size(), configsByName.size(), configsById.size());
+            rawConfigs.size(), configsByName.size(), configsById.size());
     }
 
     @Override

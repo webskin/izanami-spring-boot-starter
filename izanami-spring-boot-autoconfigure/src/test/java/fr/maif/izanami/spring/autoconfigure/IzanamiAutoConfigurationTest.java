@@ -79,12 +79,11 @@ class IzanamiAutoConfigurationTest {
     void bindsValueTypeAndErrorStrategyUsingConverters() {
         contextRunner
             .withPropertyValues(
-                "openfeature.flags[0].key=0c1774d1-9a26-4284-b8a6-0179eb7cf2f7",
-                "openfeature.flags[0].name=new-dashboard",
-                "openfeature.flags[0].description=Test flag",
-                "openfeature.flags[0].valueType=object",
-                "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                "openfeature.flags[0].defaultValue.name=Izanami"
+                "openfeature.flags.new-dashboard.key=0c1774d1-9a26-4284-b8a6-0179eb7cf2f7",
+                "openfeature.flags.new-dashboard.description=Test flag",
+                "openfeature.flags.new-dashboard.valueType=object",
+                "openfeature.flags.new-dashboard.errorStrategy=DEFAULT_VALUE",
+                "openfeature.flags.new-dashboard.defaultValue.name=Izanami"
             )
             .run(context -> {
                 FlagConfigService configService = context.getBean(FlagConfigService.class);
@@ -157,16 +156,14 @@ class IzanamiAutoConfigurationTest {
         void bindsMultipleFlags() {
             contextRunner
                 .withPropertyValues(
-                    "openfeature.flags[0].key=uuid-1",
-                    "openfeature.flags[0].name=feature-1",
-                    "openfeature.flags[0].valueType=boolean",
-                    "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                    "openfeature.flags[0].defaultValue=true",
-                    "openfeature.flags[1].key=uuid-2",
-                    "openfeature.flags[1].name=feature-2",
-                    "openfeature.flags[1].valueType=string",
-                    "openfeature.flags[1].errorStrategy=DEFAULT_VALUE",
-                    "openfeature.flags[1].defaultValue=hello"
+                    "openfeature.flags.feature-1.key=uuid-1",
+                    "openfeature.flags.feature-1.valueType=boolean",
+                    "openfeature.flags.feature-1.errorStrategy=DEFAULT_VALUE",
+                    "openfeature.flags.feature-1.defaultValue=true",
+                    "openfeature.flags.feature-2.key=uuid-2",
+                    "openfeature.flags.feature-2.valueType=string",
+                    "openfeature.flags.feature-2.errorStrategy=DEFAULT_VALUE",
+                    "openfeature.flags.feature-2.defaultValue=hello"
                 )
                 .run(context -> {
                     FlagConfigService configService = context.getBean(FlagConfigService.class);
@@ -180,10 +177,9 @@ class IzanamiAutoConfigurationTest {
         void bindsFailErrorStrategy() {
             contextRunner
                 .withPropertyValues(
-                    "openfeature.flags[0].key=uuid-1",
-                    "openfeature.flags[0].name=critical-feature",
-                    "openfeature.flags[0].valueType=boolean",
-                    "openfeature.flags[0].errorStrategy=FAIL"
+                    "openfeature.flags.critical-feature.key=uuid-1",
+                    "openfeature.flags.critical-feature.valueType=boolean",
+                    "openfeature.flags.critical-feature.errorStrategy=FAIL"
                 )
                 .run(context -> {
                     FlagConfigService configService = context.getBean(FlagConfigService.class);
@@ -198,11 +194,10 @@ class IzanamiAutoConfigurationTest {
         void bindsIntegerValueType() {
             contextRunner
                 .withPropertyValues(
-                    "openfeature.flags[0].key=uuid-1",
-                    "openfeature.flags[0].name=max-retries",
-                    "openfeature.flags[0].valueType=integer",
-                    "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                    "openfeature.flags[0].defaultValue=3"
+                    "openfeature.flags.max-retries.key=uuid-1",
+                    "openfeature.flags.max-retries.valueType=integer",
+                    "openfeature.flags.max-retries.errorStrategy=DEFAULT_VALUE",
+                    "openfeature.flags.max-retries.defaultValue=3"
                 )
                 .run(context -> {
                     FlagConfigService configService = context.getBean(FlagConfigService.class);
@@ -216,11 +211,10 @@ class IzanamiAutoConfigurationTest {
         void bindsDoubleValueType() {
             contextRunner
                 .withPropertyValues(
-                    "openfeature.flags[0].key=uuid-1",
-                    "openfeature.flags[0].name=rate-limit",
-                    "openfeature.flags[0].valueType=double",
-                    "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                    "openfeature.flags[0].defaultValue=1.5"
+                    "openfeature.flags.rate-limit.key=uuid-1",
+                    "openfeature.flags.rate-limit.valueType=double",
+                    "openfeature.flags.rate-limit.errorStrategy=DEFAULT_VALUE",
+                    "openfeature.flags.rate-limit.defaultValue=1.5"
                 )
                 .run(context -> {
                     FlagConfigService configService = context.getBean(FlagConfigService.class);
@@ -234,11 +228,10 @@ class IzanamiAutoConfigurationTest {
         void lookupByKeyAndName() {
             contextRunner
                 .withPropertyValues(
-                    "openfeature.flags[0].key=my-uuid",
-                    "openfeature.flags[0].name=my-feature",
-                    "openfeature.flags[0].valueType=boolean",
-                    "openfeature.flags[0].errorStrategy=DEFAULT_VALUE",
-                    "openfeature.flags[0].defaultValue=true"
+                    "openfeature.flags.my-feature.key=my-uuid",
+                    "openfeature.flags.my-feature.valueType=boolean",
+                    "openfeature.flags.my-feature.errorStrategy=DEFAULT_VALUE",
+                    "openfeature.flags.my-feature.defaultValue=true"
                 )
                 .run(context -> {
                     FlagConfigService configService = context.getBean(FlagConfigService.class);

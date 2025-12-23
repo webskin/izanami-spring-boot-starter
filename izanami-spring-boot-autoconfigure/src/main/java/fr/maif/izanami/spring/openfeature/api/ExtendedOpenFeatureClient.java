@@ -18,9 +18,9 @@ import dev.openfeature.sdk.*;
  * This client provides two sets of methods for flag evaluation:
  * <ul>
  *   <li><b>Key-based methods</b> (e.g., {@code getBooleanValue(key)}) - Use the Izanami feature
- *       key (UUID) directly. The key must match the {@code openfeature.flags[].key} configuration.</li>
+ *       key (UUID) directly. The key must match the {@code openfeature.flags.<name>.key} configuration.</li>
  *   <li><b>Name-based methods</b> (e.g., {@code getBooleanValueByName(name)}) - Use the configured
- *       flag name. The name is looked up in {@code openfeature.flags[].name}, and the corresponding
+ *       flag name. The name is looked up in {@code openfeature.flags.<name>.name}, and the corresponding
  *       key is used for evaluation.</li>
  * </ul>
  *

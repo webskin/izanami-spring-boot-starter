@@ -94,10 +94,10 @@ izanami:
 
 openfeature:
   flags:
-    - key: "feature-uuid"        # Izanami feature key (UUID)
-      name: "my-feature"         # Human-friendly name for OpenFeature
+    my-feature:                    # Map key becomes the flag name
+      key: "feature-uuid"          # Izanami feature key (UUID)
       description: "Feature description"
-      valueType: BOOLEAN         # BOOLEAN, STRING, INTEGER, DOUBLE, OBJECT
+      valueType: BOOLEAN           # BOOLEAN, STRING, INTEGER, DOUBLE, OBJECT
       errorStrategy: DEFAULT_VALUE
       defaultValue: false
 ```
