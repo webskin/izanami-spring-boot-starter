@@ -11,9 +11,11 @@ import fr.maif.izanami.spring.openfeature.internal.ErrorStrategyFactoryImpl;
 import fr.maif.izanami.spring.openfeature.internal.FlagConfigServiceImpl;
 import fr.maif.izanami.spring.service.CompositeContextResolver;
 import fr.maif.izanami.spring.service.IzanamiServiceImpl;
+import fr.maif.izanami.spring.service.UserResolver;
 import fr.maif.izanami.spring.service.api.IzanamiService;
 import fr.maif.izanami.spring.service.api.RootContextProvider;
 import fr.maif.izanami.spring.service.api.SubContextResolver;
+import fr.maif.izanami.spring.service.api.UserProvider;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
@@ -186,12 +188,26 @@ public class IzanamiAutoConfiguration {
     }
 
     /**
+     * Create the user resolver.
+     * <p>
+     * Uses ObjectProvider to safely handle optional and request-scoped beans.
+     *
+     * @param userProvider provider for user identifier (optional, typically request-scoped)
+     * @return a {@link UserResolver}
+     */
+    @Bean
+    UserResolver userResolver(ObjectProvider<UserProvider> userProvider) {
+        return new UserResolver(userProvider);
+    }
+
+    /**
      * Create the Izanami service.
      *
      * @param properties        Izanami properties
      * @param flagConfigService flag configuration service (used to preload ids)
      * @param objectMapper      Jackson ObjectMapper for JSON serialization
      * @param contextResolver   composite context resolver for default context resolution
+     * @param userResolver      user resolver for default user resolution
      * @return an {@link IzanamiService}
      */
     @Bean
@@ -200,8 +216,9 @@ public class IzanamiAutoConfiguration {
             IzanamiProperties properties,
             FlagConfigService flagConfigService,
             ObjectMapper objectMapper,
-            CompositeContextResolver contextResolver
+            CompositeContextResolver contextResolver,
+            UserResolver userResolver
     ) {
-        return new IzanamiServiceImpl(properties, flagConfigService, objectMapper, contextResolver);
+        return new IzanamiServiceImpl(properties, flagConfigService, objectMapper, contextResolver, userResolver);
     }
 }

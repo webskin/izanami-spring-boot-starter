@@ -238,6 +238,69 @@ Context paths are automatically normalized:
 - Leading/trailing slashes are removed
 - Multiple adjacent slashes are collapsed
 
+### Default User Resolution
+
+Similar to context resolution, you can provide a default user for feature flag evaluations. This is useful when you want user-based targeting without explicitly calling `withUser()` on every evaluation.
+
+#### UserProvider Interface
+
+Implement `UserProvider` to supply the default user:
+
+```java
+import fr.maif.izanami.spring.service.api.UserProvider;
+import org.springframework.stereotype.Component;
+
+@Component
+public class SystemUserProvider implements UserProvider {
+    @Override
+    public Optional<String> user() {
+        return Optional.of("system-user");
+    }
+}
+```
+
+#### Request-Scoped UserProvider with Spring Security
+
+For per-request user resolution, implement `UserProvider` as a request-scoped bean:
+
+```java
+import fr.maif.izanami.spring.service.api.UserProvider;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
+import org.springframework.web.context.annotation.RequestScope;
+
+@Component
+@RequestScope
+public class SecurityContextUserProvider implements UserProvider {
+    @Override
+    public Optional<String> user() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(auth.getName());
+    }
+}
+```
+
+#### User Resolution Order
+
+1. **Explicit user**: `withUser("user-123")` always takes precedence
+2. **UserProvider**: If present and returns a value
+3. **No user**: If neither is configured, no user is sent
+
+```java
+// Explicit user always wins
+izanamiService.forFlagName("my-feature")
+    .withUser("explicit-user")  // Uses "explicit-user", ignores provider
+    .booleanValue().join();
+
+// Without explicit user, uses resolved user from provider
+izanamiService.forFlagName("my-feature")
+    .booleanValue().join();
+```
+
 ## Usage
 
 ### Simple Usage with IzanamiService (Fluent API)

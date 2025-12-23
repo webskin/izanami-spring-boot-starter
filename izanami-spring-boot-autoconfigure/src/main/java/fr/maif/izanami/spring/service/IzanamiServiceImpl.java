@@ -47,6 +47,7 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
     private final FlagConfigService flagConfigService;
     private final ObjectMapper objectMapper;
     private final CompositeContextResolver contextResolver;
+    private final UserResolver userResolver;
     private final IzanamiClientFactory clientFactory;
 
     private final AtomicReference<IzanamiClient> clientRef = new AtomicReference<>();
@@ -60,10 +61,12 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
      * @param flagConfigService flag configuration service providing IDs to preload
      * @param objectMapper      Jackson ObjectMapper for JSON serialization
      * @param contextResolver   composite context resolver for default context resolution
+     * @param userResolver      user resolver for default user resolution
      */
     public IzanamiServiceImpl(IzanamiProperties properties, FlagConfigService flagConfigService,
-                              ObjectMapper objectMapper, CompositeContextResolver contextResolver) {
-        this(properties, flagConfigService, objectMapper, contextResolver, IzanamiClientFactory.DEFAULT);
+                              ObjectMapper objectMapper, CompositeContextResolver contextResolver,
+                              UserResolver userResolver) {
+        this(properties, flagConfigService, objectMapper, contextResolver, userResolver, IzanamiClientFactory.DEFAULT);
     }
 
     /**
@@ -71,11 +74,12 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
      */
     IzanamiServiceImpl(IzanamiProperties properties, FlagConfigService flagConfigService,
                        ObjectMapper objectMapper, CompositeContextResolver contextResolver,
-                       IzanamiClientFactory clientFactory) {
+                       UserResolver userResolver, IzanamiClientFactory clientFactory) {
         this.properties = properties;
         this.flagConfigService = flagConfigService;
         this.objectMapper = objectMapper;
         this.contextResolver = contextResolver;
+        this.userResolver = userResolver;
         this.clientFactory = clientFactory;
     }
 
@@ -450,14 +454,15 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
             FeatureClientErrorStrategy<?> effectiveErrorStrategy =
                 IzanamiEvaluationHelper.computeEffectiveErrorStrategy(errorStrategy, fc.clientErrorStrategy());
 
-            // Resolve context using composite resolver
+            // Resolve context and user using resolvers
             String resolvedContext = service.contextResolver.resolve(context).orElse(null);
+            String resolvedUser = service.userResolver.resolve(user).orElse(null);
 
             FeatureEvaluationParams params = FeatureEvaluationParams.builder()
                 .client(service.clientRef.get())
                 .objectMapper(service.objectMapper)
                 .flagConfig(fc)
-                .user(user)
+                .user(resolvedUser)
                 .context(resolvedContext)
                 .ignoreCache(ignoreCache)
                 .callTimeout(callTimeout)
@@ -549,6 +554,8 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
         public CompletableFuture<BatchResult> values() {
             // Resolve context using composite resolver
             String resolvedContext = service.contextResolver.resolve(context).orElse(null);
+            // Resolve user using user resolver
+            String resolvedUser = service.userResolver.resolve(user).orElse(null);
 
             BatchEvaluationParams params = BatchEvaluationParams.builder()
                 .client(service.clientRef.get())
@@ -556,7 +563,7 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
                 .flagConfigs(flagConfigs)
                 .identifierToKey(identifierToKey)
                 .notFoundIdentifiers(notFoundIdentifiers)
-                .user(user)
+                .user(resolvedUser)
                 .context(resolvedContext)
                 .ignoreCache(ignoreCache)
                 .callTimeout(callTimeout)
