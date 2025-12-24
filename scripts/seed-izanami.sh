@@ -29,6 +29,12 @@ IZANAMI_SEED_OUTPUT="${IZANAMI_SEED_OUTPUT:-export}" # export|github-env
 # | 0ab6360f-2f01-7700-0c0a-5f131bba7317 | inactive-string | string  | hidden value           | false   | (none)                                 |
 # | 1bc7471f-3012-8811-1d1b-6f242ccb8428 | inactive-number | number  | 42                     | false   | (none)                                 |
 # | 2cd8582f-4123-9922-2e2c-7f353ddc9539 | user-targeted   | boolean | (conditional)          | true    | UserList: provider-user, other-allowed |
+# | 3de9693f-5234-aa33-3f3d-8f464eec0640 | context-targeted| boolean | (context overloads)    | false   | Context-based overloads (see below)    |
+#
+# Context-targeted feature has overloads:
+#   - PROD context: enabled for user "prod-user"
+#   - PROD/mobile context: enabled for user "mobile-user"
+#   - PROD/mobile/EU context: enabled for user "eu-user"
 #
 IZANAMI_TURBO_MODE_ID="${IZANAMI_TURBO_MODE_ID:-a4c0d04f-69ac-41aa-a6e4-febcee541d51}"
 IZANAMI_SECRET_CODENAME_ID="${IZANAMI_SECRET_CODENAME_ID:-b5d1e15f-7abd-42bb-b7f5-0cdef6652e62}"
@@ -39,6 +45,7 @@ IZANAMI_INACTIVE_BOOL_ID="${IZANAMI_INACTIVE_BOOL_ID:-f9a5259f-1ef0-66ff-fbf9-4f
 IZANAMI_INACTIVE_STRING_ID="${IZANAMI_INACTIVE_STRING_ID:-0ab6360f-2f01-7700-0c0a-5f131bba7317}"
 IZANAMI_INACTIVE_NUMBER_ID="${IZANAMI_INACTIVE_NUMBER_ID:-1bc7471f-3012-8811-1d1b-6f242ccb8428}"
 IZANAMI_USER_TARGETED_ID="${IZANAMI_USER_TARGETED_ID:-2cd8582f-4123-9922-2e2c-7f353ddc9539}"
+IZANAMI_CONTEXT_TARGETED_ID="${IZANAMI_CONTEXT_TARGETED_ID:-3de9693f-5234-aa33-3f3d-8f464eec0640}"
 
 # Locate iz CLI
 find_iz_cmd() {
@@ -208,6 +215,41 @@ create_feature_with_conditions() {
     --data "${json}" >&2
 }
 
+# Helper function to create a global context
+create_global_context() {
+  local name="$1"
+
+  # Create global context (ignore error if already exists)
+  ${IZ_CMD} admin contexts create "${name}" \
+    --global \
+    --tenant "${IZANAMI_TENANT}" 2>/dev/null || true
+}
+
+# Helper function to create a project-specific context with parent
+create_project_context() {
+  local name="$1"
+  local parent="$2"
+
+  # Create project context (ignore error if already exists)
+  ${IZ_CMD} admin contexts create "${name}" \
+    --project "${IZANAMI_PROJECT}" \
+    --parent "${parent}" \
+    --tenant "${IZANAMI_TENANT}" 2>/dev/null || true
+}
+
+# Helper function to set a feature overload for a context
+create_overload() {
+  local feature_name="$1"
+  local context="$2"
+  local data_json="$3"
+
+  ${IZ_CMD} admin overloads set "${feature_name}" \
+    --context "${context}" \
+    --project "${IZANAMI_PROJECT}" \
+    --tenant "${IZANAMI_TENANT}" \
+    --data "${data_json}" >&2
+}
+
 # Create boolean feature: turbo-mode
 create_feature \
   "${IZANAMI_TURBO_MODE_ID}" \
@@ -288,6 +330,34 @@ create_feature_with_conditions \
   "Feature enabled only for specific users" \
   "boolean" \
   '[{"rule": {"type": "UserList", "users": ["provider-user", "other-allowed"]}}]'
+
+# Create contexts for context-targeted feature testing
+echo "Creating contexts for context-targeted feature ..." >&2
+create_global_context "PROD"
+create_project_context "mobile" "PROD"
+create_project_context "EU" "PROD/mobile"
+
+# Create context-targeted feature (disabled at base level)
+create_feature \
+  "${IZANAMI_CONTEXT_TARGETED_ID}" \
+  "context-targeted" \
+  "Feature with context-based overloads for testing" \
+  "boolean" \
+  "" \
+  "false"
+
+# Create overloads for context-targeted feature
+# PROD context: enabled for user "prod-user"
+create_overload "context-targeted" "PROD" \
+  '{"enabled": true, "resultType": "boolean", "conditions": [{"rule": {"type": "UserList", "users": ["prod-user"]}}]}'
+
+# PROD/mobile context: enabled for user "mobile-user"
+create_overload "context-targeted" "PROD/mobile" \
+  '{"enabled": true, "resultType": "boolean", "conditions": [{"rule": {"type": "UserList", "users": ["mobile-user"]}}]}'
+
+# PROD/mobile/EU context: enabled for user "eu-user"
+create_overload "context-targeted" "PROD/mobile/EU" \
+  '{"enabled": true, "resultType": "boolean", "conditions": [{"rule": {"type": "UserList", "users": ["eu-user"]}}]}'
 
 echo "Seed complete." >&2
 

@@ -40,6 +40,9 @@ abstract class BaseIzanamiIT {
     // User-targeted feature (enabled only for users "provider-user" and "other-allowed")
     protected static final String USER_TARGETED_ID = "2cd8582f-4123-9922-2e2c-7f353ddc9539";
 
+    // Context-targeted feature (base disabled, with context overloads)
+    protected static final String CONTEXT_TARGETED_ID = "3de9693f-5234-aa33-3f3d-8f464eec0640";
+
     protected static final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
         .withConfiguration(AutoConfigurations.of(IzanamiAutoConfiguration.class, OpenFeatureAutoConfiguration.class));
 
