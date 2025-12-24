@@ -18,16 +18,17 @@ IZANAMI_SEED_OUTPUT="${IZANAMI_SEED_OUTPUT:-export}" # export|github-env
 #
 # This script creates the following features in Izanami:
 #
-# | ID                                   | Name            | Type    | Value                  | Enabled |
-# |--------------------------------------|-----------------|---------|------------------------|---------|
-# | a4c0d04f-69ac-41aa-a6e4-febcee541d51 | turbo-mode      | boolean | true (enabled)         | true    |
-# | b5d1e15f-7abd-42bb-b7f5-0cdef6652e62 | secret-codename | string  | Operation Thunderbolt  | true    |
-# | c6e2f26f-8bce-43cc-c8f6-1def07763f73 | max-power-level | number  | 9001                   | true    |
-# | d7f3037f-9cdf-44dd-d9f7-2ef008874084 | discount-rate   | number  | 0.15                   | true    |
-# | e8f4148f-0def-55ee-eaf8-3f0109985195 | json-config     | string  | {"enabled":true,...}   | true    |
-# | f9a5259f-1ef0-66ff-fbf9-4f020aa96206 | inactive-bool   | boolean | (none)                 | false   |
-# | 0ab6360f-2f01-7700-0c0a-5f131bba7317 | inactive-string | string  | hidden value           | false   |
-# | 1bc7471f-3012-8811-1d1b-6f242ccb8428 | inactive-number | number  | 42                     | false   |
+# | ID                                   | Name            | Type    | Value                  | Enabled | Condition                              |
+# |--------------------------------------|-----------------|---------|------------------------|---------|----------------------------------------|
+# | a4c0d04f-69ac-41aa-a6e4-febcee541d51 | turbo-mode      | boolean | true (enabled)         | true    | (none)                                 |
+# | b5d1e15f-7abd-42bb-b7f5-0cdef6652e62 | secret-codename | string  | Operation Thunderbolt  | true    | (none)                                 |
+# | c6e2f26f-8bce-43cc-c8f6-1def07763f73 | max-power-level | number  | 9001                   | true    | (none)                                 |
+# | d7f3037f-9cdf-44dd-d9f7-2ef008874084 | discount-rate   | number  | 0.15                   | true    | (none)                                 |
+# | e8f4148f-0def-55ee-eaf8-3f0109985195 | json-config     | string  | {"enabled":true,...}   | true    | (none)                                 |
+# | f9a5259f-1ef0-66ff-fbf9-4f020aa96206 | inactive-bool   | boolean | (none)                 | false   | (none)                                 |
+# | 0ab6360f-2f01-7700-0c0a-5f131bba7317 | inactive-string | string  | hidden value           | false   | (none)                                 |
+# | 1bc7471f-3012-8811-1d1b-6f242ccb8428 | inactive-number | number  | 42                     | false   | (none)                                 |
+# | 2cd8582f-4123-9922-2e2c-7f353ddc9539 | user-targeted   | boolean | (conditional)          | true    | UserList: provider-user, other-allowed |
 #
 IZANAMI_TURBO_MODE_ID="${IZANAMI_TURBO_MODE_ID:-a4c0d04f-69ac-41aa-a6e4-febcee541d51}"
 IZANAMI_SECRET_CODENAME_ID="${IZANAMI_SECRET_CODENAME_ID:-b5d1e15f-7abd-42bb-b7f5-0cdef6652e62}"
@@ -37,6 +38,7 @@ IZANAMI_JSON_CONFIG_ID="${IZANAMI_JSON_CONFIG_ID:-e8f4148f-0def-55ee-eaf8-3f0109
 IZANAMI_INACTIVE_BOOL_ID="${IZANAMI_INACTIVE_BOOL_ID:-f9a5259f-1ef0-66ff-fbf9-4f020aa96206}"
 IZANAMI_INACTIVE_STRING_ID="${IZANAMI_INACTIVE_STRING_ID:-0ab6360f-2f01-7700-0c0a-5f131bba7317}"
 IZANAMI_INACTIVE_NUMBER_ID="${IZANAMI_INACTIVE_NUMBER_ID:-1bc7471f-3012-8811-1d1b-6f242ccb8428}"
+IZANAMI_USER_TARGETED_ID="${IZANAMI_USER_TARGETED_ID:-2cd8582f-4123-9922-2e2c-7f353ddc9539}"
 
 # Locate iz CLI
 find_iz_cmd() {
@@ -177,6 +179,35 @@ create_feature() {
     --data "${json}" >&2
 }
 
+# Helper function to create a feature with activation conditions
+create_feature_with_conditions() {
+  local id="$1"
+  local name="$2"
+  local description="$3"
+  local result_type="$4"
+  local conditions_json="$5"
+
+  # Delete existing feature (ignore error)
+  ${IZ_CMD} admin features delete "${id}" \
+    --tenant "${IZANAMI_TENANT}" \
+    --force 2>/dev/null || true
+
+  # Build JSON payload with conditions
+  local json
+  json=$(jq -n \
+    --arg id "${id}" \
+    --arg name "${name}" \
+    --arg desc "${description}" \
+    --arg rt "${result_type}" \
+    --argjson cond "${conditions_json}" \
+    '{id: $id, name: $name, description: $desc, enabled: true, resultType: $rt, conditions: $cond}')
+
+  ${IZ_CMD} admin features create "${name}" \
+    --tenant "${IZANAMI_TENANT}" \
+    --project "${IZANAMI_PROJECT}" \
+    --data "${json}" >&2
+}
+
 # Create boolean feature: turbo-mode
 create_feature \
   "${IZANAMI_TURBO_MODE_ID}" \
@@ -248,6 +279,15 @@ create_feature \
   "number" \
   "42" \
   "false"
+
+# Create user-targeted feature with UserList condition
+# This feature is enabled only for users "provider-user" and "other-allowed"
+create_feature_with_conditions \
+  "${IZANAMI_USER_TARGETED_ID}" \
+  "user-targeted" \
+  "Feature enabled only for specific users" \
+  "boolean" \
+  '[{"rule": {"type": "UserList", "users": ["provider-user", "other-allowed"]}}]'
 
 echo "Seed complete." >&2
 

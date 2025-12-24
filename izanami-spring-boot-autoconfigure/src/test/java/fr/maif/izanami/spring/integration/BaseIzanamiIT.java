@@ -37,6 +37,9 @@ abstract class BaseIzanamiIT {
     protected static final String INACTIVE_STRING_ID = "0ab6360f-2f01-7700-0c0a-5f131bba7317";
     protected static final String INACTIVE_NUMBER_ID = "1bc7471f-3012-8811-1d1b-6f242ccb8428";
 
+    // User-targeted feature (enabled only for users "provider-user" and "other-allowed")
+    protected static final String USER_TARGETED_ID = "2cd8582f-4123-9922-2e2c-7f353ddc9539";
+
     protected static final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
         .withConfiguration(AutoConfigurations.of(IzanamiAutoConfiguration.class, OpenFeatureAutoConfiguration.class));
 
