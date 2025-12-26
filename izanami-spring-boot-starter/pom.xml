@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>fr.maif</groupId>
+        <groupId>io.github.webskin</groupId>
         <artifactId>izanami-spring-boot-starter-parent</artifactId>
         <version>${revision}</version>
         <relativePath>../pom.xml</relativePath>
@@ -17,7 +17,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>fr.maif</groupId>
+            <groupId>io.github.webskin</groupId>
             <artifactId>izanami-spring-boot-autoconfigure</artifactId>
             <version>${project.version}</version>
         </dependency>
