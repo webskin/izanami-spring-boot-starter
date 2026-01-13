@@ -66,6 +66,9 @@
 
         <!-- Integration tests are opt-in via -Pintegration-tests -->
         <skipITs>true</skipITs>
+
+        <!-- Skip SonarQube for parent POM (no source code) -->
+        <sonar.skip>true</sonar.skip>
     </properties>
 
     <dependencyManagement>

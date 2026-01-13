@@ -15,6 +15,11 @@
     <name>Izanami Spring Boot Starter</name>
     <description>Spring Boot starter for Izanami + OpenFeature integration.</description>
 
+    <properties>
+        <!-- Skip SonarQube for starter POM (no source code) -->
+        <sonar.skip>true</sonar.skip>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>fr.maif</groupId>
