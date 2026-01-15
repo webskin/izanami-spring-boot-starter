@@ -7,11 +7,20 @@ import java.time.Duration;
 /**
  * Configuration properties for the Izanami client.
  * <p>
+ * Binds to {@code izanami} prefix by default. To use a custom prefix, define a bean
+ * named {@code izanamiProperties}:
+ * <pre>{@code
+ * @Bean
+ * @ConfigurationProperties(prefix = "custom.izanami")
+ * public IzanamiProperties izanamiProperties() {
+ *     return new IzanamiProperties();
+ * }
+ * }</pre>
+ * <p>
  * This starter never fails the Spring application context startup when Izanami is unreachable.
  * If the client cannot be created or cannot reach the server, evaluations fall back to the
  * configured OpenFeature flag defaults.
  */
-@ConfigurationProperties(prefix = "izanami")
 public class IzanamiProperties {
 
     private String baseUrl = "http://localhost:9000";

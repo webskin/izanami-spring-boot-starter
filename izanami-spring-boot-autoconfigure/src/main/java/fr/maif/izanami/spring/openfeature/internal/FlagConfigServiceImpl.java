@@ -68,8 +68,7 @@ public final class FlagConfigServiceImpl implements FlagConfigService {
         this.configsById = Map.copyOf(byId);
         this.nameToId = Map.copyOf(nameToIdMap);
 
-        log.info("Loaded {} flag configurations ({} by name, {} by key)",
-            rawConfigs.size(), configsByName.size(), configsById.size());
+        log.info("Loaded {} flag configurations", rawConfigs.size());
     }
 
     @Override

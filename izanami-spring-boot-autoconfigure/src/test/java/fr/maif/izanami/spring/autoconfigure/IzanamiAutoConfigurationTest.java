@@ -38,7 +38,10 @@ class IzanamiAutoConfigurationTest {
     void createsBeansWhenEnabledByDefault() {
         contextRunner.run(context -> {
             assertThat(context).hasSingleBean(IzanamiProperties.class);
-            assertThat(context).hasSingleBean(FlagsProperties.class);
+            // FlagsProperties has two beans: flagsProperties (YAML-bound) and mergedFlagsProperties (primary/merged)
+            assertThat(context).hasBean("flagsProperties");
+            assertThat(context).hasBean("mergedFlagsProperties");
+            assertThat(context.getBean(FlagsProperties.class)).isNotNull(); // Primary bean resolves
             assertThat(context).hasSingleBean(FlagConfigService.class);
             assertThat(context).hasSingleBean(ErrorStrategyFactory.class);
             assertThat(context).hasSingleBean(IzanamiService.class);

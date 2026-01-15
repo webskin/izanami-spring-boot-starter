@@ -1,6 +1,7 @@
 package fr.maif.izanami.spring.autoconfigure;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.openfeature.sdk.Client;
 import dev.openfeature.sdk.FeatureProvider;
 import dev.openfeature.sdk.OpenFeatureAPI;
 import fr.maif.IzanamiClient;
