@@ -78,13 +78,6 @@ class IzanamiBatchFeatureEvaluatorTest {
         return featureValue;
     }
 
-    private FeatureValue createStringFeatureValue(String value, boolean enabled) {
-        FeatureValue featureValue = mock(FeatureValue.class);
-        when(featureValue.stringValue()).thenReturn(value);
-        when(featureValue.booleanValue(any(BooleanCastStrategy.class))).thenReturn(enabled);
-        return featureValue;
-    }
-
     private IzanamiBatchFeatureEvaluator buildEvaluator(
         @Nullable IzanamiClient client,
         Map<String, FlagConfig> flagConfigs,

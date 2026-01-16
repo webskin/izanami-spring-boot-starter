@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -74,7 +75,7 @@ class IzanamiEvaluationHelperTest {
             IzanamiResult.Success success = new IzanamiResult.Success(featureValue);
 
             IzanamiEvaluationHelper.EvaluationOutcome<String> outcome =
-                IzanamiEvaluationHelper.computeOutcome(success, null, () -> null, str -> str == null);
+                IzanamiEvaluationHelper.computeOutcome(success, null, () -> null, Objects::isNull);
 
             assertThat(outcome.value()).isNull();
             assertThat(outcome.source()).isEqualTo(FlagValueSource.IZANAMI);
@@ -328,7 +329,7 @@ class IzanamiEvaluationHelperTest {
                 r -> "test-value",
                 baseMetadata,
                 () -> null,
-                str -> str == null,
+                Objects::isNull,
                 "test-flag"
             );
 

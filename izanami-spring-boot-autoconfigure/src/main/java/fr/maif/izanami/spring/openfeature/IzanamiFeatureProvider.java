@@ -170,7 +170,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
     /**
      * Base class for all evaluation executions using *ValueDetails() methods.
      */
-    static abstract class EvaluationExecution<T> {
+    abstract static class EvaluationExecution<T> {
         protected final EvaluationDependencies deps;
         protected final String flagKey;
         protected final T callerDefaultValue;
@@ -324,9 +324,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         }
 
         private static ErrorCode mapValueSourceToErrorCode(String reason, String valueSource) {
-            if (FlagValueSource.IZANAMI.name().equals(valueSource)) {
-                return null;
-            } else if ("DISABLED".equals(reason)) {
+            if (FlagValueSource.IZANAMI.name().equals(valueSource) || "DISABLED".equals(reason)) {
                 return null;
             }
             return ErrorCode.GENERAL;
