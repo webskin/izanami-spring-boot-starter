@@ -1,8 +1,6 @@
 package fr.maif.izanami.spring.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.openfeature.sdk.FlagValueType;
 import fr.maif.FeatureCacheConfiguration;
 import fr.maif.FeatureClientErrorStrategy;
 import fr.maif.IzanamiClient;
@@ -575,21 +573,6 @@ public final class IzanamiServiceImpl implements InitializingBean, DisposableBea
             // Cast to BatchResult for API compatibility (BatchResultImpl implements BatchResult)
             return evaluator.evaluate().thenApply(result -> result);
         }
-    }
-
-    public static String stringifyDefaultValue(ObjectMapper objectMapper, FlagConfig config) {
-        Object defaultValue = config.defaultValue();
-        if (defaultValue == null) {
-            return null;
-        }
-        if (config.valueType() == FlagValueType.OBJECT) {
-            try {
-                return objectMapper.writeValueAsString(defaultValue);
-            } catch (JsonProcessingException e) {
-                return defaultValue.toString();
-            }
-        }
-        return defaultValue.toString();
     }
 
     @Override

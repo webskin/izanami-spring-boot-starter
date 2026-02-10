@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.openfeature.sdk.*;
 import fr.maif.izanami.spring.openfeature.api.FlagConfigService;
-import fr.maif.izanami.spring.service.IzanamiServiceImpl;
+import fr.maif.izanami.spring.service.IzanamiEvaluationHelper;
 import fr.maif.izanami.spring.service.api.FeatureRequestBuilder;
 import fr.maif.izanami.spring.service.api.IzanamiService;
 import fr.maif.izanami.spring.service.api.ResultValueWithDetails;
@@ -285,7 +285,7 @@ public final class IzanamiFeatureProvider implements FeatureProvider {
         }
 
         private ImmutableMetadata applicationErrorMetadata(FlagConfig flagConfig) {
-            String defaultValueString = IzanamiServiceImpl.stringifyDefaultValue(deps.objectMapper(), flagConfig);
+            String defaultValueString = IzanamiEvaluationHelper.stringifyDefaultValue(deps.objectMapper(), flagConfig);
             return ImmutableMetadata.builder()
                 .addString(FlagMetadataKeys.FLAG_CONFIG_KEY, flagConfig.key())
                 .addString(FlagMetadataKeys.FLAG_CONFIG_NAME, flagConfig.name())

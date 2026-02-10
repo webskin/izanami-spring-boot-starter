@@ -1134,7 +1134,7 @@ class IzanamiServiceImplTest {
         void stringifyDefaultValue_withNull_returnsNull() {
             FlagConfig config = testDefaultStringFlagConfig("key", "name", null);
 
-            String result = IzanamiServiceImpl.stringifyDefaultValue(objectMapper, config);
+            String result = IzanamiEvaluationHelper.stringifyDefaultValue(objectMapper, config);
 
             assertThat(result).isNull();
         }
@@ -1143,7 +1143,7 @@ class IzanamiServiceImplTest {
         void stringifyDefaultValue_withBoolean_returnsString() {
             FlagConfig config = testDefaultBooleanFlagConfig("key", "name", true);
 
-            String result = IzanamiServiceImpl.stringifyDefaultValue(objectMapper, config);
+            String result = IzanamiEvaluationHelper.stringifyDefaultValue(objectMapper, config);
 
             assertThat(result).isEqualTo("true");
         }
@@ -1152,7 +1152,7 @@ class IzanamiServiceImplTest {
         void stringifyDefaultValue_withNumber_returnsString() {
             FlagConfig config = testDefaultDoubleFlagConfig("key", "name", new BigDecimal("123.45"));
 
-            String result = IzanamiServiceImpl.stringifyDefaultValue(objectMapper, config);
+            String result = IzanamiEvaluationHelper.stringifyDefaultValue(objectMapper, config);
 
             assertThat(result).isEqualTo("123.45");
         }
@@ -1161,7 +1161,7 @@ class IzanamiServiceImplTest {
         void stringifyDefaultValue_withString_returnsString() {
             FlagConfig config = testDefaultStringFlagConfig("key", "name", "hello");
 
-            String result = IzanamiServiceImpl.stringifyDefaultValue(objectMapper, config);
+            String result = IzanamiEvaluationHelper.stringifyDefaultValue(objectMapper, config);
 
             assertThat(result).isEqualTo("hello");
         }
@@ -1176,7 +1176,7 @@ class IzanamiServiceImplTest {
                 objectValue, null
             );
 
-            String result = IzanamiServiceImpl.stringifyDefaultValue(objectMapper, config);
+            String result = IzanamiEvaluationHelper.stringifyDefaultValue(objectMapper, config);
 
             assertThat(result).contains("\"key1\"");
             assertThat(result).contains("\"value1\"");
@@ -1202,7 +1202,7 @@ class IzanamiServiceImplTest {
                 objectWithToString, null
             );
 
-            String result = IzanamiServiceImpl.stringifyDefaultValue(brokenMapper, config);
+            String result = IzanamiEvaluationHelper.stringifyDefaultValue(brokenMapper, config);
 
             assertThat(result).isEqualTo("fallback-toString");
         }

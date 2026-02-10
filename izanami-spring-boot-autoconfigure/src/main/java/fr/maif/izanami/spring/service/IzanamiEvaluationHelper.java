@@ -1,6 +1,8 @@
 package fr.maif.izanami.spring.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.openfeature.sdk.FlagValueType;
 import fr.maif.FeatureClientErrorStrategy;
 import fr.maif.features.results.IzanamiResult;
 import fr.maif.izanami.spring.openfeature.FlagConfig;
@@ -24,10 +26,8 @@ import static java.util.Collections.unmodifiableMap;
 
 /**
  * Shared evaluation utilities for feature flag processing.
- * <p>
- * This class is package-private and not part of the public API.
  */
-final class IzanamiEvaluationHelper {
+public final class IzanamiEvaluationHelper {
     private static final Logger log = LoggerFactory.getLogger(IzanamiEvaluationHelper.class);
 
     private IzanamiEvaluationHelper() {
@@ -61,6 +61,13 @@ final class IzanamiEvaluationHelper {
             if (isDisabledCheck.test(rawValue)) {
                 // Feature is disabled - apply default value if configured
                 T resolvedValue = disabledValueResolver.get();
+                // Source depends on where the final value comes from:
+                // - resolvedValue != null: using application's configured default → APPLICATION_ERROR_STRATEGY
+                // - resolvedValue == null: no configured default, using raw Izanami value → IZANAMI
+                //
+                // Note on booleans: For boolean flags, disabledValueResolver intentionally returns null
+                // because `false` IS the natural disabled state - no fallback is needed. The raw Izanami
+                // value (false) is used directly, hence source is IZANAMI.
                 return new EvaluationOutcome<>(
                     resolvedValue != null ? resolvedValue : rawValue,
                     resolvedValue != null ? FlagValueSource.APPLICATION_ERROR_STRATEGY : FlagValueSource.IZANAMI,
@@ -128,7 +135,7 @@ final class IzanamiEvaluationHelper {
         metadata.put(FlagMetadataKeys.FLAG_CONFIG_NAME, config.name());
         metadata.put(FlagMetadataKeys.FLAG_CONFIG_DESCRIPTION, config.description());
         metadata.put(FlagMetadataKeys.FLAG_CONFIG_VALUE_TYPE, config.valueType().name());
-        metadata.put(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE, IzanamiServiceImpl.stringifyDefaultValue(objectMapper, config));
+        metadata.put(FlagMetadataKeys.FLAG_CONFIG_DEFAULT_VALUE, stringifyDefaultValue(objectMapper, config));
         metadata.put(FlagMetadataKeys.FLAG_CONFIG_ERROR_STRATEGY, config.errorStrategy().name());
         return metadata;
     }
@@ -230,5 +237,29 @@ final class IzanamiEvaluationHelper {
         metadata.put(FlagMetadataKeys.FLAG_VALUE_SOURCE, FlagValueSource.APPLICATION_ERROR_STRATEGY.name());
         metadata.put(FlagMetadataKeys.FLAG_EVALUATION_REASON, "FLAG_NOT_FOUND");
         return metadata;
+    }
+
+    /**
+     * Converts a FlagConfig's default value to a string representation.
+     * <p>
+     * For OBJECT types, serializes to JSON. For other types, uses toString().
+     *
+     * @param objectMapper Jackson ObjectMapper for JSON serialization
+     * @param config       the flag configuration
+     * @return string representation of the default value, or null if default is null
+     */
+    public static String stringifyDefaultValue(ObjectMapper objectMapper, FlagConfig config) {
+        Object defaultValue = config.defaultValue();
+        if (defaultValue == null) {
+            return null;
+        }
+        if (config.valueType() == FlagValueType.OBJECT) {
+            try {
+                return objectMapper.writeValueAsString(defaultValue);
+            } catch (JsonProcessingException e) {
+                return defaultValue.toString();
+            }
+        }
+        return defaultValue.toString();
     }
 }

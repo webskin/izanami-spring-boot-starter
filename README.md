@@ -567,7 +567,7 @@ try {
 
 ### Custom Configuration Prefix
 
-If you need to nest the configuration under a custom prefix (e.g., `organisation.izanami` instead of `izanami`), define your own beans with `@Primary`:
+If you need to nest the configuration under a custom prefix (e.g., `organisation.izanami` instead of `izanami`), define your own beans with :
 
 ```java
 import fr.maif.izanami.spring.autoconfigure.IzanamiProperties;
@@ -581,14 +581,12 @@ import org.springframework.context.annotation.Primary;
 public class CustomIzanamiConfig {
 
     @Bean
-    @Primary
     @ConfigurationProperties(prefix = "organisation.izanami")
     public IzanamiProperties izanamiProperties() {
         return new IzanamiProperties();
     }
 
     @Bean
-    @Primary
     @ConfigurationProperties(prefix = "organisation.openfeature")
     public FlagsProperties flagsProperties() {
         return new FlagsProperties();
