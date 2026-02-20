@@ -36,6 +36,7 @@
     <modules>
         <module>izanami-spring-boot-autoconfigure</module>
         <module>izanami-spring-boot-starter</module>
+        <module>izanami-spring-boot-starter-testing</module>
     </modules>
 
     <properties>

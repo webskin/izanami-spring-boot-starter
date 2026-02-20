@@ -301,6 +301,167 @@ izanamiService.forFlagName("my-feature")
     .booleanValue().join();
 ```
 
+### Spring WebFlux Support
+
+In Spring WebFlux, `@RequestScope` is tied to the Servlet request lifecycle and is not available. Reactive apps should use `ReactiveIzanamiService` with reactive providers that resolve user and context at subscription time inside the Reactor context.
+
+The reactive API is auto-configured when `reactor-core` is on the classpath (typically via `spring-boot-starter-webflux`).
+
+#### Quick Start
+
+Inject `ReactiveIzanamiService` instead of `IzanamiService`:
+
+```java
+import fr.maif.izanami.spring.service.api.ReactiveIzanamiService;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Mono;
+
+@RestController
+public class FeatureController {
+    private final ReactiveIzanamiService izanamiService;
+
+    public FeatureController(ReactiveIzanamiService izanamiService) {
+        this.izanamiService = izanamiService;
+    }
+
+    @GetMapping("/feature")
+    public Mono<Boolean> isEnabled() {
+        return izanamiService.forFlagName("turbo-mode").booleanValue();
+    }
+}
+```
+
+#### Reactive Feature Evaluation
+
+All evaluation methods return `Mono<T>` instead of `CompletableFuture<T>`:
+
+```java
+import fr.maif.izanami.spring.service.api.ReactiveIzanamiService;
+import fr.maif.izanami.spring.service.api.ResultValueWithDetails;
+import fr.maif.izanami.spring.openfeature.FlagMetadataKeys;
+
+@Autowired ReactiveIzanamiService izanamiService;
+
+// Boolean evaluation (by name or by key)
+Mono<Boolean> enabled = izanamiService.forFlagName("turbo-mode")
+    .booleanValue();
+
+Mono<Boolean> enabledByKey = izanamiService.forFlagKey("a4c0d04f-69ac-41aa-a6e4-febcee541d51")
+    .booleanValue();
+
+// String evaluation with user targeting
+Mono<String> codename = izanamiService.forFlagName("secret-codename")
+    .withUser("user-123")
+    .stringValue();
+
+// Number evaluation with user and context
+Mono<BigDecimal> rate = izanamiService.forFlagName("discount-rate")
+    .withUser("user-123")
+    .withContext("premium-tier")
+    .numberValue();
+
+// Value details (includes metadata about evaluation source and reason)
+Mono<ResultValueWithDetails<Boolean>> details = izanamiService.forFlagName("turbo-mode")
+    .withUser("user-123")
+    .booleanValueDetails();
+
+details.subscribe(result -> {
+    Boolean value = result.value();
+    String source = result.metadata().get(FlagMetadataKeys.FLAG_VALUE_SOURCE);
+    String reason = result.metadata().get(FlagMetadataKeys.FLAG_EVALUATION_REASON);
+});
+
+// With builder options (cache bypass, timeout, error strategy override)
+Mono<Boolean> fresh = izanamiService.forFlagName("turbo-mode")
+    .withUser("user-123")
+    .ignoreCache(true)
+    .withCallTimeout(Duration.ofSeconds(2))
+    .booleanValue();
+```
+
+#### ReactiveUserProvider with Spring Security
+
+Use `ReactiveSecurityContextHolder` to resolve the authenticated user reactively:
+
+```java
+import fr.maif.izanami.spring.service.api.ReactiveUserProvider;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
+
+@Component
+public class SecurityReactiveUserProvider implements ReactiveUserProvider {
+    @Override
+    public Mono<String> user() {
+        return ReactiveSecurityContextHolder.getContext()
+            .map(ctx -> ctx.getAuthentication().getName());
+    }
+}
+```
+
+#### ReactiveSubContextResolver via WebFilter
+
+Use a `WebFilter` to populate the Reactor Context, then read it in the resolver. Do **not** inject `ServerWebExchange` directly into the resolver constructor.
+
+```java
+import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebFilter;
+import org.springframework.web.server.WebFilterChain;
+import reactor.core.publisher.Mono;
+
+// WebFilter populates Reactor Context
+@Component
+public class MobileContextWebFilter implements WebFilter {
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        String ua = exchange.getRequest().getHeaders().getFirst("User-Agent");
+        String sub = (ua != null && ua.contains("Mobi")) ? "mobile" : "";
+        return chain.filter(exchange)
+            .contextWrite(ctx -> ctx.put("izanami.sub-context", sub));
+    }
+}
+```
+
+```java
+import fr.maif.izanami.spring.service.api.ReactiveSubContextResolver;
+import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
+
+// Resolver reads from Reactor Context
+@Component
+public class MobileReactiveSubContextResolver implements ReactiveSubContextResolver {
+    @Override
+    public Mono<String> subContext() {
+        return Mono.deferContextual(ctx ->
+            Mono.justOrEmpty(ctx.getOrDefault("izanami.sub-context", ""))
+                .filter(s -> !s.isEmpty()));
+    }
+}
+```
+
+#### Batch Reactive Evaluation
+
+```java
+import fr.maif.izanami.spring.service.api.ReactiveIzanamiService;
+
+@GetMapping("/features")
+public Mono<Map<String, Object>> getFeatures() {
+    return izanamiService.forFlagNames("turbo-mode", "secret-codename")
+        .withUser("user-123")
+        .values()
+        .map(result -> Map.of(
+            "turboMode", result.booleanValue("turbo-mode"),
+            "codename", result.stringValue("secret-codename")
+        ));
+}
+```
+
+#### Fallback Behavior
+
+If no `ReactiveUserProvider` or `ReactiveSubContextResolver` is registered, the reactive resolvers automatically fall back to the sync `UserProvider` / `SubContextResolver`. Both `IzanamiService` (for MVC) and `ReactiveIzanamiService` (for WebFlux) can coexist in the same application.
+
 ## Usage
 
 ### Simple Usage with IzanamiService (Fluent API)

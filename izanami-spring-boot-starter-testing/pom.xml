@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>fr.maif</groupId>
+        <artifactId>izanami-spring-boot-starter-parent</artifactId>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>izanami-spring-boot-starter-testing</artifactId>
+    <name>Izanami Spring Boot Starter Testing</name>
+    <description>Mockito testing utilities for Izanami Spring Boot Starter.</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>fr.maif</groupId>
+            <artifactId>izanami-spring-boot-autoconfigure</artifactId>
+            <version>${revision}</version>
+        </dependency>
+
+        <!-- Required for mocking IzanamiService (references IzanamiClient in its API) -->
+        <dependency>
+            <groupId>fr.maif</groupId>
+            <artifactId>izanami-client</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-core</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Test scope: for testing this library itself -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>
