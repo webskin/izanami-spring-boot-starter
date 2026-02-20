@@ -81,7 +81,7 @@ public final class CompositeContextResolver {
         try {
             RootContextProvider provider = rootContextProvider.getIfAvailable();
             if (provider != null) {
-                return provider.root().map(this::normalize).filter(s -> !s.isEmpty());
+                return provider.root().map(CompositeContextResolver::normalize).filter(s -> !s.isEmpty());
             }
         } catch (Exception e) {
             log.debug("Could not resolve root context: {}", e.getMessage());
@@ -93,7 +93,7 @@ public final class CompositeContextResolver {
         try {
             SubContextResolver resolver = subContextResolver.getIfAvailable();
             if (resolver != null) {
-                return resolver.subContext().map(this::normalize).filter(s -> !s.isEmpty());
+                return resolver.subContext().map(CompositeContextResolver::normalize).filter(s -> !s.isEmpty());
             }
         } catch (Exception e) {
             log.debug("Could not resolve sub-context (likely outside request scope): {}", e.getMessage());
@@ -109,7 +109,7 @@ public final class CompositeContextResolver {
      *   <li>Collapsing multiple adjacent slashes to single slash</li>
      * </ul>
      */
-    String normalize(String context) {
+    static String normalize(String context) {
         if (context == null) {
             return "";
         }
